@@ -1105,7 +1105,7 @@ Watcher.prototype.setHits = function(hits) {
 	if (typeof hits !== 'undefined') {
 		if (Object.prototype.toString.call(hits) != '[object Array]')
 			hits = new Array(hits);
-		sendHits(hits, this);
+		this.sendHits(hits);
 	}
 	this.updateWatcherPanel();
 }
