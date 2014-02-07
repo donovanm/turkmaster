@@ -37,7 +37,6 @@ $(document).ready(function(){
 	}
 	
 	notificationPanel = new NotificationPanel();
-	fixTitle();
 	
 	// Listen to messages
 	window.addEventListener('storage', onStorageEvent, false);
@@ -81,35 +80,6 @@ function checkIfDashboard() {
 function requestMain() {
 	localStorage.setItem('notifier_request_main', new Date().getTime());
 	// console.log("Requesting main dashboard rights");
-}
-
-/** This function makes the page titles more verbose. It takes no arguements and returns no values.
-	Most pages on Mechanical Turk simply have "Amazon Mechanical Turk" for the title and if you have
-	multiple tabs open, it can be hard to determine which is which at a glance. This function puts 
-	an appropriate title for nearly every page on AMT.
-**/
-function fixTitle() {
-	var title = $("title").text().trim();
-	var existingTitle = title.replace(/Amazon Mechanical Turk( - )?/, "");
-	var newText = "";
-	
-	if (existingTitle != "") {
-		existingTitle += " - AMT";
-	} else {
-		existingTitle = " - AMT";
-	
-		if ($(".capsulelink_bold > div:nth-child(1)").length > 0) {
-			newText = $(".capsulelink_bold > div:nth-child(1)").text().trim();
-		} else if ($(".title_orange_text_bold").length > 0) {
-			newText = $(".title_orange_text_bold").text().trim();
-		} else if ($(".error_title").length > 0) {
-			newText = $(".error_title").text().trim();
-		} else {
-			existingTitle = "AMT";
-		}
-	}
-
-	$("title").text(newText + existingTitle);
 }
 
 function addWatcher(groupId, duration, type, name) {
@@ -872,8 +842,8 @@ Watcher.prototype.start = function() {
 	var _this = this;
 	
 	// Set the interval and start right away
-	this.interval = setInterval(function(){ _this.parseURL() }, this.time);
-	this.parseURL();
+	this.interval = setInterval(function(){ _this.getData() }, this.time);
+	this.getData();
 	
 	this.isRunning = true;
 }
@@ -1020,85 +990,84 @@ Watcher.prototype.sendHits = function(hits) {
 		}
 	}
 }
-Watcher.prototype.parseURL = function() {
+Watcher.prototype.getData = function() {
 	var _this = this;
 	$.get(this.url, function(data) {
-		var hits;
-		var data = $(data);
-		var error = $(".error_title", data);
-
-		if (error.length > 0) {
-			if (error.text().contains("You have exceeded"))
-				return;
-		}
-
-		if (_this.type != 'hit') {
-			// var hitCount = $("body > div:nth-child(7) > table:nth-child(3) > tbody:nth-child(1) > tr", data).length;
-			var hitCount = $("table:nth-child(3) > tbody:nth-child(1) > tr", data).length;
-			hits = new Array();
-			// var links = $("a",data);
-		
-			for (var i = 0; i < hitCount; ++i) {
-				// base = "body > div:nth-child(7) > table:nth-child(3) > tbody:nth-child(1) > tr:nth-child(" + (i+1) + ") > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > ";
-				base = "table:nth-child(3) > tbody:nth-child(1) > tr:nth-child(" + (i+1) + ") > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > ";
-				qryRequester = base + "tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > a";
-				qryUrl = base + "tr:nth-child(2) > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(3) > span:nth-child(1) > a";
-				qryReward = base + "tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > span:nth-child(1)"
-				qryTitle = base + "tr:nth-child(2) > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(1) > a:nth-child(1)";
-				qryAvailable = base + "tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(3) > table > tbody > tr:nth-child(2) > td:nth-child(2)";
-				qryTime = base + "tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > table > tbody > tr:nth-child(2) > td:nth-child(2)";
-
-				var hit = new Hit();
-				
-				hit.requester = $(qryRequester, data).text();
-				hit.requesterID = $(qryRequester, data).attr("href");
-				hit.url = $(qryUrl, data).attr("href");
-				hit.title = $(qryTitle, data).text().trim();
-				hit.reward = $(qryReward, data).text().trim();
-				hit.available = $(qryAvailable, data).text().trim();
-				hit.time = $(qryTime, data).text().trim();
-				
-				var idMatch = hit.url.match(/groupId=([A-Z0-9]+)/);
-				if (idMatch != null)
-					hit.id = idMatch[1];
-
-				hits[i] = hit;
-			}
-		} else {
-			var msgbox = $("#alertboxHeader", data);
-			var hasCaptcha = ($(data).length > 0) ? ($(data).text()).contains("In order to accept your next HIT") : false;
-			
-			if ($(msgbox).length > 0 && ($(msgbox).text()).contains("There are no more available HITs in this group.")) {
-				// If there aren't any more available, keep checking. If they were just previously available
-				// then we should alert the user that it's gone.
-				// console.log("No more available.");
-			} else {
-				// If it's newly available, alert the user and start auto-stacking if that's desired.
-				//TODO We need to test for "You are not qualified to accept this HIT."
-				
-				if (hasCaptcha) console.log("Has captcha");
-
-				var uid = $("input[name='hitId']", data).attr("value");
-				var hit = new Hit(_this.id, uid, _this.auto);
-				hit.requester = $("form:nth-child(7) > div:nth-child(9) > div:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2)", data).text().trim();
-				hit.title = $(".capsulelink_bold > div:nth-child(1)", data).text().trim();
-				hit.reward = $("td.capsule_field_text:nth-child(5) > span:nth-child(1)", data).text().trim();
-				hit.available = $("td.capsule_field_text:nth-child(8)", data).text().trim();
-				hit.time = $("td.capsule_field_text:nth-child(11)", data).text().trim();
-				
-				if ((hasCaptcha || _this.auto) && _this.isRunning)
-					// We should probably toggle off all auto-accept hits when we encounter a captcha. Maybe send a special message to all mturk windows while we're at it.
-					// The special message could be some kind of banner that says that no more hits can be accepted in the background until the captcha is entered. (It would
-					// be pretty cool if we could pull up the captcha image in the background and just show it and the form to enter it from another page).
-					_this.toggleOnOff();
-					
-			}
-		}
-		_this.setHits(hits || hit);
+		_this.onDataReceived($(data));
 	});
 }
-Watcher.prototype.onDataReceived = function(attrs) {
+Watcher.prototype.onDataReceived = function(data) {
+	var error = $(".error_title", data);
+	if (error.length > 0) {
+		if (error.text().contains("You have exceeded"))
+			return;
+	}
 
+	if (this.type == 'hit')
+		this.setHits(this.parseHitPage(data));
+	else
+		this.setHits(this.parseListing(data));
+}
+Watcher.prototype.parseListing = function(data) {
+	var hitCount = $("table:nth-child(3) > tbody:nth-child(1) > tr", data).length;
+	var hits = new Array();
+
+	for (var i = 0; i < hitCount; ++i) {
+		base = "table:nth-child(3) > tbody:nth-child(1) > tr:nth-child(" + (i+1) + ") > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > ";
+		qryRequester = base + "tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > a";
+		qryUrl = base + "tr:nth-child(2) > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(3) > span:nth-child(1) > a";
+		qryReward = base + "tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > span:nth-child(1)"
+		qryTitle = base + "tr:nth-child(2) > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(1) > a:nth-child(1)";
+		qryAvailable = base + "tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(3) > table > tbody > tr:nth-child(2) > td:nth-child(2)";
+		qryTime = base + "tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > table > tbody > tr:nth-child(2) > td:nth-child(2)";
+
+		var hit = new Hit();
+		hit.requester = $(qryRequester, data).text();
+		hit.requesterID = $(qryRequester, data).attr("href");
+		hit.url = $(qryUrl, data).attr("href");
+		hit.title = $(qryTitle, data).text().trim();
+		hit.reward = $(qryReward, data).text().trim();
+		hit.available = $(qryAvailable, data).text().trim();
+		hit.time = $(qryTime, data).text().trim();
+		
+		var idMatch = hit.url.match(/groupId=([A-Z0-9]+)/);
+		if (idMatch != null)
+			hit.id = idMatch[1];
+
+		hits[i] = hit;
+	}
+	return hits;
+}
+Watcher.prototype.parseHitPage = function(data) {
+	var msgbox = $("#alertboxHeader", data);
+	var hasCaptcha = ($(data).length > 0) ? ($(data).text()).contains("In order to accept your next HIT") : false;
+	
+	if ($(msgbox).length > 0 && ($(msgbox).text()).contains("There are no more available HITs in this group.")) {
+		// If there aren't any more available, keep checking. If they were just previously available
+		// then we should alert the user that it's gone.
+		// console.log("No more available.");
+	} else {
+		// If it's newly available, alert the user and start auto-stacking if that's desired.
+		//TODO We need to test for "You are not qualified to accept this HIT."
+		
+		if (hasCaptcha) console.log("Has captcha");
+
+		var uid = $("input[name='hitId']", data).attr("value");
+		var hit = new Hit(this.id, uid, this.auto);
+		hit.requester = $("form:nth-child(7) > div:nth-child(9) > div:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2)", data).text().trim();
+		hit.title = $(".capsulelink_bold > div:nth-child(1)", data).text().trim();
+		hit.reward = $("td.capsule_field_text:nth-child(5) > span:nth-child(1)", data).text().trim();
+		hit.available = $("td.capsule_field_text:nth-child(8)", data).text().trim();
+		hit.time = $("td.capsule_field_text:nth-child(11)", data).text().trim();
+		
+		if ((hasCaptcha || this.auto) && this.isRunning)
+			// We should probably toggle off all auto-accept hits when we encounter a captcha. Maybe send a special message to all mturk windows while we're at it.
+			// The special message could be some kind of banner that says that no more hits can be accepted in the background until the captcha is entered. (It would
+			// be pretty cool if we could pull up the captcha image in the background and just show it and the form to enter it from another page).
+			this.toggleOnOff();
+		
+		return new Array(hit);
+	}
 }
 /** Watcher Stack and Queue
 	Stack - Grab as many as possible right away
@@ -1128,14 +1097,14 @@ NotificationPanel.prototype.add = function(notification) {
 
 	notification.onTimeout = function() { _this.onTimeoutListener(notification) };
 	this.notifications.push(notification);
-	this.addToPanelDOM(notification);
+	this.addToPanel(notification);
 
 	if (this.isHidden) {
 		this.show();
 	}
 }
 NotificationPanel.prototype.remove = function(notification) {
-	this.removeFromPanelDOM(notification);
+	this.removeFromPanel(notification);
 
 	var newArray = new Array();
 	for (var i = 0; i < this.notifications.length; i++)
@@ -1251,10 +1220,10 @@ NotificationPanel.prototype.createPanel = function() {
 NotificationPanel.prototype.getDOMElement = function() {
 	return this.DOMElement;
 }
-NotificationPanel.prototype.addToPanelDOM = function(notification) {
+NotificationPanel.prototype.addToPanel = function(notification) {
 	$(this.getDOMElement()).prepend(notification.getDOMElement());
 }
-NotificationPanel.prototype.removeFromPanelDOM = function(notification) {
+NotificationPanel.prototype.removeFromPanel = function(notification) {
 	$(notification.getDOMElement()).remove();
 }
 NotificationPanel.prototype.onTimeoutListener = function(notification) {
