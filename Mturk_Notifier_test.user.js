@@ -221,12 +221,12 @@ function loadHits() {
 	dispatch.add(new Watcher("https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=Laura+Harrison&minReward=0.00&x=7&y=1", 10000, 'url', "Easy $8 survey"));
 	dispatch.add(new Watcher("2FH56XBAT2D5VV0DSCUQ8JGA0ZV048", 20000, 'hit', "25 seconds of audio")); // crowdsurf hit
 	dispatch.add(new Watcher("2C4PHMVHVKCJ6T0G85VJB9LU493538", 180000, 'hit', "Crowdsource .20 keywords")); // crowdsource
-	dispatch.add(new Watcher("2KGJ1XERSQV6DMLJAXK3PVWF2PL088", 20000, 'hit', "ACME English", {auto:true}));
-	dispatch.add(new Watcher("2IUC1QP6AUC2D8G00SSXBV0KS4C07H", 30000, 'hit', "ACME Transcription", {alert:true}));
-	dispatch.add(new Watcher("2HGWQIHPCGJ6H9UR6LWXR0JPSTN175", 15000, 'hit', "Taskrabbit Auto", {auto:true}));
-	dispatch.add(new Watcher("2FH56XBAT2D9NQFBUKUQAJG7U3M04G", 15000, 'hit', "$10 hit", {auto:true}));
-	dispatch.add(new Watcher("2RTSP6AUC26HG6O1Q2UVAFK2DRN29X", 13000, 'hit', "$20 Market Research", {auto:true}));
-	// dispatch.add(new Watcher("2E3CT2D5NQYNN65ODF751YMSI2448R", 15000, 'hit', "Receipt hit", false));
+	// dispatch.add(new Watcher("2KGJ1XERSQV6DMLJAXK3PVWF2PL088", 20000, 'hit', "ACME English", {auto:true}));
+	// dispatch.add(new Watcher("2IUC1QP6AUC2D8G00SSXBV0KS4C07H", 30000, 'hit', "ACME Transcription", {alert:true}));
+	// dispatch.add(new Watcher("2HGWQIHPCGJ6H9UR6LWXR0JPSTN175", 15000, 'hit', "Taskrabbit Auto", {auto:true}));
+	// dispatch.add(new Watcher("2FH56XBAT2D9NQFBUKUQAJG7U3M04G", 15000, 'hit', "$10 hit", {auto:true}));
+	// dispatch.add(new Watcher("2RTSP6AUC26HG6O1Q2UVAFK2DRN29X", 13000, 'hit', "$20 Market Research", {auto:true}));
+	dispatch.add(new Watcher("2PBXCNHMVHVKTTYQLPT7AJ7GOYX13M", 15000, 'hit', "Receipt hit"));
 	// dispatch.add(new Watcher("2YEAJIA0RYNJTANGW8R5HMJ0YM4613", 60000, 'hit', "RnR caption", true)); // RnR caption
 	// dispatch.add(new Watcher("A19NF3HMR2SC0H", 10000, 'requester', "Sirius Project"));
 	dispatch.add(new Watcher("A11L036EBWKONR", 14000, 'requester', "Project Endor*", {alert:true}));	// Endor
@@ -451,124 +451,52 @@ function deparcelize(hits) {
 }
 
 function showHits(title, hits) {
-	// alert(output);
-	
 	// If this page is in focus, let the server know so it won't send a browser notification
 	if (document.hasFocus())
 		localStorage.setItem('notification_viewed', new Date().getTime());
 		
-	// notify(hits, type);
-	notify2(title, hits);
-	// return false;
+	notificationPanel.add(new NotificationGroup(title, hits));
 }
 
-function onHitsLoaded(hits, type, id, title) {
-	// showHits(hits);
 
-	// Send the hits in a message. We may want to filter the results before doing this in the future.
-	// localStorage.setItem('notifier_message', parcelize(hits));
-	sendHits(hits, type, id, title);
-	
-	// console.log("Watcher ID = " + id);
-	
-	var watcher = dispatch.getWatcherById(id);
-	updateWatcherPanel(watcher);
-}
 
-function updateWatcherPanel(watcher) {
-	watcher.updateLastChecked();
-	$("#dispatcher #" + watcher.id + " .last_updated").text(formatTime(watcher.date));
-}
-
-function formatTime(time) {
-	var str = "";
-	var hours = time.getHours();
-	var ampm = "am";
-	
-	if (hours > 12) {
-		hours -= 12;
-		ampm = "pm";
-	} else if (hours == 0) {
-		hours = 12;
-	}
-		
-	str += hours + ":" 
-		+ ((time.getMinutes() < 10) ? "0" : "") + time.getMinutes() + ":"
-		+ ((time.getSeconds() < 10) ? "0" : "") + time.getSeconds()
-		+ ampm;
-		
-		return str;
-}
-
-function sendHits(hits, type, id, title) {
-	// Only send the hits if there is actually something to send
-	// In the near future this will have to be changed to show when HITs go away completely
-	if (typeof hits != 'undefined' && hits.length > 0) {
-		var watcher = dispatch.getWatcherById(id);
-		// console.log("Watcher:");
-		// console.log(watcher);
-		// console.log("ID: " + id);
-		hits = watcher.filterMessages(hits);
-		// console.log("Filtered hits:");
-		// console.log(hits);
-		
-		if (hits.length > 0) {
-			wasViewed = false;
-			
-			
-			var msg = parcelize(title, hits);
-			// console.log("Sending message: " + msg);
-			localStorage.setItem('notifier_message', msg);
-			
-			
-			// Show notification on dashboard, too
-			// notify(hits, type);
-			notify2(title, hits);
-
-			// console.log("Message sent:" + msg);
-			if (!document.hasFocus())
-				setTimeout(function() { sendBrowserNotification(hits, type, id); }, 100);
-		}
-	}
-}
-
-function sendBrowserNotification(hits, type, id) {
+function sendBrowserNotification(hits, watcher) {
 	// Let's check if the browser supports notifications
     if (!("Notification" in window)) {
-      alert("This browser does not support desktop notification");
+		alert("This browser does not support desktop notification");
     }
 
-  // Let's check if the user is okay to get some notification
-  else if (Notification.permission === "granted") {
-	// If the user isn't on a mturk page to receive a rich notification, then send a web notification
-	if (!wasViewed) {
-		var bodyText = hits[0].title.substring(0, 35) + ((hits[0].title.length > 35) ? "..." : "") + "\n" + hits[0].reward + "\n";
-		var watcher = dispatch.getWatcherById(id);
-		
-		for (i = 1; i < hits.length; i++)
-			bodyText += "\n" + hits[i].title.substring(0, 35) + ((hits[i].title.length > 35) ? "..." : "") + "\n" + hits[i].reward + "\n";
-		var notification = new Notification(
-			watcher.name,
-			{ 
-				body: bodyText,
-				icon: "http://halfelf.org/wp-content/uploads/sites/2/2012/06/amazon_icon.png"
-			}
-		);
-		notification.onclick = function() {
-			window.focus();
-			this.close();
-			showDetailsPanel(watcher);
-		};
-		notification.onshow = function() { setTimeout(function() { notification.close() }, 5000) };
-	}
-  }
+	// Let's check if the user is okay to get some notification
+	else if (Notification.permission === "granted") {
+		// If the user isn't on a mturk page to receive a rich notification, then send a web notification
+		if (!wasViewed) {
+			var bodyText = "";
+			
+			for (i = 0; i < hits.length; i++)
+				bodyText += "\n" + hits[i].title.substring(0, 35) + ((hits[i].title.length > 35) ? "..." : "") + "\n" + hits[i].reward + "\n";
 
-  // Otherwise, we need to ask the user for permission
-  // Note, Chrome does not implement the permission static property
-  // So we have to check for NOT 'denied' instead of 'default'
-  else if (Notification.permission !== 'denied') {
-    requestWebNotifications();
-  }
+			var notification = new Notification(
+				watcher.name,
+				{ 
+					body: bodyText,
+					icon: "http://halfelf.org/wp-content/uploads/sites/2/2012/06/amazon_icon.png"
+				}
+			);
+			notification.onclick = function() {
+				window.focus();
+				this.close();
+				showDetailsPanel(watcher);
+			};
+			notification.onshow = function() { setTimeout(function() { notification.close() }, 5000) };
+		}
+	}
+
+	// Otherwise, we need to ask the user for permission
+	// Note, Chrome does not implement the permission static property
+	// So we have to check for NOT 'denied' instead of 'default'
+	else if (Notification.permission !== 'denied') {
+		requestWebNotifications();
+	}
 }
 
 function requestWebNotifications() {
@@ -584,23 +512,21 @@ function requestWebNotifications() {
 }
 
 
-function parseURL(url, type, id, title, isAutoAccept) {
-	$.get(url, function(data) {
-		// alert(data);
-		var hits = new Array();
-
+function parseURL(watcher) {
+	$.get(watcher.url, function(data) {
+		var hits;
 		var data = $(data);
-		
 		var error = $(".error_title", data);
+
 		if (error.length > 0) {
 			if (error.text().contains("You have exceeded"))
 				return;
 		}
 		
-		if (type != 'hit') {
+		if (watcher.type != 'hit') {
 			// var hitCount = $("body > div:nth-child(7) > table:nth-child(3) > tbody:nth-child(1) > tr", data).length;
 			var hitCount = $("table:nth-child(3) > tbody:nth-child(1) > tr", data).length;
-
+			hits = new Array();
 			// var links = $("a",data);
 		
 			for (var i = 0; i < hitCount; ++i) {
@@ -628,17 +554,10 @@ function parseURL(url, type, id, title, isAutoAccept) {
 					hit.id = idMatch[1];
 
 				hits[i] = hit;
-
-				// alert(hit.title);
 			}
 		} else {
 			var msgbox = $("#alertboxHeader", data);
-			// console.log(typeof $(data).text() + " - " + typeof $(msgbox).text());
-			// console.log($(data));
 			var hasCaptcha = ($(data).length > 0) ? ($(data).text()).contains("In order to accept your next HIT") : false;
-			
-			// console.log(msgbox);
-			// console.log("Data for HIT watcher received");
 			
 			if ($(msgbox).length > 0 && ($(msgbox).text()).contains("There are no more available HITs in this group.")) {
 				// If there aren't any more available, keep checking. If they were just previously available
@@ -646,38 +565,30 @@ function parseURL(url, type, id, title, isAutoAccept) {
 				// console.log("No more available.");
 			} else {
 				// If it's newly available, alert the user and start auto-stacking if that's desired.
-				var watcher = dispatch.getWatcherById(id);
-				// console.log($(data).html());
-				// console.log("Hit found!");
-				
 				//TODO We need to test for "You are not qualified to accept this HIT."
 				
 				if (hasCaptcha) console.log("Has captcha");
 
 				var uid = $("input[name='hitId']", data).attr("value");
-				var hit = new Hit(id, uid, isAutoAccept);
+				var hit = new Hit(watcher.id, uid, watcher.auto);
 				hit.requester = $("form:nth-child(7) > div:nth-child(9) > div:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2)", data).text().trim();
 				hit.title = $(".capsulelink_bold > div:nth-child(1)", data).text().trim();
 				hit.reward = $("td.capsule_field_text:nth-child(5) > span:nth-child(1)", data).text().trim();
 				hit.available = $("td.capsule_field_text:nth-child(8)", data).text().trim();
 				hit.time = $("td.capsule_field_text:nth-child(11)", data).text().trim();
 				
-				// console.log("Individual hit");
-				// console.log(hit);
-				
-				watcher.onHitCaught(hit);
-				if ((hasCaptcha || isAutoAccept) && watcher.isRunning)
+				// watcher.onHitCaught(hit);
+				if ((hasCaptcha || watcher.auto) && watcher.isRunning)
 					// We should probably toggle off all auto-accept hits when we encounter a captcha. Maybe send a special message to all mturk windows while we're at it.
 					// The special message could be some kind of banner that says that no more hits can be accepted in the background until the captcha is entered. (It would
 					// be pretty cool if we could pull up the captcha image in the background and just show it and the form to enter it from another page).
 					watcher.toggleOnOff();
+					
 			}
 		}
-		// alert(hits.length);
-		// return hits;
-		
-		// showHits(hits);
-		onHitsLoaded(hits, type, id, title);
+
+		// onHitsLoaded(hits, watcher);
+		watcher.setHits(hits || hit);
 	});
 }
 
@@ -1065,24 +976,12 @@ Watcher.prototype.onChanged = function() {
 	if (this.auto || this.isAlert)
 		this.alert();
 }
-Watcher.prototype.onHitCaught = function (hit) {
-	var hits = new Array();
-	hits.push(hit);
-	var id = this.id;
-	var type = this.type;
-	
-	sendHits(hits, type, id, this.name);
-}
 Watcher.prototype.start = function() {
-	var type = this.type;
-	var id = this.id;
-	var url = this.url;
-	var name = this.name;
-	var auto = this.auto;
+	var _this = this;
 	
 	// Set the interval and start right away
-	this.interval = setInterval(function(){parseURL(url, type, id, name, auto)}, this.time);
-	parseURL(url, type, id, name, auto);
+	this.interval = setInterval(function(){ parseURL(_this) }, this.time);
+	parseURL(this);
 	
 	this.isRunning = true;
 }
@@ -1099,9 +998,7 @@ Watcher.prototype.filterMessages = function(newHits) {
 	// Determine which hits, if any, the user should be notified of
 	// For now just showing new hits
 	var filteredHits = new Array();
-	
-	// console.log("Last Hits");
-	// console.log(this.lastHits);
+
 	if (typeof this.lastHits != 'undefined' && this.lastHits.length > 0) {
 		this.isChanged = false;
 		
@@ -1129,7 +1026,7 @@ Watcher.prototype.filterMessages = function(newHits) {
 
 		this.lastHits = newHits;
 		this.newHits = filteredHits;
-		// console.log("Returning filtered hits");
+
 		return filteredHits;
 	}
 	
@@ -1157,9 +1054,6 @@ Watcher.prototype.toggleOnOff = function() {
 		this.isOn = true;
 	}
 }
-Watcher.prototype.updateLastChecked = function() {
-	this.date = new Date();
-}
 Watcher.prototype.markViewed = function () {
 	if (this.isUpdated) {
 		this.unhighlight();
@@ -1179,6 +1073,63 @@ Watcher.prototype.highlight = function() {
 }
 Watcher.prototype.unhighlight = function() {
 	$("#dispatcher #" + this.id + " div.details").css('background-color', 'rgba(234, 234, 234, 1)');
+}
+Watcher.prototype.updateLastChecked = function() {
+	this.date = new Date();
+}
+Watcher.prototype.updateWatcherPanel = function() {
+	this.updateLastChecked();
+	$("#dispatcher #" + this.id + " .last_updated").text(this.getformattedTime());
+}
+Watcher.prototype.getformattedTime = function() {
+	var time = this.date;
+	var str = "";
+	var hours = time.getHours();
+	var ampm = "am";
+	
+	if (hours > 12) {
+		hours -= 12;
+		ampm = "pm";
+	} else if (hours == 0) {
+		hours = 12;
+	}
+		
+	str += hours + ":" 
+		+ ((time.getMinutes() < 10) ? "0" : "") + time.getMinutes() + ":"
+		+ ((time.getSeconds() < 10) ? "0" : "") + time.getSeconds()
+		+ ampm;
+		
+		return str;
+}
+Watcher.prototype.setHits = function(hits) {
+	if (typeof hits !== 'undefined') {
+		if (Object.prototype.toString.call(hits) != '[object Array]')
+			hits = new Array(hits);
+		sendHits(hits, this);
+	}
+	this.updateWatcherPanel();
+}
+Watcher.prototype.sendHits = function(hits) {
+	// Only send the hits if there is actually something to send
+	// In the near future this will have to be changed to show when HITs go away completely
+	if (typeof hits != 'undefined' && hits.length > 0) {
+		hits = this.filterMessages(hits);
+		
+		if (hits.length > 0) {
+			wasViewed = false;
+			
+			var msg = parcelize(this.name, hits);
+			localStorage.setItem('notifier_message', msg);
+			
+			// Show notification on dashboard, too
+			notificationPanel.add(new NotificationGroup(this.name, hits));
+
+			// Attempt to send a browser notification after a brief period of time. If another mturk
+			// page was visible when it received the hits, this will cancel out.
+			if (!document.hasFocus())
+				setTimeout(function() { sendBrowserNotification(hits, this); }, 100);
+		}
+	}
 }
 /** Watcher Stack and Queue
 	Stack - Grab as many as possible right away
@@ -1480,200 +1431,6 @@ AMTNotification.prototype.getDOMElement = function() {
 	return this.DOMElement;
 }
 
-
-
-
-// function createNotificationPanel() {
-	// $("body").append(
-		// $("<div>").addClass("notification_panel").attr('id', "receiver")
-			// .append("<h2></h2>")
-			// .hover(function(){showPanel()}, function(){hidePanel()})
-	// );
-
-	// addStyle("\
-		// #receiver.notification_panel { \
-			// position: fixed;\
-			// width: 400px;\
-			// bottom: 0px;\
-			// right: -410px;\
-			// background: rgba(255, 255, 255, 1);\
-			// padding: 5px;\
-			// font: 10pt Verdana;\
-			// border: 1px solid #d5d5d5;\
-			// border-size: 1px 0 0 1px;\
-			// overflow: auto;\
-			// border-radius:  16px 0 0 0;\
-			// }\
-		// .notification_panel h2, #details_panel h2 { font-size: 100%; font-weight: normal; margin: 0px }\
-		// .notification { padding: 3px 3px 0 5px; border-bottom: 1px solid #e9e9e9; position: relative; font: 10pt Verdana; }\
-		// .notification:last-child { border: none; padding-bottom: 3px }\
-		// .notification .mute { position: absolute; bottom: 4px; right: 5px; color: #999; cursor: pointer; font-size: 7pt }\
-		// .notification p { margin: -13px 0 0; padding: 0 }\
-		// .notification_panel a:link, .notification_panel a:visited {\
-			// font-size: 130%;\
-			// text-decoration: none;\
-			// color: #6bf;\
-			// }\
-		// .notification_panel a.title:link, .notification_panel a.title:visited {\
-			// display:block;\
-			// white-space: nowrap;\
-			// overflow: hidden;\
-			// text-overflow: ellipsis;\
-			// margin-bottom: 0px;\
-			// font-size: 9pt;\
-			// }\
-		// .notification_panel .links {\
-			// position: absolute;\
-			// bottom: 6px;\
-			// right: 35px;\
-			// }\
-		// .notification_panel a.hit_link {\
-			// font-size: 8pt;\
-			// color: #fafafa;\
-			// background: #6bf;\
-			// border-radius: 1px;\
-			// display: inline;\
-			// margin: 10px 5px 0 0;\
-			// padding: 0 6px;\
-			// }\
-		// .notification_panel a.hit_link:visited { background-color: #9df; }\
-		// .notification_panel a strong { color:black; }\
-		// .notification_panel strong { font-size: 80%; }\
-		// .notification_panel a.hit_link:hover { background: #8df; }\
-		// .notification_panel p {	margin: 1px 0 6px 0; }\
-		// .notification_panel .autoaccept {\
-			// background-color: rgba(148, 236, 255, .3);\
-			// background-color: rgba(214, 255, 91, 1);\
-		// }\
-		// .notification.not_qualified { background-color: rgba(245, 244, 229, 1) }\
-		// .notification_panel .new { background-color: rgba(220, 255, 228, 1); }");
-// }
-
-// function getPanel() {
-	// return $("#receiver.notification_panel");
-// }
-
-// function setPanelTitle(title) {
-	// var panel = getPanel();
-	
-	// $("h2", panel).text(title);
-// }
-
-// function clearPanel() {
-	// var panel = getPanel();
-	// $(".notification", panel).remove();
-// }
-
-// function showPanel() {
-	// var panel = getPanel();
-	// $(panel).css("right", "0");
-	
-	// panelHidden = false;
-// }
-
-// function hidePanel() {
-	// var panel = getPanel();
-	// $(panel).css("right", "-410px");
-
-	// panelHidden = true;
-// }
-
-
-/**
-	This notify function is for requester notification.
-**/
-// function notify(hits, type, watcher) {
-	// // panel = getPanel();
-	
-	// // if (type == 'requester') {
-		// // setPanelTitle(hits[0].requester);
-		// // $("h2", panel).show();
-	// // } else {
-		// // $("h2", panel).hide();
-	// // }
-	
-	// // if (hits != null) {
-		// // clearPanel();
-
-		// // for (i = 0; i < hits.length; ++i) {
-			// // if (isDashboard)
-				// // $(panel).append(createNotification(hits[i], type, watcher));
-			// // else
-				// // $(panel).append(createNotification(hits[i], type));
-		// // }
-		
-		// // showPanel();
-	// // }
-	
-	// notificationPanel.add(new NotificationGroup("Title", hits));
-// }
-
-function notify2(title, hits) {
-	notificationPanel.add(new NotificationGroup(title, hits));
-}
-
 function queue(id) {
 	localStorage.setItem("notifier_queue", id);
 }
-
-// function createNotification(hit, type, watcher) {
-	// var notification = $('<div>').addClass("notification");
-	// var content = "<a class=\"title\" href=\"" + hit.getURL('preview') + "\" title=\"" + hit.title + "\">" + hit.title + "</a>";
-	// content += "<p>";
-	// if (type != 'requester') content += "<a href=\"" + hit.requesterID + "\" target=\"_blank\"><strong>" + hit.requester + "</strong></a><br />";
-	// content += hit.reward + " - " + hit.available + " remaining</p><div class=\"links\">";
-	
-	// // TODO Fix this so we still can provide a preview for unqualified hits that still allow a preview
-	// if (typeof hit.id != 'undefined' && hit.id != "undefined") {
-		// if (hit.isAutoAccept) {
-			// content += "<a class=\"hit_link\" href=\"" + hit.getURL('view') + "\" target=\"_blank\">View</a>";
-			// content += "<a class=\"hit_link\" href=\"" + hit.getURL('return') + "\" target=\"_blank\">Return</a>";
-			// content += "<a class=\"hit_link\" href=\"javascript:queue(\'" + hit.id + "\')" + "\" target=\"_blank\">Queue</a>";
-		// } else {
-			// content += "<a class=\"hit_link\" href=\"" + hit.getURL('preview') + "\" target=\"_blank\">Preview</a>";
-			// content += "<a class=\"hit_link\" href=\"" + hit.getURL('accept') + "\" target=\"_blank\">Accept</a>";
-			// content += "<a class=\"hit_link\" href=\"" + hit.getURL('auto') + "\" target=\"_blank\">+Auto</a>";
-		// }
-	// } else {
-		// content += "<em>Not Qualified</em>&nbsp;&nbsp;"
-		// $(notification).addClass("not_qualified");
-	// }
-	
-	// content += "</div>";
-	
-	// $(notification).html(content);
-	// var muteButton = $('<div>').addClass("mute");
-	
-	// var id = hit.id;
-	// $(muteButton).text((!dispatch.isMuted(id)) ? "mute" : "muted");
-	// $(muteButton).click(function () {
-		// if (!isDashboard) {
-			// if ($(this).text() == "mute")
-				// localStorage.setItem('mute_hit', id + "," + new Date().getTime());
-			// else
-				// localStorage.setItem('unmute_hit', id + "," + new Date().getTime());
-		// } else {
-			// if (!dispatch.isMuted(id))
-				// dispatch.mute(id);
-			// else
-				// dispatch.unmute(id);
-		// }
-
-		// if ($(this).text() == "mute")
-			// $(this).text("muted");
-		// else
-			// $(this).text("mute");
-	// });
-
-	// $(notification).append(muteButton);
-	
-	// if (hit.isAutoAccept)
-		// $(notification).addClass("autoaccept");
-		
-	// if  (typeof watcher != 'undefined' && watcher.isNewHit(hit))
-		// $(notification).addClass("new");
-	
-	// // console.log(watcher);
-	
-	// return notification;
-// }
