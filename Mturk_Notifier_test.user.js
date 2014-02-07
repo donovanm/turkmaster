@@ -10,11 +10,11 @@
 // @grant       none
 // ==/UserScript==
 
-var panelHidden = true;
 var isDashboard = false;
 var isMain = true;		// Need a way to determine the main dashboard in case multiple dashboards are open. This is so remote watcher
 					    // requests don't add new watchers to multiple pages and cause mturk errors.
 var wasViewed = false;
+var isSoundOn = false;
 var dispatch = new Dispatch();
 var notificationPanel; 
 
@@ -87,12 +87,13 @@ function addWatcher(groupId, duration, type, name) {
 	localStorage.setItem('add_hit', msg);
 }
 function addHitWatchButton() {
-	var box = $(".message.success");
+	var box = $(".message.success h6");
 	// console.log("BOX");
 	// console.log(box);
 	var groupId = document.URL.match(/groupId=([A-Z0-9]+)/)[1];
 	
-	var button = $("<div>").text("+ Watch").addClass("watcher_button");
+	var button = $("<div>").addClass("watcher_button")
+		.append($("<a>").text("Watch this hit?").attr('href', "javascript:void(0)"));
 	var form = $("<div>").attr('id', 'add_watcher_form');
 	form.html("<h3>Add a watcher</h3>\
 				<p>Name <input id=\"watcherName\" type=\"text\" />\
@@ -125,12 +126,15 @@ function addHitWatchButton() {
 		// box = $("body > form:nth-child(7) > table:nth-child(8) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(2) > td:nth-child(1)");
 	}
 	box.append(button);
-	box.append(form);
+	$("body").append(form);
 	
 	addStyle("\
 		#add_watcher_form {\
 			position: fixed;\
-			margin: auto auto;\
+			width: 600px;\
+			top: 50px;\
+			left: 50%;\
+			margin: 50px -300px;\
 			background-color: #fcfcfe;\
 			border: 1px solid #aaa;\
 			border-radius: 1px;\
@@ -161,6 +165,9 @@ function addHitWatchButton() {
 			padding: 9px;\
 			font: 11pt Verdana;\
 			}\
+		.watcher_button { display: inline; }\
+		.watcher_button a { text-decoration: none; margin-left: 3em;	}\
+		.watcher_button a:hover { text-decoration: underline; }\
 		");
 }
 
@@ -317,10 +324,6 @@ function onStorageEvent(event) {
 	}
 }
 
-function getType(hits) {
-	return (isSameRequester(hits)) ? 'requester' : 'url';
-}
-
 /** This function takes an array of hits and determines if they are all from the same requester
 
 	argument	Hit[] hits		Array of hits to be evaluated
@@ -328,7 +331,6 @@ function getType(hits) {
 **/
 function isSameRequester(hits) {
 	if (this.length == 1) return false;
-	
 	if (hits.length > 1) {
 		var compareRequester = hits[0].requester;
 		for (i = 1; i < hits.length; ++i) {
@@ -339,8 +341,9 @@ function isSameRequester(hits) {
 	return true;
 }
 
-/**	This function accepts hits and puts parcelizes them to be sent as a message.
+/**	This function accepts hits and a title and parcelizes them to be sent as a message.
 	
+	arguemnt	title			Title of the watcher`	111111
 	argument	Hit[] hits		Array of hits to be parcelized
 	return		string			Parcelized string of Hit array
 **/
@@ -463,9 +466,6 @@ function requestWebNotifications() {
 }
 
 
-
-
-
 // This is the Hit object
 function Hit(id, uid, isAutoAccept) {
     var requester, url, title, reward, description, available, time, name, isAutoAccept;
@@ -484,42 +484,33 @@ Hit.prototype.setAutoAccept = function(isAutoAccept) {
 		this.url = "https://www.mturk.com/mturk/preview?groupId=" + this.id;
 }
 Hit.prototype.getURL = function(type) {
-	// Types are 'preview', 'accept', 'auto', 'view', 'return'
 	switch(type) {
-		case 'preview':
-			return "https://www.mturk.com/mturk/preview?groupId=" + this.id;
-			break;
-			
-		case 'accept':
-			return "https://www.mturk.com/mturk/previewandaccept?groupId=" + this.id;
-			break;
-			
-		case 'auto':
-			return "https://www.mturk.com/mturk/previewandaccept?groupId=" + this.id + "&autoAcceptEnabled=true";
-			break;
-			
-		case 'view':
-			return "https://www.mturk.com/mturk/continue?hitId=" + this.uid;
-			break;
-			
-		case 'return':
-			// This will need to be changed. It's the same as 'view' until more testing is done on AMT's return functionality
-			return "https://www.mturk.com/mturk/preview?hitId=" + this.uid;
-			break;
-			
-		default:
-			return "";
+	case 'preview':
+		return "https://www.mturk.com/mturk/preview?groupId=" + this.id;
+		break;
+	case 'accept':
+		return "https://www.mturk.com/mturk/previewandaccept?groupId=" + this.id;
+		break;
+	case 'auto':
+		return "https://www.mturk.com/mturk/previewandaccept?groupId=" + this.id + "&autoAcceptEnabled=true";
+		break;
+	case 'view':
+		return "https://www.mturk.com/mturk/continue?hitId=" + this.uid;
+		break;
+	case 'return':
+		// This will need to be changed. It's the same as 'view' until more testing is done on AMT's return functionality
+		return "https://www.mturk.com/mturk/preview?hitId=" + this.uid;
+		break;
+	default:
+		return "";
 	}
 }
 
 // Message object
 function Message() {
-	// Status (changed): Unchanged, Added, Removed, Count
-	// We should mark each Hit in the message with what has changed. The
-	// count change should be sent with this.
-	// The message will also tell the client whether or not to pop-up
-	// the notification.
-
+	/*  Status (changed): Unchanged, Added, Removed, Count
+		We should mark each Hit in the message with what has changed. The count change should be sent with this.
+		The message will also tell the client whether or not to pop-up the notification.	*/
 }
 
 // Create the panel for dispatch
@@ -922,7 +913,7 @@ Watcher.prototype.markViewed = function () {
 Watcher.prototype.alert = function () {
 	var sound = new Audio();
 	
-	if (sound.canPlayType('audio/ogg;codecs="vorbis"')) {
+	if (sound.canPlayType('audio/ogg;codecs="vorbis"') && isSoundOn) {
 		sound.src = "http://rpg.hamsterrepublic.com/wiki-images/3/3e/Heal8-Bit.ogg";
 		sound.play();
 	}
@@ -985,8 +976,10 @@ Watcher.prototype.sendHits = function(hits) {
 
 			// Attempt to send a browser notification after a brief period of time. If another mturk
 			// page was visible when it received the hits, this will cancel out.
-			if (!document.hasFocus())
-				setTimeout(function() { sendBrowserNotification(hits, this); }, 100);
+			if (!document.hasFocus()) {
+				var _this = this;
+				setTimeout(function() { sendBrowserNotification(hits, _this); }, 100);
+			}
 		}
 	}
 }
