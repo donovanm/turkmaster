@@ -51,16 +51,11 @@ $(window).unload(function() {
 function storeIgnoreList() {
 	var size = dispatch.ignoreList.length;
 	var list = "";
-	
-	// console.log("Storing ignore list(" + size + "): ");
-	// console.log(dispatch.ignoreList);
+
 	if (size > 0) {
-		// console.log("OK. Bout to start the store loop");
 		for (var i = 0; i < size; i++)
 			list += dispatch.ignoreList[i] + ((i + 1 < size) ? '`' : "");
-			
 		localStorage.setItem('notifier_ignore', list);
-		// console.log("Ignore list saved");
 	}
 }
 function loadIgnoreList() {
@@ -295,17 +290,11 @@ function onStorageEvent(event) {
 			// This is so we can determine whether or not to send a browser notification
 			// that'll show up everywhere.
 			if (!isDashboard) {
-				// console.log(new Date().getTime());
-				// console.log("Received message: " + event.newValue);
-		
 				var msg = deparcelize(event.newValue);
 				var hits = msg['hits'];
 				var title = msg['title'];
-				// showHits(hits, getType(hits));
 				showHits(title, hits);
 			}
-			// alert('Message changed: ' + event.newValue);
-			
 			break;
 		case 'notification_viewed' :
 			if (isDashboard) {
@@ -378,7 +367,6 @@ function isSameRequester(hits) {
 				return false;
 		}
 	}
-	
 	return true;
 }
 
@@ -389,9 +377,6 @@ function isSameRequester(hits) {
 **/
 function parcelize(title, hits) {
 	var hitString = title + '|';
-	
-	// console.log("Parcelizing this hit");
-	// console.log(hits);
 	
 	if (hits != null && hits.length > 0) {
 		for(i = 0; i < hits.length; ++i) {
@@ -409,7 +394,6 @@ function parcelize(title, hits) {
 			if (i + 1 < hits.length)
 				hitString += "|";
 		}
-
 		return hitString;
 	}
 }
@@ -457,8 +441,6 @@ function showHits(title, hits) {
 		
 	notificationPanel.add(new NotificationGroup(title, hits));
 }
-
-
 
 function sendBrowserNotification(hits, watcher) {
 	// Let's check if the browser supports notifications
@@ -577,7 +559,6 @@ function parseURL(watcher) {
 				hit.available = $("td.capsule_field_text:nth-child(8)", data).text().trim();
 				hit.time = $("td.capsule_field_text:nth-child(11)", data).text().trim();
 				
-				// watcher.onHitCaught(hit);
 				if ((hasCaptcha || watcher.auto) && watcher.isRunning)
 					// We should probably toggle off all auto-accept hits when we encounter a captcha. Maybe send a special message to all mturk windows while we're at it.
 					// The special message could be some kind of banner that says that no more hits can be accepted in the background until the captcha is entered. (It would
@@ -586,8 +567,6 @@ function parseURL(watcher) {
 					
 			}
 		}
-
-		// onHitsLoaded(hits, watcher);
 		watcher.setHits(hits || hit);
 	});
 }
@@ -722,16 +701,7 @@ function showDetailsPanel(watcher) {
 	$("*", panel).remove();
 
 	if (hits.length > 0) {
-		// for (i = 0; i < hits.length; ++i) {
-			// var hit = hits[i];
-			// notification = createNotification(hit, type, watcher);
-			// // console.log("Notification " + (i+1) + ":");
-			// // console.log(notification);
-			// $(panel).append(notification);			
-		// }
-		
 		$(panel).append((new NotificationGroup(null, hits, false, watcher)).getDOMElement());
-		// console.log(watcher);
 	} else {
 		$(panel).append($('<div>').append('<h2>').css('text-align', 'center').text("There are no HITs avaialable."));
 	}
@@ -771,7 +741,6 @@ Dispatch.prototype.stop = function() {
 	}
 	this.isRunning = false;
 	this.interruptStart = true;
-	// alert("STOP");
 }
 Dispatch.prototype.add = function(watcher) {
 	this.watchers.push(watcher);
@@ -795,8 +764,6 @@ Dispatch.prototype.getWatcherById = function(id) {
 				return this.watchers[i];
 		}
 	}
-
-	console.log("No watcher found with id '" + id + "'");
 	return null;
 }
 Dispatch.prototype.getWatcher = function(index) {
@@ -809,12 +776,8 @@ Dispatch.prototype.isMuted = function(hitID) {
 	return (this.ignoreList.indexOf(hitID) != -1) ? true : false;
 }
 Dispatch.prototype.mute = function(hitID) {
-	if (!this.isMuted(hitID)) {
+	if (!this.isMuted(hitID))
 		this.ignoreList.push(hitID);
-		// console.log("Successfully muted");
-	} else {
-		// console.log("Already muted");
-	}
 }
 Dispatch.prototype.unmute = function(hitID) {
 	if (this.isMuted(hitID)) {
@@ -853,7 +816,6 @@ Dispatch.prototype.getHTML = function() {
 			.html("<img src=\"http://qrcode.littleidiot.be/qr-little/site/images/icon-settings.png\" />")
 			.click(function() { requestWebNotifications(); })
 		)
-		// .append("Mturk Notifier <a id=\"start_button\" class=\"on_off\" href=\"javascript:void(0)\">OFF</a>");
 		.append("Mturk Notifier")
 		.append("<div class=\"on_off\"><a" + (dispatch.isRunning ? " class=\"selected\"" : "") + ">ON</a><a" + (!dispatch.isRunning ? " class=\"selected\"" : "") + ">OFF</a></div>");
 
@@ -970,7 +932,6 @@ Watcher.prototype.isNewHit = function (hit) {
 Watcher.prototype.onChanged = function() {
 	this.highlight();
 	this.isUpdated = true;
-	// console.log("onChanged triggered for " + this.name + "-- ID = " + this.id);
 	
 	// Sound alert for auto-accept HIT watchers and watchers that have the alert set on
 	if (this.auto || this.isAlert)
@@ -986,12 +947,9 @@ Watcher.prototype.start = function() {
 	this.isRunning = true;
 }
 Watcher.prototype.stop = function() {
-	// Stop the interval object
+	// Stop the interval object and the timer object
 	clearInterval(this.interval);
-	
-	// Stop the timer object
 	clearTimeout(this.timer);
-	
 	this.isRunning = false;
 }
 Watcher.prototype.filterMessages = function(newHits) {
