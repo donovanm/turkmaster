@@ -36,7 +36,6 @@ $(document).ready(function(){
 		addHitWatchButton();
 	}
 	
-	// createNotificationPanel();
 	notificationPanel = new NotificationPanel();
 	fixTitle();
 	
@@ -494,82 +493,7 @@ function requestWebNotifications() {
 }
 
 
-function parseURL(watcher) {
-	$.get(watcher.url, function(data) {
-		var hits;
-		var data = $(data);
-		var error = $(".error_title", data);
 
-		if (error.length > 0) {
-			if (error.text().contains("You have exceeded"))
-				return;
-		}
-		
-		if (watcher.type != 'hit') {
-			// var hitCount = $("body > div:nth-child(7) > table:nth-child(3) > tbody:nth-child(1) > tr", data).length;
-			var hitCount = $("table:nth-child(3) > tbody:nth-child(1) > tr", data).length;
-			hits = new Array();
-			// var links = $("a",data);
-		
-			for (var i = 0; i < hitCount; ++i) {
-				// base = "body > div:nth-child(7) > table:nth-child(3) > tbody:nth-child(1) > tr:nth-child(" + (i+1) + ") > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > ";
-				base = "table:nth-child(3) > tbody:nth-child(1) > tr:nth-child(" + (i+1) + ") > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > ";
-				qryRequester = base + "tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > a";
-				qryUrl = base + "tr:nth-child(2) > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(3) > span:nth-child(1) > a";
-				qryReward = base + "tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > span:nth-child(1)"
-				qryTitle = base + "tr:nth-child(2) > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(1) > a:nth-child(1)";
-				qryAvailable = base + "tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(3) > table > tbody > tr:nth-child(2) > td:nth-child(2)";
-				qryTime = base + "tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > table > tbody > tr:nth-child(2) > td:nth-child(2)";
-
-				var hit = new Hit();
-				
-				hit.requester = $(qryRequester, data).text();
-				hit.requesterID = $(qryRequester, data).attr("href");
-				hit.url = $(qryUrl, data).attr("href");
-				hit.title = $(qryTitle, data).text().trim();
-				hit.reward = $(qryReward, data).text().trim();
-				hit.available = $(qryAvailable, data).text().trim();
-				hit.time = $(qryTime, data).text().trim();
-				
-				var idMatch = hit.url.match(/groupId=([A-Z0-9]+)/);
-				if (idMatch != null)
-					hit.id = idMatch[1];
-
-				hits[i] = hit;
-			}
-		} else {
-			var msgbox = $("#alertboxHeader", data);
-			var hasCaptcha = ($(data).length > 0) ? ($(data).text()).contains("In order to accept your next HIT") : false;
-			
-			if ($(msgbox).length > 0 && ($(msgbox).text()).contains("There are no more available HITs in this group.")) {
-				// If there aren't any more available, keep checking. If they were just previously available
-				// then we should alert the user that it's gone.
-				// console.log("No more available.");
-			} else {
-				// If it's newly available, alert the user and start auto-stacking if that's desired.
-				//TODO We need to test for "You are not qualified to accept this HIT."
-				
-				if (hasCaptcha) console.log("Has captcha");
-
-				var uid = $("input[name='hitId']", data).attr("value");
-				var hit = new Hit(watcher.id, uid, watcher.auto);
-				hit.requester = $("form:nth-child(7) > div:nth-child(9) > div:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2)", data).text().trim();
-				hit.title = $(".capsulelink_bold > div:nth-child(1)", data).text().trim();
-				hit.reward = $("td.capsule_field_text:nth-child(5) > span:nth-child(1)", data).text().trim();
-				hit.available = $("td.capsule_field_text:nth-child(8)", data).text().trim();
-				hit.time = $("td.capsule_field_text:nth-child(11)", data).text().trim();
-				
-				if ((hasCaptcha || watcher.auto) && watcher.isRunning)
-					// We should probably toggle off all auto-accept hits when we encounter a captcha. Maybe send a special message to all mturk windows while we're at it.
-					// The special message could be some kind of banner that says that no more hits can be accepted in the background until the captcha is entered. (It would
-					// be pretty cool if we could pull up the captcha image in the background and just show it and the form to enter it from another page).
-					watcher.toggleOnOff();
-					
-			}
-		}
-		watcher.setHits(hits || hit);
-	});
-}
 
 
 // This is the Hit object
@@ -837,6 +761,13 @@ Dispatch.prototype.getHTML = function() {
 	return html;
 }
 
+/** The QuickWatcher simply refreshes the first page for new hits (every 1 second or so) and tries to 
+	match any requester on the list that shows up on the page. Could possibly iterate through each
+	requester initially before doing the quick refresh.
+	
+	Experimental.
+**/
+function QuickWatcher() { var requester = new Array(); }
 
 /**	The Watcher object. This is what controls the pages that are monitored and how often
 
@@ -941,8 +872,8 @@ Watcher.prototype.start = function() {
 	var _this = this;
 	
 	// Set the interval and start right away
-	this.interval = setInterval(function(){ parseURL(_this) }, this.time);
-	parseURL(this);
+	this.interval = setInterval(function(){ _this.parseURL() }, this.time);
+	this.parseURL();
 	
 	this.isRunning = true;
 }
@@ -1088,6 +1019,86 @@ Watcher.prototype.sendHits = function(hits) {
 				setTimeout(function() { sendBrowserNotification(hits, this); }, 100);
 		}
 	}
+}
+Watcher.prototype.parseURL = function() {
+	var _this = this;
+	$.get(this.url, function(data) {
+		var hits;
+		var data = $(data);
+		var error = $(".error_title", data);
+
+		if (error.length > 0) {
+			if (error.text().contains("You have exceeded"))
+				return;
+		}
+
+		if (_this.type != 'hit') {
+			// var hitCount = $("body > div:nth-child(7) > table:nth-child(3) > tbody:nth-child(1) > tr", data).length;
+			var hitCount = $("table:nth-child(3) > tbody:nth-child(1) > tr", data).length;
+			hits = new Array();
+			// var links = $("a",data);
+		
+			for (var i = 0; i < hitCount; ++i) {
+				// base = "body > div:nth-child(7) > table:nth-child(3) > tbody:nth-child(1) > tr:nth-child(" + (i+1) + ") > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > ";
+				base = "table:nth-child(3) > tbody:nth-child(1) > tr:nth-child(" + (i+1) + ") > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > ";
+				qryRequester = base + "tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > a";
+				qryUrl = base + "tr:nth-child(2) > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(3) > span:nth-child(1) > a";
+				qryReward = base + "tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > span:nth-child(1)"
+				qryTitle = base + "tr:nth-child(2) > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(1) > a:nth-child(1)";
+				qryAvailable = base + "tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(3) > table > tbody > tr:nth-child(2) > td:nth-child(2)";
+				qryTime = base + "tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > table > tbody > tr:nth-child(2) > td:nth-child(2)";
+
+				var hit = new Hit();
+				
+				hit.requester = $(qryRequester, data).text();
+				hit.requesterID = $(qryRequester, data).attr("href");
+				hit.url = $(qryUrl, data).attr("href");
+				hit.title = $(qryTitle, data).text().trim();
+				hit.reward = $(qryReward, data).text().trim();
+				hit.available = $(qryAvailable, data).text().trim();
+				hit.time = $(qryTime, data).text().trim();
+				
+				var idMatch = hit.url.match(/groupId=([A-Z0-9]+)/);
+				if (idMatch != null)
+					hit.id = idMatch[1];
+
+				hits[i] = hit;
+			}
+		} else {
+			var msgbox = $("#alertboxHeader", data);
+			var hasCaptcha = ($(data).length > 0) ? ($(data).text()).contains("In order to accept your next HIT") : false;
+			
+			if ($(msgbox).length > 0 && ($(msgbox).text()).contains("There are no more available HITs in this group.")) {
+				// If there aren't any more available, keep checking. If they were just previously available
+				// then we should alert the user that it's gone.
+				// console.log("No more available.");
+			} else {
+				// If it's newly available, alert the user and start auto-stacking if that's desired.
+				//TODO We need to test for "You are not qualified to accept this HIT."
+				
+				if (hasCaptcha) console.log("Has captcha");
+
+				var uid = $("input[name='hitId']", data).attr("value");
+				var hit = new Hit(_this.id, uid, _this.auto);
+				hit.requester = $("form:nth-child(7) > div:nth-child(9) > div:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2)", data).text().trim();
+				hit.title = $(".capsulelink_bold > div:nth-child(1)", data).text().trim();
+				hit.reward = $("td.capsule_field_text:nth-child(5) > span:nth-child(1)", data).text().trim();
+				hit.available = $("td.capsule_field_text:nth-child(8)", data).text().trim();
+				hit.time = $("td.capsule_field_text:nth-child(11)", data).text().trim();
+				
+				if ((hasCaptcha || _this.auto) && _this.isRunning)
+					// We should probably toggle off all auto-accept hits when we encounter a captcha. Maybe send a special message to all mturk windows while we're at it.
+					// The special message could be some kind of banner that says that no more hits can be accepted in the background until the captcha is entered. (It would
+					// be pretty cool if we could pull up the captcha image in the background and just show it and the form to enter it from another page).
+					_this.toggleOnOff();
+					
+			}
+		}
+		_this.setHits(hits || hit);
+	});
+}
+Watcher.prototype.onDataReceived = function(attrs) {
+
 }
 /** Watcher Stack and Queue
 	Stack - Grab as many as possible right away
