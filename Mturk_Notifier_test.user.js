@@ -5,7 +5,7 @@
 // @include     https://www.mturk.com/mturk/*
 // @include		https://www.mturk.com/mturk/dashboard
 // @include		https://www.mturk.com/mturk/myhits
-// @version     0.86
+// @version     0.88
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js
 // @grant       none
 // ==/UserScript==
@@ -14,9 +14,12 @@ var isDashboard = false;
 var isMain = true;		// Need a way to determine the main dashboard in case multiple dashboards are open. This is so remote watcher
 					    // requests don't add new watchers to multiple pages and cause mturk errors.
 var wasViewed = false;
-var isSoundOn = false;
 var dispatch = new Dispatch();
 var notificationPanel; 
+
+// Options
+var isSoundOn = true;
+var isAnimationOn = true;
 
 $(document).ready(function(){
     var base, qryRequester, qryUrl, qryReward, qryTitle;
@@ -258,18 +261,22 @@ function start() {
 }
 
 function onStorageEvent(event) {
-	// console.log("Event key: " + event.key);
-	
 	switch(event.key) {
 		case 'notifier_message': 
 			// Notify server if the tab was in focus when the message was received.
 			// This is so we can determine whether or not to send a browser notification
 			// that'll show up everywhere.
-			if (!isDashboard) {
-				var msg = deparcelize(event.newValue);
-				var hits = msg['hits'];
-				var title = msg['title'];
-				showHits(title, hits);
+			if (!isDashboard || (isDashboard && !isMain)) {
+				var message = JSON.parse(event.newValue);
+				var hits = message.hits;
+				
+				// Re-create the hits so their methods can be used
+				for(var i = hits.length; i--;) hits[i] = new Hit(hits[i]);
+
+				// Show the hits and let the dashboard know it was seen
+				if (document.hasFocus())
+					localStorage.setItem('notification_viewed', new Date().getTime());
+				notificationPanel.add(new NotificationGroup(message.title, hits));
 			}
 			break;
 		case 'notification_viewed' :
@@ -313,7 +320,6 @@ function onStorageEvent(event) {
 		case 'notifier_request_main' :
 			if (isDashboard && isMain)
 				localStorage.setItem('notifier_request_denied', new Date().getTime());
-				// console.log("Denying main dashboard rights request");
 			break;
 		case 'notifier_request_denied' :
 			if (isDashboard && isMain) {
@@ -339,79 +345,6 @@ function isSameRequester(hits) {
 		}
 	}
 	return true;
-}
-
-/**	This function accepts hits and a title and parcelizes them to be sent as a message.
-	
-	arguemnt	title			Title of the watcher`	111111
-	argument	Hit[] hits		Array of hits to be parcelized
-	return		string			Parcelized string of Hit array
-**/
-function parcelize(title, hits) {
-	var hitString = title + '|';
-	
-	if (hits != null && hits.length > 0) {
-		for(i = 0; i < hits.length; ++i) {
-			var hit = hits[i];
-			hitString += hit.title + "`";
-			hitString += hit.url + "`";
-			hitString += hit.reward + "`";
-			hitString += hit.available + "`";
-			hitString += hit.requester + "`";
-			hitString += hit.requesterID + "`";
-			hitString += hit.id + "`";
-			hitString += hit.uid + "`";
-			hitString += (hit.isAutoAccept) ? 1 : 0;
-			
-			if (i + 1 < hits.length)
-				hitString += "|";
-		}
-		return hitString;
-	}
-}
-
-/**	This function accepts a string that is a parcelized array of Hits.
-	
-	argument	String hits		Parcelized string of Hit array
-	return		Hit[]			Array of hits to be parcelized
-**/
-function deparcelize(hits) {
-	var hitArray = new Array();
-	var title = hits.split('|')[0];
-	hits = hits.substring(title.length + 1, hits.length-1);
-	var hitsStr = hits.split('|');
-	
-	if (typeof hits != 'undefined') {
-		for (i = 0; i < hitsStr.length; ++i) {
-			var hitStr = hitsStr[i].split('`');
-			var hit = new Hit();
-			
-			// The index has to specifically match the value or things will be wrong
-			hit.title = hitStr[0];
-			hit.url = hitStr[1];
-			hit.reward = hitStr[2];
-			hit.available = hitStr[3];
-			hit.requester = hitStr[4];
-			hit.requesterID = hitStr[5];
-			hit.id = hitStr[6];
-			hit.uid = hitStr[7];
-			hit.isAutoAccept = (hitStr[8] == "1") ? true : false;
-		
-			hitArray[i] = hit;
-		}
-		
-		return { 
-			title: title,
-			hits: hitArray };
-	}
-}
-
-function showHits(title, hits) {
-	// If this page is in focus, let the server know so it won't send a browser notification
-	if (document.hasFocus())
-		localStorage.setItem('notification_viewed', new Date().getTime());
-		
-	notificationPanel.add(new NotificationGroup(title, hits));
 }
 
 function sendBrowserNotification(hits, watcher) {
@@ -467,21 +400,18 @@ function requestWebNotifications() {
 
 
 // This is the Hit object
-function Hit(id, uid, isAutoAccept) {
-    var requester, url, title, reward, description, available, time, name, isAutoAccept;
-
-	this.id = id;
-	if (typeof uid != 'undefined') this.uid = uid;
-	this.setAutoAccept(isAutoAccept);
-	
-}
-Hit.prototype.setAutoAccept = function(isAutoAccept) {
-	this.isAutoAccept = isAutoAccept;
-	
-	if (isAutoAccept)
-		this.url = "https://www.mturk.com/mturk/preview?hitId=" + this.uid;
-	else
-		this.url = "https://www.mturk.com/mturk/preview?groupId=" + this.id;
+function Hit(attrs) {
+	var attrs = attrs || {};
+	this.id 			= attrs.id;
+	this.uid 			= attrs.uid;
+	this.isAutoAccept 	= attrs.isAutoAccept || false;
+	this.requester 		= attrs.requester;
+	this.url 			= attrs.url;
+	this.title 			= attrs.title;
+	this.reward 		= attrs.reward;
+	this.description 	= attrs.description;
+	this.available 		= attrs.available;
+	this.time 			= attrs.time;
 }
 Hit.prototype.getURL = function(type) {
 	switch(type) {
@@ -967,9 +897,9 @@ Watcher.prototype.sendHits = function(hits) {
 		
 		if (hits.length > 0) {
 			wasViewed = false;
-			
-			var msg = parcelize(this.name, hits);
-			localStorage.setItem('notifier_message', msg);
+
+			// Send hits
+			localStorage.setItem('notifier_message', JSON.stringify({'title':this.name, 'hits':hits},null,4));
 			
 			// Show notification on dashboard, too
 			notificationPanel.add(new NotificationGroup(this.name, hits));
@@ -1046,7 +976,7 @@ Watcher.prototype.parseHitPage = function(data) {
 		if (hasCaptcha) console.log("Has captcha");
 
 		var uid = $("input[name='hitId']", data).attr("value");
-		var hit = new Hit(this.id, uid, this.auto);
+		var hit = new Hit({id: this.id, uid: uid, isAutoAccept: this.auto});
 		hit.requester = $("form:nth-child(7) > div:nth-child(9) > div:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2)", data).text().trim();
 		hit.title = $(".capsulelink_bold > div:nth-child(1)", data).text().trim();
 		hit.reward = $("td.capsule_field_text:nth-child(5) > span:nth-child(1)", data).text().trim();
@@ -1108,20 +1038,20 @@ NotificationPanel.prototype.remove = function(notification) {
 }
 NotificationPanel.prototype.show = function() {
 	if (this.isHidden) {
-		if (!document.hidden) {
+		if (document.hasFocus() && isAnimationOn) {
 			this.animatePanel(-400, 0);
 		} else {
-			$(this.getDOMElement).css('right', "0");
+			this.getDOMElement().css('right', "0px");
 		}
 	}
 	this.isHidden = false;
 }
 NotificationPanel.prototype.hide = function() {
 	if (!this.isHidden) {
-		if (!document.hidden) {
+		if (document.hasFocus() && isAnimationOn) {
 			this.animatePanel(0, -400);
 		} else {
-			$(this.getDOMElement).css('right', "-400");
+			this.getDOMElement().css('right', "-400px");
 		}
 	}
 	this.isHidden = true;
@@ -1221,12 +1151,12 @@ NotificationPanel.prototype.removeFromPanel = function(notification) {
 }
 NotificationPanel.prototype.onTimeoutListener = function(notification) {
 	if (this.notifications.length > 1) {
-		if (!document.hidden) {
-			notification.fadeOut(750);
-			var _this = this;
-			setTimeout(function() { _this.remove(notification) }, 510);
+		var _this = this;
+		if (document.hasFocus() && isAnimationOn) {
+			notification.fadeOut(700);
+			setTimeout(function() { _this.remove(notification) }, 705);
 		} else {
-			this.remove(notification);
+			setTimeout(function() { _this.remove(notification) }, 705);
 		}
 	} else {
 		this.hide();
@@ -1241,7 +1171,7 @@ function NotificationGroup(title, hits, isSticky, watcher) {
 	this.title = title;
 	this.hits = hits;
 	this.isSticky = (typeof isSticky != 'undefined') ? isSticky : this.hasAutoAccept();
-	this.timeout = (this.isSticky) ? 15000 : 7500;
+	this.timeout = (this.isSticky) ? 15000 : 6000;
 	this.hasTimedOut = false;
 	if (typeof watcher != 'undefined') this.watcher = watcher;
 	
@@ -1273,7 +1203,6 @@ NotificationGroup.prototype.hasAutoAccept = function() {
 	var hasAutoAccept = false;
 	for (var i = 0; i < this.hits.length; i++)
 		if (this.hits[i].isAutoAccept) hasAutoAccept = true;
-		
 	return hasAutoAccept;
 }
 NotificationGroup.prototype.fadeOut = function(duration) {
