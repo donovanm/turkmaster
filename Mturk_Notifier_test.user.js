@@ -323,8 +323,7 @@ function onStorageEvent(event) {
 			break;
 		case 'notifier_request_denied' :
 			if (isDashboard && isMain) {
-				isMain = false;
-				dispatch.hideWatchers();
+				dispatch.onRequestMainDenied();
 			}
 			break;
 	}
@@ -453,11 +452,14 @@ function createDispatchPanel() {
 			.append($(pageElements))
 	);
 	$("body").prepend(dispatch.getHTML());
-	addStyle("#dispatcher { background-color: #f5f5f5; position: fixed; top: 0px; float: left; width: 270px; font: 8pt Helvetica; height: 100%; overflow: auto }\
-		#content_container { position: absolute; left: 275px; top: 0; right: 0; border-left: 2px solid #dadada }\
-		#dispatcher #controller { text-align: center; font: 140% Helvetica; position: relative }\
-		#dispatcher #controller .on_off { margin: 5px 5px 0 0 }\
+	addStyle("#dispatcher { background-color: #f5f5f5; position: fixed; top: 0px; float: left; height: 100%;  width: 270px; font: 8pt Helvetica;  margin-left: -5px }\
+		#content_container { position: absolute; left: 270px; top: 0; right: 0; border-left: 2px solid #dadada }\
+		#dispatcher #controller { text-align: center; font: 200% Candara; position: relative; height: 25px; }\
+		#dispatcher #controller .on_off { margin: 7px 5px 0 0 }\
 		#dispatcher #controller .on_off a { font: 80% Helvetica }\
+		#dispatcher #watcher_container { position: absolute; top: 25px; bottom: 0; overflow-y:auto;}\
+		#dispatcher #watcher_container a.close { text-decoration: none; color: #555; background-color: #fff; padding: 3px 10px; border: 1px solid #aaa; border-radius: 2px }\
+		#dispatcher #watcher_container a.close:hover { background-color: #def; border-color: #aaa }\
 		#dispatcher #settings { float: left; margin: 3px 2px }\
 		#dispatcher div { font-size: 8pt }\
 		#dispatcher .watcher { margin: 3px; background-color: #fff; position: relative; border-bottom: 1px solid #ddd; border-right: 1px solid #ddd; }\
@@ -615,7 +617,17 @@ Dispatch.prototype.hideWatchers = function() {
 		.css('color', "#ff6b6b")
 		.css('padding', "5px")
 		.css('text-align', "center")
-		.append("There is already a notifier running on a different page.");
+		.append($("<p>")
+			.text("There is already a notifier running on a different page."))
+		.append($("<a>")
+			.html("Close")
+			.addClass("close")
+			.attr('href', "javascript:void(0)")
+			.click(function() {
+				$("#dispatcher").css('display', "none");
+				$("#content_container").css('left', "0px");
+				})
+			);
 }
 Dispatch.prototype.getHTML = function() {
 	// Create the HTML to display the dispatcher
@@ -650,6 +662,10 @@ Dispatch.prototype.getHTML = function() {
 	});
 	
 	return html;
+}
+Dispatch.prototype.onRequestMainDenied = function() {
+	isMain = false;
+	dispatch.hideWatchers();
 }
 
 /** The QuickWatcher simply refreshes the first page for new hits (every 1 second or so) and tries to 
