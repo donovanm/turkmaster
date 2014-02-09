@@ -45,7 +45,8 @@ $(document).ready(function(){
 }); 
 
 $(window).unload(function() {
-	dispatch.ignoreList.save();
+	if (isDashboard && isMain)
+		dispatch.ignoreList.save();
 });
 
 
@@ -166,15 +167,15 @@ function loadHits() {
 	dispatch.add(new Watcher("https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=survey&minReward=0.25&qualifiedFor=on&x=13&y=10", 30000, 'url', "Surveys $0.25 and up")); //$.25 surveys
 	dispatch.add(new Watcher("https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=qualification&minReward=0.00&x=0&y=0", 300000, 'url', "Qualification HITs")); // Qualification HITs
 	dispatch.add(new Watcher("https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=transcribe&minReward=0.60&qualifiedFor=on&x=0&y=0", 60000, 'url', "Transcription HITs")); // Transcription HITs
-	dispatch.add(new Watcher("https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=Laura+Harrison&minReward=0.00&x=7&y=1", 10000, 'url', "Easy $8 survey"));
-	dispatch.add(new Watcher("2FH56XBAT2D5VV0DSCUQ8JGA0ZV048", 20000, 'hit', "25 seconds of audio")); // crowdsurf hit
+	// dispatch.add(new Watcher("https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=Laura+Harrison&minReward=0.00&x=7&y=1", 10000, 'url', "Easy $8 survey"));
+	// dispatch.add(new Watcher("2FH56XBAT2D5VV0DSCUQ8JGA0ZV048", 20000, 'hit', "25 seconds of audio")); // crowdsurf hit
 	dispatch.add(new Watcher("2C4PHMVHVKCJ6T0G85VJB9LU493538", 180000, 'hit', "Crowdsource .20 keywords")); // crowdsource
-	// dispatch.add(new Watcher("2KGJ1XERSQV6DMLJAXK3PVWF2PL088", 20000, 'hit', "ACME English", {auto:true}));
-	// dispatch.add(new Watcher("2IUC1QP6AUC2D8G00SSXBV0KS4C07H", 30000, 'hit', "ACME Transcription", {alert:true}));
+	dispatch.add(new Watcher("2KGJ1XERSQV6DMLJAXK3PVWF2PL088", 20000, 'hit', "ACME English", {auto:true}));
+	dispatch.add(new Watcher("2IUC1QP6AUC2D8G00SSXBV0KS4C07H", 35000, 'hit', "ACME Transcription", {alert:true}));
 	// dispatch.add(new Watcher("2HGWQIHPCGJ6H9UR6LWXR0JPSTN175", 15000, 'hit', "Taskrabbit Auto", {auto:true}));
 	// dispatch.add(new Watcher("2FH56XBAT2D9NQFBUKUQAJG7U3M04G", 15000, 'hit', "$10 hit", {auto:true}));
 	// dispatch.add(new Watcher("2RTSP6AUC26HG6O1Q2UVAFK2DRN29X", 13000, 'hit', "$20 Market Research", {auto:true}));
-	dispatch.add(new Watcher("2PBXCNHMVHVKTTYQLPT7AJ7GOYX13M", 15000, 'hit', "Receipt hit"));
+	// dispatch.add(new Watcher("2PBXCNHMVHVKTTYQLPT7AJ7GOYX13M", 15000, 'hit', "Receipt hit"));
 	// dispatch.add(new Watcher("2YEAJIA0RYNJTANGW8R5HMJ0YM4613", 60000, 'hit', "RnR caption", true)); // RnR caption
 	// dispatch.add(new Watcher("A19NF3HMR2SC0H", 10000, 'requester', "Sirius Project"));
 	dispatch.add(new Watcher("A11L036EBWKONR", 14000, 'requester', "Project Endor*", {alert:true}));	// Endor
@@ -183,6 +184,7 @@ function loadHits() {
 	dispatch.add(new Watcher("A2BAP2QO7MMQI9", 60000, 'requester', "Product RnR*", {alert:true}));	// RnR
 	dispatch.add(new Watcher("A2S0QCZG8DTNJC", 20000, 'requester', "Procore Development*", {alert:true}));	// Procore Development
 	dispatch.add(new Watcher("A1ZCUBP2G0ZGZM", 200000, 'requester', "Bluejay Labs*", {alert:true})); // Bluejay
+	dispatch.add(new Watcher("https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=Nate+Ricklin&minReward=0.00&x=7&y=1", 45000, 'url', "Nate Ricklin")); // Nate Ricklin
 	dispatch.add(new Watcher("AI2HRFAYYSAW7", 60000, 'requester', "PickFu")); // PickFu
 	// dispatch.add(new Watcher("https://www.mturk.com/mturk/findhits?match=false", 20000, 'url', "Newest HITs")); // Newist HITs
 	// dispatch.add(new Watcher("ALS85546QW4UL", 120000, 'requester', "Sunghyun Park ($1 movie hits)"));
