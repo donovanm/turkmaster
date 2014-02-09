@@ -55,6 +55,11 @@ $(window).unload(function() {
 		dispatch.ignoreList.save();
 });
 
+function onStorageEvent(event) {
+	if (event.key.substring(0,9) == 'notifier_')
+		onMessageReceived(event.key.substring(9), event.newValue);
+}
+
 function checkPageType() {
 	// Dashboard, hit, requester, search
 	if (document.URL == "https://www.mturk.com/mturk/dashboard")
@@ -66,12 +71,12 @@ function checkPageType() {
 }
 
 function requestMain() {
-	localStorage.setItem('notifier_request_main', new Date().getTime());
+	sendMessage({ header: "request_main" });
 }
 
 function addWatcher(groupId, duration, type, name) {
 	var msg = groupId + "`" + duration + "`" + type + "`" + name + "`" + "true";
-	localStorage.setItem('add_hit', msg);
+	sendMessage({ header: "add_hit", content: msg });
 }
 function addHitWatchButton() {
 	var box = $(".message.success h6");
@@ -239,73 +244,65 @@ function start() {
 	dispatch.start();
 }
 
-function onStorageEvent(event) {
-	switch(event.key) {
-		case 'notifier_message': 
-			// Notify server if the tab was in focus when the message was received.
-			// This is so we can determine whether or not to send a browser notification
-			// that'll show up everywhere.
-			if (!pageType.DASHBOARD || (pageType.DASHBOARD && !pageType.MAIN)) {
-				var message = JSON.parse(event.newValue);
-				var hits = message.hits;
-				
-				// Re-create the hits so their methods can be used
-				for(var i = hits.length; i--;) hits[i] = new Hit(hits[i]);
-
-				// Show the hits and let the dashboard know it was seen
-				if (document.hasFocus())
-					localStorage.setItem('notification_viewed', new Date().getTime());
-				notificationPanel.add(new NotificationGroup(message.title, hits));
-			}
-			break;
+function onMessageReceived(header, message) {
+	console.log(header);
+	if (pageType.DASHBOARD && pageType.MAIN) {
+		switch(header) {
 		case 'notification_viewed' :
-			if (pageType.DASHBOARD) {
 				wasViewed = true;
-			}
-			
 			break;
 		case 'add_hit' : 
-			if (pageType.DASHBOARD && pageType.MAIN) {
-				var data = event.newValue.split('`');
-				var id = data[0];
-				var duration = data[1];
-				var type = data[2];
-				var name = data[3];
-				var autoAccept = (data[4] == "true");
-				
-				dispatch.add(new Watcher(id, duration, 'hit', name, {auto:autoAccept})).start();
-				
-				updateDispatchPanel();
-			}
+			var data = message.split('`');
+			var id = data[0];
+			var duration = data[1];
+			var type = data[2];
+			var name = data[3];
+			var autoAccept = (data[4] == "true");
+			
+			dispatch.add(new Watcher(id, duration, 'hit', name, {auto:autoAccept})).start();
+			
+			updateDispatchPanel();
 			break;
 		case 'mute_hit' :
-			if (pageType.DASHBOARD) {
-				var id = event.newValue.split(',')[0];
-				if (!dispatch.isMuted(id)) {
-					dispatch.mute(id);
-					console.log("Remote mute (" + id + ")");
-				} 
-			}
+			var id = message.split(',')[0];
+			if (!dispatch.isMuted(id)) {
+				dispatch.mute(id);
+				console.log("Remote mute (" + id + ")");
+			} 
 			break;
 		case 'unmute_hit' :
-			if (pageType.DASHBOARD) {
-				var id = event.newValue.split(',')[0];
-				if (dispatch.isMuted(id)) {
-					dispatch.unmute(id);
-					console.log("Remote unmute (" + id + ")");
-				}
+			var id = message.split(',')[0];
+			if (dispatch.isMuted(id)) {
+				dispatch.unmute(id);
+				console.log("Remote unmute (" + id + ")");
 			}
 			break;
-		case 'notifier_request_main' :
-			if (pageType.DASHBOARD && pageType.MAIN)
-				localStorage.setItem('notifier_request_denied', new Date().getTime());
+		case 'request_main' :
+			sendMessage({ header: "request_denied" });
 			break;
-		case 'notifier_request_denied' :
-			if (pageType.DASHBOARD && pageType.MAIN) {
-				dispatch.onRequestMainDenied();
-			}
+		case 'request_denied' :
+			dispatch.onRequestMainDenied();
 			break;
+		}
+	} else if (header == 'new_hits' && (!pageType.DASHBOARD || (pageType.DASHBOARD && !pageType.MAIN))) {
+		// Notify server if the tab was in focus when the message was received. This is so we can determine whether or 
+		// not to send a browser notification that'll show up everywhere.
+		var message = JSON.parse(message);
+		var hits = message.hits;
+		
+		// Re-create the hits so their methods can be used
+		for(var i = hits.length; i--;) hits[i] = new Hit(hits[i]);
+
+		// Show the hits and let the dashboard know it was seen
+		if (document.hasFocus())
+			sendMessage({ header: "notification_viewed" });
+		notificationPanel.add(new NotificationGroup(message.title, hits));
 	}
+}
+function sendMessage(message) {
+	header = message.header;
+	content = message.content || new Date().getTime();
+	localStorage.setItem('notifier_' + header, content);
 }
 
 /** This function takes an array of hits and determines if they are all from the same requester
@@ -549,7 +546,7 @@ IgnoreList.prototype.add = function(item) {
 }
 IgnoreList.prototype.remove = function(item) {
 	if (this.contains(item)) {
-		var pos = this.items.indexOf(hitID);
+		var pos = this.items.indexOf(item);
 		var newList = new Array();
 		
 		for (var i = 0; i < this.items.length; i++) {
@@ -938,7 +935,7 @@ Watcher.prototype.sendHits = function(hits) {
 			wasViewed = false;
 
 			// Send hits
-			localStorage.setItem('notifier_message', JSON.stringify({'title':this.name, 'hits':hits},null,4));
+			sendMessage({ header: "new_hits", content: JSON.stringify({'title':this.name, 'hits':hits}) });
 			
 			// Show notification on dashboard, too
 			notificationPanel.add(new NotificationGroup(this.name, hits));
@@ -1296,13 +1293,14 @@ NotificationHit.prototype.createDOMElement = function() {
 	var id = hit.id;
 	var muteButton = $('<div>').addClass("mute");
 	
-	$(muteButton).text((typeof dispatch != 'undefined' && !dispatch.isMuted(id)) ? "mute" : "muted");
+	console.log(dispatch);
+	$(muteButton).text((typeof dispatch !== 'undefined' && dispatch.isMuted(id)) ? "muted" : "mute");
 	$(muteButton).click(function () {
 		if (!pageType.DASHBOARD) {
 			if ($(this).text() == "mute")
-				localStorage.setItem('mute_hit', id + "," + new Date().getTime());
+				sendMessage({ header: "mute_hit", content: id + "," + new Date().getTime() });
 			else
-				localStorage.setItem('unmute_hit', id + "," + new Date().getTime());
+				sendMessage({ header: "unmute_hit", content: id + "," + new Date().getTime() });
 		} else {
 			if (!dispatch.isMuted(id))
 				dispatch.mute(id);
@@ -1331,5 +1329,5 @@ NotificationHit.prototype.getDOMElement = function() {
 }
 
 function queue(id) {
-	localStorage.setItem("notifier_queue", id);
+	sendMessage({ header: "queue", content: id });
 }
