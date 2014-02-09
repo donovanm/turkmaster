@@ -14,7 +14,7 @@ var isDashboard = false;
 var isMain = true;		// Need a way to determine the main dashboard in case multiple dashboards are open. This is so remote watcher
 					    // requests don't add new watchers to multiple pages and cause mturk errors.
 var wasViewed = false;
-var dispatch = new Dispatch();
+var dispatch;
 var notificationPanel; 
 
 // Options
@@ -27,11 +27,10 @@ $(document).ready(function(){
 	checkIfDashboard();
 	
 	if (isDashboard) {
+		dispatch = new Dispatch();
 		createDispatchPanel();
 		createDetailsPanel();
 		loadHits();
-		loadIgnoreList();
-		setInterval(function() { storeIgnoreList() }, 300000); // Store the ignore list every 5 minutes (it also attempts to store onUnload)
 		requestMain();
 	}
 	
@@ -46,34 +45,9 @@ $(document).ready(function(){
 }); 
 
 $(window).unload(function() {
-	storeIgnoreList();
+	dispatch.ignoreList.save();
 });
 
-function storeIgnoreList() {
-	var size = dispatch.ignoreList.length;
-	var list = "";
-
-	if (size > 0) {
-		for (var i = 0; i < size; i++)
-			list += dispatch.ignoreList[i] + ((i + 1 < size) ? '`' : "");
-		localStorage.setItem('notifier_ignore', list);
-	}
-}
-function loadIgnoreList() {
-	var ar;
-	
-	var stored_items = localStorage.getItem('notifier_ignore');
-	// console.log(stored_items);
-	if (stored_items != null) {
-		ar = stored_items.split('`');
-		dispatch.ignoreList = ar;
-		console.log(ar.length + " ignored items loaded");
-	}
-}
-function clearIgnoreList() {
-	dispatch.ignoreList = new Array();
-	localStorage.removeItem('notifier_ignore');
-}
 
 function checkIfDashboard() {
 	if (document.URL == "https://www.mturk.com/mturk/dashboard")
@@ -525,13 +499,69 @@ function showDetailsPanel(watcher) {
 	$(panel).show();
 }
 
+
+function IgnoreList() {
+	this.time = 60000;
+	this.items = new Array();
+	this.load();
+
+	var _this = this;
+	this.interval = setInterval(function() { _this.save() }, this.time);
+}
+IgnoreList.prototype.save = function() {
+	localStorage.setItem('notifier_ignore', JSON.stringify(this.items));
+}
+IgnoreList.prototype.load = function() {
+	var storedItems = localStorage.getItem('notifier_ignore');
+
+	if (storedItems != null) {
+		try {
+			this.items = JSON.parse(storedItems);
+			console.log(this.items.length + " ignored items loaded");
+		}
+		catch (e) {
+			this.clear();
+			this.save();
+			console.log("Ignore list couldn't be loaded correctly. It has been cleared out.");
+		}
+	} else {
+		console.log("No ignored items found");
+	}
+}
+IgnoreList.prototype.clear = function() {
+	this.items = new Array();
+	localStorage.removeItem('notifier_ignore');
+}
+IgnoreList.prototype.stop = function() {
+	clearInterval(this.interval);
+}
+IgnoreList.prototype.contains = function(item) {
+	return (this.items.indexOf(item) != -1);
+}
+IgnoreList.prototype.add = function(item) {
+	if (!this.contains(item))
+		this.items.push(item);
+}
+IgnoreList.prototype.remove = function(item) {
+	if (this.contains(item)) {
+		var pos = this.items.indexOf(hitID);
+		var newList = new Array();
+		
+		for (var i = 0; i < this.items.length; i++) {
+			if (i != pos)
+				newList.push(this.items[i]);
+		}
+		this.items = newList;
+	}
+}
+
 /** Dispatch object. Controls all of the watchers.
 
 **/
 function Dispatch() {
 	this.isRunning = false;
 	this.watchers = new Array();
-	this.ignoreList = new Array();
+	this.ignoreList = new IgnoreList();
 }
 Dispatch.prototype.start = function() {
 	// For now start all watchers
@@ -564,14 +594,12 @@ Dispatch.prototype.add = function(watcher) {
 	return watcher;
 }
 Dispatch.prototype.remove = function(watcher) {
-	// Need to copy array elements one by one except the one that matches 'watcher'
 	var newArray = new Array();
-	
+
 	for (i = 0; i < this.watchers.length; ++i) {
 		if (this.watchers[i] != watcher)
 			newArray.push(this.watchers[i]);
 	}
-	
 	this.watchers = newArray;
 }
 Dispatch.prototype.getWatcherById = function(id) {
@@ -590,24 +618,13 @@ Dispatch.prototype.getWatcherCount = function() {
 	return this.watchers.length;
 }
 Dispatch.prototype.isMuted = function(hitID) {
-	return (this.ignoreList.indexOf(hitID) != -1) ? true : false;
+	return this.ignoreList.contains(hitID);
 }
 Dispatch.prototype.mute = function(hitID) {
-	if (!this.isMuted(hitID))
-		this.ignoreList.push(hitID);
+	this.ignoreList.add(hitID);
 }
 Dispatch.prototype.unmute = function(hitID) {
-	if (this.isMuted(hitID)) {
-		var pos = this.ignoreList.indexOf(hitID);
-		var newList = new Array();
-		
-		for (var i = 0; i < this.ignoreList.length; i++) {
-			if (i != pos)
-				newList.push(this.ignoreList[i]);
-		}
-		
-		this.ignoreList = newList;
-	}
+	this.ignoreList.remove(hitID);
 }
 Dispatch.prototype.hideWatchers = function() {
 	$("#controller a").css('display', "none");
@@ -665,7 +682,8 @@ Dispatch.prototype.getHTML = function() {
 }
 Dispatch.prototype.onRequestMainDenied = function() {
 	isMain = false;
-	dispatch.hideWatchers();
+	this.hideWatchers();
+	this.ignoreList.stop();
 }
 
 /** The QuickWatcher simply refreshes the first page for new hits (every 1 second or so) and tries to 
@@ -1208,7 +1226,7 @@ NotificationGroup.prototype.createDOMElement = function() {
 	
 	var isSameReq = isSameRequester(this.hits);
 	for (var i = 0; i < this.hits.length; i++)
-		$(div).append((new AMTNotification(this.hits[i], isSameReq, (typeof this.watcher != 'undefined') ? this.watcher : null)).getDOMElement());
+		$(div).append((new NotificationHit(this.hits[i], isSameReq, (typeof this.watcher != 'undefined') ? this.watcher : null)).getDOMElement());
 	
 	this.DOMElement = div;
 }
@@ -1228,14 +1246,14 @@ NotificationGroup.prototype.fadeOut = function(duration) {
 /** The Notification object. This holds the notification data for individual hits
 
 **/
-function AMTNotification(hit, isSameReq, watcher) {
+function NotificationHit(hit, isSameReq, watcher) {
 	this.hit = hit;
 	this.isSameReq = isSameReq;
 	if (typeof watcher != 'undefined') this.watcher = watcher;
 	
 	this.createDOMElement();
 }
-AMTNotification.prototype.createDOMElement = function() {
+NotificationHit.prototype.createDOMElement = function() {
 	// Create notification
 	var hit = this.hit;
 	var notification = $('<div>').addClass("notification")
@@ -1273,7 +1291,7 @@ AMTNotification.prototype.createDOMElement = function() {
 	var id = hit.id;
 	var muteButton = $('<div>').addClass("mute");
 	
-	$(muteButton).text((!dispatch.isMuted(id)) ? "mute" : "muted");
+	$(muteButton).text((typeof dispatch != 'undefined' && !dispatch.isMuted(id)) ? "mute" : "muted");
 	$(muteButton).click(function () {
 		if (!isDashboard) {
 			if ($(this).text() == "mute")
@@ -1303,7 +1321,7 @@ AMTNotification.prototype.createDOMElement = function() {
 	
 	this.DOMElement = notification;
 }
-AMTNotification.prototype.getDOMElement = function() {
+NotificationHit.prototype.getDOMElement = function() {
 	return this.DOMElement;
 }
 
