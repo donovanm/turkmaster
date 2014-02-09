@@ -5,28 +5,34 @@
 // @include     https://www.mturk.com/mturk/*
 // @include		https://www.mturk.com/mturk/dashboard
 // @include		https://www.mturk.com/mturk/myhits
-// @version     0.88
+// @version     0.89
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js
 // @grant       none
 // ==/UserScript==
 
-var isDashboard = false;
-var isMain = true;		// Need a way to determine the main dashboard in case multiple dashboards are open. This is so remote watcher
-					    // requests don't add new watchers to multiple pages and cause mturk errors.
+var pageType ={
+		MAIN:		true,	// This is so remote watcher requests don't add new watchers to multiple pages and cause mturk errors.
+		DASHBOARD: 	false,
+		HIT:		false,
+		REQUESTER:	false,
+		SEARCH:		false
+};	
+
+var settings = {
+	sound: true,
+	animation: true
+}
+
 var wasViewed = false;
 var dispatch;
 var notificationPanel; 
 
-// Options
-var isSoundOn = true;
-var isAnimationOn = true;
+
 
 $(document).ready(function(){
-    var base, qryRequester, qryUrl, qryReward, qryTitle;
+	checkPageType();
 	
-	checkIfDashboard();
-	
-	if (isDashboard) {
+	if (pageType.DASHBOARD) {
 		dispatch = new Dispatch();
 		createDispatchPanel();
 		createDetailsPanel();
@@ -34,7 +40,7 @@ $(document).ready(function(){
 		requestMain();
 	}
 	
-	if (isHitPreview()) {
+	if (pageType.HIT) {
 		addHitWatchButton();
 	}
 	
@@ -45,19 +51,22 @@ $(document).ready(function(){
 }); 
 
 $(window).unload(function() {
-	if (isDashboard && isMain)
+	if (pageType.DASHBOARD && pageType.MAIN)
 		dispatch.ignoreList.save();
 });
 
-
-function checkIfDashboard() {
+function checkPageType() {
+	// Dashboard, hit, requester, search
 	if (document.URL == "https://www.mturk.com/mturk/dashboard")
-		isDashboard = true;
+		pageType.DASHBOARD = true;
+	else if (document.URL.match(/https:\/\/www.mturk.com\/mturk\/(preview|accept).+groupId=.*/) != null)
+		pageType.HIT = true;
+	else if (document.URL.match(/requesterId=([A-Z0-9]+)/) != null)
+		pageType.REQUESTER = true;
 }
 
 function requestMain() {
 	localStorage.setItem('notifier_request_main', new Date().getTime());
-	// console.log("Requesting main dashboard rights");
 }
 
 function addWatcher(groupId, duration, type, name) {
@@ -154,12 +163,6 @@ function addStyle(styleText) {
 	$("head").append(style);
 }
 
-function isHitPreview() {
-	if (document.URL.match(/https:\/\/www.mturk.com\/mturk\/(preview|accept).+groupId=.*/) != null)
-		return true;
-	return false;
-}
-
 function loadHits() {
 	// Add a few watchers. Won't be done like this in the future
 	dispatch.add(new Watcher("https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=survey&minReward=0.75&qualifiedFor=on&x=13&y=10", 25000, 'url', "Surveys $0.75 and up")); //$.75 surveys
@@ -242,7 +245,7 @@ function onStorageEvent(event) {
 			// Notify server if the tab was in focus when the message was received.
 			// This is so we can determine whether or not to send a browser notification
 			// that'll show up everywhere.
-			if (!isDashboard || (isDashboard && !isMain)) {
+			if (!pageType.DASHBOARD || (pageType.DASHBOARD && !pageType.MAIN)) {
 				var message = JSON.parse(event.newValue);
 				var hits = message.hits;
 				
@@ -256,13 +259,13 @@ function onStorageEvent(event) {
 			}
 			break;
 		case 'notification_viewed' :
-			if (isDashboard) {
+			if (pageType.DASHBOARD) {
 				wasViewed = true;
 			}
 			
 			break;
 		case 'add_hit' : 
-			if (isDashboard && isMain) {
+			if (pageType.DASHBOARD && pageType.MAIN) {
 				var data = event.newValue.split('`');
 				var id = data[0];
 				var duration = data[1];
@@ -276,7 +279,7 @@ function onStorageEvent(event) {
 			}
 			break;
 		case 'mute_hit' :
-			if (isDashboard) {
+			if (pageType.DASHBOARD) {
 				var id = event.newValue.split(',')[0];
 				if (!dispatch.isMuted(id)) {
 					dispatch.mute(id);
@@ -285,7 +288,7 @@ function onStorageEvent(event) {
 			}
 			break;
 		case 'unmute_hit' :
-			if (isDashboard) {
+			if (pageType.DASHBOARD) {
 				var id = event.newValue.split(',')[0];
 				if (dispatch.isMuted(id)) {
 					dispatch.unmute(id);
@@ -294,11 +297,11 @@ function onStorageEvent(event) {
 			}
 			break;
 		case 'notifier_request_main' :
-			if (isDashboard && isMain)
+			if (pageType.DASHBOARD && pageType.MAIN)
 				localStorage.setItem('notifier_request_denied', new Date().getTime());
 			break;
 		case 'notifier_request_denied' :
-			if (isDashboard && isMain) {
+			if (pageType.DASHBOARD && pageType.MAIN) {
 				dispatch.onRequestMainDenied();
 			}
 			break;
@@ -459,7 +462,7 @@ function createDispatchPanel() {
 }
 
 function updateDispatchPanel() {
-	if (isMain) {
+	if (pageType.MAIN) {
 		$("#watcher_container").html("");
 		for (i = 0; i < dispatch.getWatcherCount(); ++i)
 			$("#watcher_container").append(dispatch.getWatcher(i).getHTML());
@@ -683,7 +686,7 @@ Dispatch.prototype.getHTML = function() {
 	return html;
 }
 Dispatch.prototype.onRequestMainDenied = function() {
-	isMain = false;
+	pageType.MAIN = false;
 	this.hideWatchers();
 	this.ignoreList.stop();
 }
@@ -879,7 +882,7 @@ Watcher.prototype.markViewed = function () {
 Watcher.prototype.alert = function () {
 	var sound = new Audio();
 	
-	if (sound.canPlayType('audio/ogg;codecs="vorbis"') && isSoundOn) {
+	if (sound.canPlayType('audio/ogg;codecs="vorbis"') && settings.sound) {
 		sound.src = "http://rpg.hamsterrepublic.com/wiki-images/3/3e/Heal8-Bit.ogg";
 		sound.play();
 	}
@@ -1074,7 +1077,7 @@ NotificationPanel.prototype.remove = function(notification) {
 }
 NotificationPanel.prototype.show = function() {
 	if (this.isHidden) {
-		if (document.hasFocus() && isAnimationOn) {
+		if (document.hasFocus() && settings.animation) {
 			this.animatePanel(-400, 0);
 		} else {
 			this.getDOMElement().css('right', "0px");
@@ -1084,7 +1087,7 @@ NotificationPanel.prototype.show = function() {
 }
 NotificationPanel.prototype.hide = function() {
 	if (!this.isHidden) {
-		if (document.hasFocus() && isAnimationOn) {
+		if (document.hasFocus() && settings.animation) {
 			this.animatePanel(0, -400);
 		} else {
 			this.getDOMElement().css('right', "-400px");
@@ -1188,7 +1191,7 @@ NotificationPanel.prototype.removeFromPanel = function(notification) {
 NotificationPanel.prototype.onTimeoutListener = function(notification) {
 	if (this.notifications.length > 1) {
 		var _this = this;
-		if (document.hasFocus() && isAnimationOn) {
+		if (document.hasFocus() && settings.animation) {
 			notification.fadeOut(700);
 			setTimeout(function() { _this.remove(notification) }, 705);
 		} else {
@@ -1295,7 +1298,7 @@ NotificationHit.prototype.createDOMElement = function() {
 	
 	$(muteButton).text((typeof dispatch != 'undefined' && !dispatch.isMuted(id)) ? "mute" : "muted");
 	$(muteButton).click(function () {
-		if (!isDashboard) {
+		if (!pageType.DASHBOARD) {
 			if ($(this).text() == "mute")
 				localStorage.setItem('mute_hit', id + "," + new Date().getTime());
 			else
