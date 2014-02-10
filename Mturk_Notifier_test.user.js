@@ -3,9 +3,7 @@
 // @namespace   12345
 // @description Testing out stuff for a notifier for Mturk
 // @include     https://www.mturk.com/mturk/*
-// @include		https://www.mturk.com/mturk/dashboard
-// @include		https://www.mturk.com/mturk/myhits
-// @version     0.89
+// @version     0.9
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js
 // @grant       none
 // ==/UserScript==
@@ -16,7 +14,7 @@ var pageType ={
 		HIT:		false,
 		REQUESTER:	false,
 		SEARCH:		false
-};	
+};
 
 var settings = {
 	sound: true,
@@ -40,9 +38,8 @@ $(document).ready(function(){
 		requestMain();
 	}
 	
-	if (pageType.HIT) {
-		addHitWatchButton();
-	}
+	if (pageType.HIT || pageType.REQUESTER || pageType.SEARCH)
+		addWatchButton();
 	
 	notificationPanel = new NotificationPanel();
 	
@@ -56,8 +53,8 @@ $(window).unload(function() {
 });
 
 function onStorageEvent(event) {
-	if (event.key.substring(0,9) == 'notifier_')
-		onMessageReceived(event.key.substring(9), event.newValue);
+	if (event.key.substring(0,13) == 'notifier_msg_')
+		onMessageReceived(event.key.substring(13), JSON.parse(event.newValue).content);
 }
 
 function checkPageType() {
@@ -68,58 +65,102 @@ function checkPageType() {
 		pageType.HIT = true;
 	else if (document.URL.match(/requesterId=([A-Z0-9]+)/) != null)
 		pageType.REQUESTER = true;
+	else if (document.URL.match(/(searchbar|findhits)/) != null)
+		pageType.SEARCH = true;
 }
 
 function requestMain() {
 	sendMessage({ header: "request_main" });
 }
 
-function addWatcher(groupId, duration, type, name) {
-	var msg = groupId + "`" + duration + "`" + type + "`" + name + "`" + "true";
-	sendMessage({ header: "add_hit", content: msg });
-}
-function addHitWatchButton() {
-	var box = $(".message.success h6");
-	// console.log("BOX");
-	// console.log(box);
-	var groupId = document.URL.match(/groupId=([A-Z0-9]+)/)[1];
-	
+function addWatchButton() {
+	var type = (pageType.HIT) ? 'hit' : (pageType.REQUESTER) ? 'requester' : (pageType.SEARCH) ? 'page' : '';
+	var form = addForm();
 	var button = $("<div>").addClass("watcher_button")
-		.append($("<a>").text("Watch this hit?").attr('href', "javascript:void(0)"));
-	var form = $("<div>").attr('id', 'add_watcher_form');
-	form.html("<h3>Add a watcher</h3>\
-				<p>Name <input id=\"watcherName\" type=\"text\" />\
-				&nbsp;&nbsp; Time <input id=\"watcherDuration\" type=\"text\" /> sec<br />\
-				<input type=\"button\" value=\"Save\"/>\
-				<input type=\"button\" value=\"Cancel\"/></p>");
+		.append($("<a>")
+			.text("Watch this " + type + "?")
+			.attr('href', "javascript:void(0)")
+			.click(function () {
+				form.show();
+				$("#watcherName", form).focus();
+			})
+		);
+
+	var location;	// Location to add the watch button
+	if (pageType.HIT) {
+		if ($(".message.success h6").length)
+			location = $(".message.success h6");
+		else if ($("#javascriptDependentFunctionality").length)
+			location = $("#javascriptDependentFunctionality");
+		else if ($("body > form:nth-child(7) > table:nth-child(9) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(2) > td:nth-child(1)").length)
+			location = $("body > form:nth-child(7) > table:nth-child(9) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(2) > td:nth-child(1)");
+	} else if (pageType.REQUESTER || pageType.SEARCH) {
+		if ($(".title_orange_text_bold").length)
+			location = $(".title_orange_text_bold");
+		else
+			location = $(".error_title");
+	}
+	location.append(button);
+	addWatcherStyle();
+
+}
+
+function addForm() {
+	var id = (document.URL.match(/groupId=([A-Z0-9]+)/) || document.URL.match(/requesterId=([A-Z0-9]+)/) || [,document.URL])[1];
+	console.log(id);
+		
+	var form = $("<div>").attr('id', 'add_watcher_form').append(
+		$("<h3>").text("Add a watcher"),
+		$("<p>").append(
+			$("<label>").text("Name ").append(
+				$("<input>").attr('id', "watcherName").attr('type', "text")),
+			$("<label>").text(" Time ").append(
+				$("<input>").attr('id', "watcherDuration").attr('type', "text"))
+			),
+		$("<p>").append(
+			$("<input>").attr('type', "checkbox").attr('id', "autoaccept"),
+			$("<label>").attr('for', "autoaccept").text("Auto-accept")
+			),
+		$("<p>").addClass("form_buttons").append(
+			$("<input>").attr('type', "button").attr('value', "Save"),
+			$("<input>").attr('type', "button").attr('value', "Cancel")
+			)
+		);
+		
 	form.hide();
-	
-	$(button).click(function () {
-		form.show();
-	});
 	
 	$("input[value='Save']", form).click(function() {
 		var duration = parseInt($("#watcherDuration", form).val(), 10);
-		
-		// We will have to send a message to the dashboard to tell it to add a new watcher with these parameters. addWatcher() will be the function.
-		addWatcher(groupId, duration * 1000, 'hit', $("#watcherName", form).val());
-		$(form).hide();
+		var type = (pageType.HIT) ? 'hit' : (pageType.REQUESTER) ? 'requester' : (pageType.SEARCH) ? 'url' : '';
+		var auto = $("input#autoaccept", form).get(0).checked;
+		sendMessage({
+			header: 'add_watcher',
+			content: {
+				id: id,
+				duration: duration * 1000,
+				type: type,
+				name: $("#watcherName", form).val(),
+				auto: auto
+			}
+		});
 	});
 	
-	$("input[value='Cancel']", form).click(function() {
+	$("input[type='button']", form).click(function() {
 		$(form).hide();
 	});
+
+	$("input", form).keypress(function(event) {
+		if (event.keyCode == 13 && ($(this).attr('value') != "Cancel"))		// Save
+			$("input[value='Save']", form).click();
+		else if (event.keyCode == 27)										// Cancel
+			form.hide();
+	});
 	
-	if (box.length == 0) {
-		box = $("#javascriptDependentFunctionality");
-		
-		if (box.length == 0)
-		 box = $("body > form:nth-child(7) > table:nth-child(9) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(2) > td:nth-child(1)");
-		// box = $("body > form:nth-child(7) > table:nth-child(8) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(2) > td:nth-child(1)");
-	}
-	box.append(button);
 	$("body").append(form);
-	
+	return form;
+}
+
+function addWatcherStyle() {
 	addStyle("\
 		#add_watcher_form {\
 			position: fixed;\
@@ -141,7 +182,8 @@ function addHitWatchButton() {
 			color: #111;\
 			}\
 		#add_watcher_form input[type='text'] {\
-			font: 9pt Verdana;\
+			font: 10pt Verdana;\
+			margin: 10px 20px 0 0;\
 			}\
 		#add_watcher_form input[type='button'] {\
 			margin-top: 20px;\
@@ -154,12 +196,16 @@ function addHitWatchButton() {
 			background-color: #9df;\
 			}\
 		#add_watcher_form p {\
-			padding: 9px;\
+			margin: 10px;\
 			font: 11pt Verdana;\
 			}\
+		#add_watcher_form .form_buttons input {\
+			margin: 5px;\
+		}\
 		.watcher_button { display: inline; }\
-		.watcher_button a { text-decoration: none; margin-left: 3em;	}\
+		.watcher_button a { text-decoration: none; margin-left: 3em; font-weight: normal	}\
 		.watcher_button a:hover { text-decoration: underline; }\
+		.error_title .watcher_button { display: block; margin: 15px }\
 		");
 }
 
@@ -196,7 +242,7 @@ function loadHits() {
 	dispatch.add(new Watcher("AI2HRFAYYSAW7", 60000, 'requester', "PickFu")); // PickFu
 	// dispatch.add(new Watcher("https://www.mturk.com/mturk/findhits?match=false", 20000, 'url', "Newest HITs")); // Newist HITs
 	// dispatch.add(new Watcher("ALS85546QW4UL", 120000, 'requester', "Sunghyun Park ($1 movie hits)"));
-	dispatch.add(new Watcher("A32WH2887E2DAC", 300000, 'requester', "Grant Stewart"));
+/*	dispatch.add(new Watcher("A32WH2887E2DAC", 300000, 'requester', "Grant Stewart"));
 	dispatch.add(new Watcher("A11HABGEZWI0OZ", 30000, 'requester', "Jason Kaminsky"));	// Kaminsky
 	dispatch.add(new Watcher("AKEBQYX32KM19", 45000, 'requester', "Crowdsurf"));		// Crowdsurf
 	dispatch.add(new Watcher("A1EXB5EHTKUO8O", 600000, 'requester', "FoodEssentials")); // Foodessentials
@@ -236,32 +282,19 @@ function loadHits() {
 	dispatch.add(new Watcher("A2UHX2LSVVA3N4", 100000, 'requester', "Michael Iarrobino")); // Michael Iarrobino (newsletter batch)
 	dispatch.add(new Watcher("A3EG46USIUDWGA", 80000, 'requester', "KB (decent batches)")); // KB (decent batches)
 	dispatch.add(new Watcher("https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=amazon+requester&minReward=0.00&qualifiedFor=on&x=6&y=8", 600000, 'url', "Amazon Requester (qualified)")); // Trying to find some Amazon Requester hits I can do or at least quals
+	*/
 	// dispatch.add(new Watcher("A244AEXZLYKAD9", 90000, 'requester', "Affective Cog Neuro Lab 09")); // Good batch if they put out one I can qualify for
-	updateDispatchPanel();
-}
-
-function start() {
-	dispatch.start();
 }
 
 function onMessageReceived(header, message) {
-	console.log(header);
 	if (pageType.DASHBOARD && pageType.MAIN) {
 		switch(header) {
 		case 'notification_viewed' :
 				wasViewed = true;
 			break;
-		case 'add_hit' : 
-			var data = message.split('`');
-			var id = data[0];
-			var duration = data[1];
-			var type = data[2];
-			var name = data[3];
-			var autoAccept = (data[4] == "true");
-			
-			dispatch.add(new Watcher(id, duration, 'hit', name, {auto:autoAccept})).start();
-			
-			updateDispatchPanel();
+		case 'add_watcher' : 
+			var msg = message;
+			dispatch.add(new Watcher(msg.id, msg.duration, msg.type , msg.name, {auto:msg.auto})).start();
 			break;
 		case 'mute_hit' :
 			var id = message.split(',')[0];
@@ -287,7 +320,6 @@ function onMessageReceived(header, message) {
 	} else if (header == 'new_hits' && (!pageType.DASHBOARD || (pageType.DASHBOARD && !pageType.MAIN))) {
 		// Notify server if the tab was in focus when the message was received. This is so we can determine whether or 
 		// not to send a browser notification that'll show up everywhere.
-		var message = JSON.parse(message);
 		var hits = message.hits;
 		
 		// Re-create the hits so their methods can be used
@@ -300,9 +332,10 @@ function onMessageReceived(header, message) {
 	}
 }
 function sendMessage(message) {
-	header = message.header;
-	content = message.content || new Date().getTime();
-	localStorage.setItem('notifier_' + header, content);
+	var header = message.header;
+	var content = message.content || new Date().getTime();		// Make the content a timestamp when there's no actual content
+	var timestamp = message.timestamp && new Date().getTime();	// If wanted, adds a timestamp to the content so a message with the same content will still trigger the event
+	localStorage.setItem('notifier_msg_' + header, JSON.stringify({ content: content, timestamp: timestamp}));
 }
 
 /** This function takes an array of hits and determines if they are all from the same requester
@@ -427,7 +460,8 @@ function createDispatchPanel() {
 			.attr('id', "content_container")
 			.append($(pageElements))
 	);
-	$("body").prepend(dispatch.getHTML());
+	dispatch.DOMElement = dispatch.getHTML();
+	$("body").prepend(dispatch.DOMElement);
 	addStyle("#dispatcher { background-color: #f5f5f5; position: fixed; top: 0px; float: left; height: 100%;  width: 270px; font: 8pt Helvetica;  margin-left: -5px }\
 		#content_container { position: absolute; left: 270px; top: 0; right: 0; border-left: 2px solid #dadada }\
 		#dispatcher #controller { text-align: center; font: 200% Candara; position: relative; height: 25px; }\
@@ -458,21 +492,12 @@ function createDispatchPanel() {
 		#dispatcher .watcher .color_code.url 		{ background-color: rgba(58, 158, 59, .7); }");
 }
 
-function updateDispatchPanel() {
-	if (pageType.MAIN) {
-		$("#watcher_container").html("");
-		for (i = 0; i < dispatch.getWatcherCount(); ++i)
-			$("#watcher_container").append(dispatch.getWatcher(i).getHTML());
-	}
-}
-
 // The details panel for each watcher
 function createDetailsPanel() {
 	var div = $('<div>').attr('id', 'details_panel').addClass('notification_panel');
 	addStyle("#details_panel {\
 		background-color: #fff;\
 		position: fixed; top: 0px;\
-		margin-left: 6px;\
 		width: 500;\
 		border: 1px solid #e3e3e3;\
 		border-radius: 0 0 3px 0;\
@@ -593,6 +618,7 @@ Dispatch.prototype.stop = function() {
 }
 Dispatch.prototype.add = function(watcher) {
 	this.watchers.push(watcher);
+	$("#watcher_container", this.DOMElement).append(watcher.getHTML());
 	return watcher;
 }
 Dispatch.prototype.remove = function(watcher) {
@@ -670,7 +696,7 @@ Dispatch.prototype.getHTML = function() {
 		var off = $("#controller .on_off a:last-child", html);
 
 		if (!dispatch.isRunning) {
-			start();
+			dispatch.start();
 			$(on).addClass("selected");
 			$(off).removeClass("selected");
 		} else {
@@ -747,14 +773,14 @@ Watcher.prototype.getHTML = function() {
 	var div = $('<div>')
 		.attr('id', this.id)
 		.addClass("watcher");
-		
+	// console.log(this);	
 	var html = "<div class=\"details\"> > </div>\
 		<div>\
 		<div class=\"on_off\"><a" + (this.isOn ? " class=\"selected\"" : "") + ">ON</a><a" + (!this.isOn ? " class=\"selected\"" : "") + ">OFF</a></div>\
 		<a class=\"name\" href=\"" + this.getURL() + "\" target=\"_blank\">" + ((typeof this.name != 'undefined') ? this.name : this.id) + "</a><br />" +
 		(this.time / 1000) + " seconds <a class=\"edit\" href=\"javascript:void(0)\">Edit</a>\
 		<div class=\"bottom\">\
-			<div class=\"last_updated\" title=\"Last checked\">" + ((typeof this.date != 'undefined') ? formatTime(this.date) : "n/a") + "</div>\
+			<div class=\"last_updated\" title=\"Last checked\">" + ((typeof this.date != 'undefined') ? this.getFormattedTime() : "n/a") + "</div>\
 		</div>\
 		<div class=\"color_code\"></div>\
 		</div>";
@@ -935,7 +961,7 @@ Watcher.prototype.sendHits = function(hits) {
 			wasViewed = false;
 
 			// Send hits
-			sendMessage({ header: "new_hits", content: JSON.stringify({'title':this.name, 'hits':hits}) });
+			sendMessage({ header: "new_hits", content: {'title':this.name, 'hits':hits} });
 			
 			// Show notification on dashboard, too
 			notificationPanel.add(new NotificationGroup(this.name, hits));
@@ -1293,14 +1319,13 @@ NotificationHit.prototype.createDOMElement = function() {
 	var id = hit.id;
 	var muteButton = $('<div>').addClass("mute");
 	
-	console.log(dispatch);
 	$(muteButton).text((typeof dispatch !== 'undefined' && dispatch.isMuted(id)) ? "muted" : "mute");
 	$(muteButton).click(function () {
 		if (!pageType.DASHBOARD) {
 			if ($(this).text() == "mute")
-				sendMessage({ header: "mute_hit", content: id + "," + new Date().getTime() });
+				sendMessage({ header: "mute_hit", content: id, timestamp: true });
 			else
-				sendMessage({ header: "unmute_hit", content: id + "," + new Date().getTime() });
+				sendMessage({ header: "unmute_hit", content: id, timestamp: true });
 		} else {
 			if (!dispatch.isMuted(id))
 				dispatch.mute(id);
