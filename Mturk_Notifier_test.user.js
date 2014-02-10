@@ -34,7 +34,8 @@ $(document).ready(function(){
 		dispatch = new Dispatch();
 		createDispatchPanel();
 		createDetailsPanel();
-		loadHits();
+		// loadHits();
+		dispatch.load();
 		requestMain();
 	}
 	
@@ -48,8 +49,10 @@ $(document).ready(function(){
 }); 
 
 $(window).unload(function() {
-	if (pageType.DASHBOARD && pageType.MAIN)
+	if (pageType.DASHBOARD && pageType.MAIN) {
 		dispatch.ignoreList.save();
+		dispatch.save();
+	}
 });
 
 function onStorageEvent(event) {
@@ -107,7 +110,7 @@ function addWatchButton() {
 
 function addForm() {
 	var id = (document.URL.match(/groupId=([A-Z0-9]+)/) || document.URL.match(/requesterId=([A-Z0-9]+)/) || [,document.URL])[1];
-	console.log(id);
+	// console.log(id);
 		
 	var form = $("<div>").attr('id', 'add_watcher_form').append(
 		$("<h3>").text("Add a watcher"),
@@ -141,7 +144,8 @@ function addForm() {
 				type: type,
 				name: $("#watcherName", form).val(),
 				auto: auto
-			}
+			},
+			timestamp: true
 		});
 	});
 	
@@ -216,33 +220,86 @@ function addStyle(styleText) {
 
 function loadHits() {
 	// Add a few watchers. Won't be done like this in the future
-	dispatch.add(new Watcher("https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=survey&minReward=0.75&qualifiedFor=on&x=13&y=10", 25000, 'url', "Surveys $0.75 and up")); //$.75 surveys
+	dispatch.isLoading = true;
+	dispatch.add(new Watcher({
+		id: "A11L036EBWKONR",
+		time: 14000,
+		type: 'requester',
+		name: "Project Endor*",
+		option: {alert:true}}));	// Endor
+	dispatch.add(new Watcher({
+		id: "A2ELUBUNBP6BLE",
+		time: 60000,
+		type: 'requester',
+		name: "UW Social Media Lab*",
+		option: {alert:true}}));	// UW Social Media Lab
+	dispatch.add(new Watcher({
+		id: "A35GBZ8TKR3UKC",
+		time: 20000,
+		type: 'requester',
+		name: "Andy K*",
+		option: {alert:true}}));	// Andy K
+	dispatch.add(new Watcher({
+		id: "A2BAP2QO7MMQI9",
+		time: 60000,
+		type: 'requester',
+		name: "Product RnR*",
+		option: {alert:true}}));	// RnR
+	dispatch.add(new Watcher({
+		id: "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=survey&minReward=0.75&qualifiedFor=on&x=13&y=10",
+		time: 25000,
+		type: 'url',
+		name: "Surveys $0.75 and up"})); //$.75 surveys
 	// dispatch.add(new Watcher("https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=study&minReward=0.50&qualifiedFor=on&x=13&y=10", 22000, 'url', "Studies $0.50 and up")); //$.50 studies
-	dispatch.add(new Watcher("https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=survey&minReward=0.25&qualifiedFor=on&x=13&y=10", 30000, 'url', "Surveys $0.25 and up")); //$.25 surveys
-	dispatch.add(new Watcher("https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=qualification&minReward=0.00&x=0&y=0", 300000, 'url', "Qualification HITs")); // Qualification HITs
-	dispatch.add(new Watcher("https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=transcribe&minReward=0.60&qualifiedFor=on&x=0&y=0", 60000, 'url', "Transcription HITs")); // Transcription HITs
+	dispatch.add(new Watcher({
+		id: "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=survey&minReward=0.25&qualifiedFor=on&x=13&y=10",
+		time: 30000,
+		type: 'url',
+		name: "Surveys $0.25 and up"})); //$.25 surveys
+	dispatch.add(new Watcher({
+		id: "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=qualification&minReward=0.00&x=0&y=0",
+		time: 300000,
+		type: 'url',
+		name: "Qualification HITs"})); // Qualification HITs
+	dispatch.add(new Watcher({
+		id: "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=transcribe&minReward=0.60&qualifiedFor=on&x=0&y=0",
+		time: 60000,
+		type: 'url',
+		name: "Transcription HITs"})); // Transcription HITs
 	// dispatch.add(new Watcher("https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=Laura+Harrison&minReward=0.00&x=7&y=1", 10000, 'url', "Easy $8 survey"));
 	// dispatch.add(new Watcher("2FH56XBAT2D5VV0DSCUQ8JGA0ZV048", 20000, 'hit', "25 seconds of audio")); // crowdsurf hit
-	dispatch.add(new Watcher("2C4PHMVHVKCJ6T0G85VJB9LU493538", 180000, 'hit', "Crowdsource .20 keywords")); // crowdsource
-	dispatch.add(new Watcher("2KGJ1XERSQV6DMLJAXK3PVWF2PL088", 20000, 'hit', "ACME English", {auto:true}));
-	dispatch.add(new Watcher("2IUC1QP6AUC2D8G00SSXBV0KS4C07H", 35000, 'hit', "ACME Transcription", {alert:true}));
+	dispatch.add(new Watcher({
+		id: "2C4PHMVHVKCJ6T0G85VJB9LU493538",
+		time: 180000,
+		type: 'hit',
+		name: "Crowdsource .20 keywords",
+		option: {alert:true}})); // crowdsource
+
+	dispatch.add(new Watcher({
+		id: "2KGJ1XERSQV6DMLJAXK3PVWF2PL088",
+		time: 20000,
+		type: 'hit',
+		name: "ACME English",
+		option: {auto:true}}));
+	dispatch.add(new Watcher({
+		id: "2IUC1QP6AUC2D8G00SSXBV0KS4C07H",
+		time: 35000,
+		type: 'hit',
+		name: "ACME Transcription",
+		option: {alert:true}}));
 	// dispatch.add(new Watcher("2HGWQIHPCGJ6H9UR6LWXR0JPSTN175", 15000, 'hit', "Taskrabbit Auto", {auto:true}));
 	// dispatch.add(new Watcher("2FH56XBAT2D9NQFBUKUQAJG7U3M04G", 15000, 'hit', "$10 hit", {auto:true}));
 	// dispatch.add(new Watcher("2RTSP6AUC26HG6O1Q2UVAFK2DRN29X", 13000, 'hit', "$20 Market Research", {auto:true}));
 	// dispatch.add(new Watcher("2PBXCNHMVHVKTTYQLPT7AJ7GOYX13M", 15000, 'hit', "Receipt hit"));
 	// dispatch.add(new Watcher("2YEAJIA0RYNJTANGW8R5HMJ0YM4613", 60000, 'hit', "RnR caption", true)); // RnR caption
 	// dispatch.add(new Watcher("A19NF3HMR2SC0H", 10000, 'requester', "Sirius Project"));
-	dispatch.add(new Watcher("A11L036EBWKONR", 14000, 'requester', "Project Endor*", {alert:true}));	// Endor
-	dispatch.add(new Watcher("A2ELUBUNBP6BLE", 60000, 'requester', "UW Social Media Lab*", {alert:true}));	// UW Social Media Lab
-	dispatch.add(new Watcher("A35GBZ8TKR3UKC", 20000, 'requester', "Andy K*", {alert:true}));	// Andy K
-	dispatch.add(new Watcher("A2BAP2QO7MMQI9", 60000, 'requester', "Product RnR*", {alert:true}));	// RnR
-	dispatch.add(new Watcher("A2S0QCZG8DTNJC", 20000, 'requester', "Procore Development*", {alert:true}));	// Procore Development
+/*	dispatch.add(new Watcher("A2S0QCZG8DTNJC", 20000, 'requester', "Procore Development*", {alert:true}));	// Procore Development
 	dispatch.add(new Watcher("A1ZCUBP2G0ZGZM", 200000, 'requester', "Bluejay Labs*", {alert:true})); // Bluejay
 	dispatch.add(new Watcher("https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=Nate+Ricklin&minReward=0.00&x=7&y=1", 45000, 'url', "Nate Ricklin")); // Nate Ricklin
 	dispatch.add(new Watcher("AI2HRFAYYSAW7", 60000, 'requester', "PickFu")); // PickFu
 	// dispatch.add(new Watcher("https://www.mturk.com/mturk/findhits?match=false", 20000, 'url', "Newest HITs")); // Newist HITs
 	// dispatch.add(new Watcher("ALS85546QW4UL", 120000, 'requester', "Sunghyun Park ($1 movie hits)"));
-/*	dispatch.add(new Watcher("A32WH2887E2DAC", 300000, 'requester', "Grant Stewart"));
+	dispatch.add(new Watcher("A32WH2887E2DAC", 300000, 'requester', "Grant Stewart"));
 	dispatch.add(new Watcher("A11HABGEZWI0OZ", 30000, 'requester', "Jason Kaminsky"));	// Kaminsky
 	dispatch.add(new Watcher("AKEBQYX32KM19", 45000, 'requester', "Crowdsurf"));		// Crowdsurf
 	dispatch.add(new Watcher("A1EXB5EHTKUO8O", 600000, 'requester', "FoodEssentials")); // Foodessentials
@@ -284,6 +341,8 @@ function loadHits() {
 	dispatch.add(new Watcher("https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=amazon+requester&minReward=0.00&qualifiedFor=on&x=6&y=8", 600000, 'url', "Amazon Requester (qualified)")); // Trying to find some Amazon Requester hits I can do or at least quals
 	*/
 	// dispatch.add(new Watcher("A244AEXZLYKAD9", 90000, 'requester', "Affective Cog Neuro Lab 09")); // Good batch if they put out one I can qualify for
+	dispatch.isLoading = false;
+	// dispatch.save();
 }
 
 function onMessageReceived(header, message) {
@@ -294,7 +353,7 @@ function onMessageReceived(header, message) {
 			break;
 		case 'add_watcher' : 
 			var msg = message;
-			dispatch.add(new Watcher(msg.id, msg.duration, msg.type , msg.name, {auto:msg.auto})).start();
+			dispatch.add(new Watcher({id: msg.id, time: msg.duration, type: msg.type , name: msg.name, options: {auto:msg.auto}})).start();
 			break;
 		case 'mute_hit' :
 			var id = message.split(',')[0];
@@ -462,12 +521,12 @@ function createDispatchPanel() {
 	);
 	dispatch.DOMElement = dispatch.getHTML();
 	$("body").prepend(dispatch.DOMElement);
-	addStyle("#dispatcher { background-color: #f5f5f5; position: fixed; top: 0px; float: left; height: 100%;  width: 270px; font: 8pt Helvetica;  margin-left: -5px }\
+	addStyle("#dispatcher { background-color: #f5f5f5; position: fixed; top: 0px; float: left; height: 100%;  width: 270px; font: 8pt Helvetica;  margin-left: -5px; margin }\
 		#content_container { position: absolute; left: 270px; top: 0; right: 0; border-left: 2px solid #dadada }\
 		#dispatcher #controller { text-align: center; font: 200% Candara; position: relative; height: 25px; }\
 		#dispatcher #controller .on_off { margin: 7px 5px 0 0 }\
 		#dispatcher #controller .on_off a { font: 80% Helvetica }\
-		#dispatcher #watcher_container { position: absolute; top: 25px; bottom: 0; overflow-y:auto;}\
+		#dispatcher #watcher_container { position: absolute; top: 25px; bottom: 0; overflow-y:auto; width: 100%}\
 		#dispatcher #watcher_container a.close { text-decoration: none; color: #555; background-color: #fff; padding: 3px 10px; border: 1px solid #aaa; border-radius: 2px }\
 		#dispatcher #watcher_container a.close:hover { background-color: #def; border-color: #aaa }\
 		#dispatcher #settings { float: left; margin: 3px 2px }\
@@ -498,6 +557,7 @@ function createDetailsPanel() {
 	addStyle("#details_panel {\
 		background-color: #fff;\
 		position: fixed; top: 0px;\
+		margin-left: 1px;\
 		width: 500;\
 		border: 1px solid #e3e3e3;\
 		border-radius: 0 0 3px 0;\
@@ -554,6 +614,8 @@ IgnoreList.prototype.load = function() {
 	} else {
 		console.log("No ignored items found");
 	}
+	var _this = this;
+	setInterval(function(){ _this.save() }, 60000);
 }
 IgnoreList.prototype.clear = function() {
 	this.items = new Array();
@@ -589,6 +651,7 @@ function Dispatch() {
 	this.isRunning = false;
 	this.watchers = new Array();
 	this.ignoreList = new IgnoreList();
+	this.isLoading = false;
 }
 Dispatch.prototype.start = function() {
 	// For now start all watchers
@@ -598,7 +661,7 @@ Dispatch.prototype.start = function() {
 			// Don't start them all at the same time. There is a 2 second delay
 			// between each start. It had to be done in a self-executing function
 			// in order for the setTimeout to work properly.
-			if (this.getWatcher(i).isOn) {
+			if (this.getWatcher(i).state.isOn) {
 				(function (watcher, x){
 						watcher.timer = setTimeout(function() { watcher.start(); }, x * 2000);
 				})(this.getWatcher(i), count++);
@@ -619,7 +682,26 @@ Dispatch.prototype.stop = function() {
 Dispatch.prototype.add = function(watcher) {
 	this.watchers.push(watcher);
 	$("#watcher_container", this.DOMElement).append(watcher.getHTML());
+
+	if (!this.isLoading)
+		this.save();
+
 	return watcher;
+}
+Dispatch.prototype.save = function() {
+	console.log("Saving " + this.watchers.length + " watchers...");
+	// console.log(JSON.stringify(dispatch.watchers,Watcher.replacerArray,4));
+	localStorage.setItem('notifier_watchers', JSON.stringify(dispatch.watchers,Watcher.replacerArray));
+}
+Dispatch.prototype.load = function() {
+	this.isLoading = true;
+	var data = localStorage.getItem('notifier_watchers');
+	var watchers;
+	if (data != null) {
+		watchers = JSON.parse(data);
+		for(var i = 0; i < watchers.length; i++) this.add(new Watcher(watchers[i]));
+	}
+	this.isLoading = false;
 }
 Dispatch.prototype.remove = function(watcher) {
 	var newArray = new Array();
@@ -629,6 +711,8 @@ Dispatch.prototype.remove = function(watcher) {
 			newArray.push(this.watchers[i]);
 	}
 	this.watchers = newArray;
+	
+	watcher.DOMElement.remove();
 }
 Dispatch.prototype.getWatcherById = function(id) {
 	if (this.watchers.length > 0) {
@@ -725,60 +809,65 @@ function QuickWatcher() { var requester = new Array(); }
 /**	The Watcher object. This is what controls the pages that are monitored and how often
 
 **/
-function Watcher(id, time, type, name, options) {
-	var id, time, type, name, url;
-	var date;
+function Watcher(attrs) {
 	this.interval = null;		// For continuous interval
 	this.timer = null; 			// For initial setTimeout
 	this.lastHits = new Array();
 	this.newHits = new Array();
 
 	// Default states
-	this.isRunning = false;
-	this.isOn = true;
-	this.isUpdated = false;
+	this.state = {};
+	state = attrs.state || {};
+	this.state.isRunning 	= (typeof state.isRunning !== 'undefined') ? state.isRunning : false;
+	this.state.isOn 		= (typeof state.isOn !== 'undefined') ? state.isOn : true;
+	this.state.isUpdated 	= (typeof state.isUpdated !== 'undefined') ? state.isUpdated : false;
 	
-	// Basic attributes
-	this.id = id;
-	this.time = time;
-	this.type = type;
-	this.name = name;
+	// Required attributes
+	this.id   = attrs.id;
+	this.time = attrs.time;
+	this.type = attrs.type;
+	this.name = attrs.name;
 	
 	// Options
-	var options = options || {};
-	this.auto 			= options.auto || false;
-	this.isAlert 		= options.alert || false;
-	this.stopOnCatch 	= options.stopOnCatch || true;
+	this.option = {};
+	option 	= attrs.option || {};
+	this.option.auto 			= (typeof option.auto !== 'undefined') ? option.auto : false;
+	this.option.alert 			= (typeof option.alert !== 'undefined') ? option.alert : false;
+	this.option.stopOnCatch 	= (typeof option.stopOnCatch !== 'undefined') ? option.stopOnCatch : true;
 
 	// Figure out the URL
-	switch(this.type) {
-		case 'hit':
-			this.url = "https://www.mturk.com/mturk/preview" + (this.auto ? "andaccept" : "") + "?groupId=" + this.id;
-			break;
-		case 'requester':
-			this.url = "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&requesterId=" + this.id;
-			break;
-		case 'url':
-			this.url = this.id;
-			
-			// URL watchers get a random id because of id requirements for CSS
-			this.id = "A" + Math.floor(Math.random() * 100000000);
-			break;
+	this.url = attrs.url;
+	if (typeof this.url === 'undefined') {
+		switch(this.type) {
+			case 'hit':
+				this.url = "https://www.mturk.com/mturk/preview" + (this.auto ? "andaccept" : "") + "?groupId=" + this.id;
+				break;
+			case 'requester':
+				this.url = "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&requesterId=" + this.id;
+				break;
+			case 'url':
+				this.url = this.id;
+				
+				// URL watchers get a random id because of id requirements for CSS
+				this.id = "A" + Math.floor(Math.random() * 100000000);
+				break;
+		}
 	}
-	
 	return this;
+}
+Watcher.prototype.toString = function() {
+	return this.name;
 }
 Watcher.prototype.getHTML = function() {
 	// Create the HTML (with the necessary variables to visualize the watcher)
 	var div = $('<div>')
 		.attr('id', this.id)
 		.addClass("watcher");
-	// console.log(this);	
 	var html = "<div class=\"details\"> > </div>\
 		<div>\
-		<div class=\"on_off\"><a" + (this.isOn ? " class=\"selected\"" : "") + ">ON</a><a" + (!this.isOn ? " class=\"selected\"" : "") + ">OFF</a></div>\
+		<div class=\"on_off\"><a" + (this.state.isOn ? " class=\"selected\"" : "") + ">ON</a><a" + (!this.state.isOn ? " class=\"selected\"" : "") + ">OFF</a></div>\
 		<a class=\"name\" href=\"" + this.getURL() + "\" target=\"_blank\">" + ((typeof this.name != 'undefined') ? this.name : this.id) + "</a><br />" +
-		(this.time / 1000) + " seconds <a class=\"edit\" href=\"javascript:void(0)\">Edit</a>\
+		(this.time / 1000) + " seconds <a class=\"edit\" href=\"javascript:void(0)\">Delete</a>\
 		<div class=\"bottom\">\
 			<div class=\"last_updated\" title=\"Last checked\">" + ((typeof this.date != 'undefined') ? this.getFormattedTime() : "n/a") + "</div>\
 		</div>\
@@ -798,13 +887,20 @@ Watcher.prototype.getHTML = function() {
 		colorCode.addClass("url");
 		colorCode.attr('title', "URL Watcher");
 	}
-
+	
 	var _this = this;
+
+	$(".edit", div).click(function() {
+		dispatch.remove(_this);
+	});
+
 	$(".on_off", div).click(function() { _this.toggleOnOff(); } );
 	$("a.name", div).click(function() { _this.markViewed(); });
 	$(".details", div).mouseout(function() { _this.markViewed(); });
 	$(".details", div).mouseover(function() { showDetailsPanel(_this); });
 	$(div).hover(function() { $(".edit", this).css('visibility', 'visible'); }, function() { $(".edit", this).css('visibility', 'hidden'); });
+	
+	this.DOMElement = div;
 	return div;
 }
 Watcher.prototype.getURL = function() {
@@ -818,7 +914,7 @@ Watcher.prototype.onChanged = function() {
 	this.isUpdated = true;
 	
 	// Sound alert for auto-accept HIT watchers and watchers that have the alert set on
-	if (this.auto || this.isAlert)
+	if (this.option.auto || this.option.alert)
 		this.alert();
 }
 Watcher.prototype.start = function() {
@@ -828,13 +924,14 @@ Watcher.prototype.start = function() {
 	this.interval = setInterval(function(){ _this.getData() }, this.time);
 	this.getData();
 	
-	this.isRunning = true;
+	this.state.isRunning = true;
+	return this;
 }
 Watcher.prototype.stop = function() {
 	// Stop the interval object and the timer object
 	clearInterval(this.interval);
 	clearTimeout(this.timer);
-	this.isRunning = false;
+	this.state.isRunning = false;
 }
 Watcher.prototype.filterMessages = function(newHits) {
 	// Determine which hits, if any, the user should be notified of
@@ -883,17 +980,17 @@ Watcher.prototype.filterMessages = function(newHits) {
 	return filteredHits;
 }
 Watcher.prototype.toggleOnOff = function() {
-	if (this.isOn) {
+	if (this.state.isOn) {
 		this.stop();
 		$("#" + this.id + " .on_off a:first-child").removeClass("selected");
 		$("#" + this.id + " .on_off a:last-child").addClass("selected");
-		this.isOn = false;
+		this.state.isOn = false;
 	} else {
-		if (!this.isRunning)
+		if (!this.state.isRunning)
 			this.start();
 		$("#" + this.id + " .on_off a:first-child").addClass("selected");
 		$("#" + this.id + " .on_off a:last-child").removeClass("selected");
-		this.isOn = true;
+		this.state.isOn = true;
 	}
 }
 Watcher.prototype.markViewed = function () {
@@ -1045,7 +1142,7 @@ Watcher.prototype.parseHitPage = function(data) {
 		hit.available = $("td.capsule_field_text:nth-child(8)", data).text().trim();
 		hit.time = $("td.capsule_field_text:nth-child(11)", data).text().trim();
 		
-		if ((hasCaptcha || this.auto) && this.isRunning)
+		if ((hasCaptcha || this.auto) && this.state.isRunning)
 			// We should probably toggle off all auto-accept hits when we encounter a captcha. Maybe send a special message to all mturk windows while we're at it.
 			// The special message could be some kind of banner that says that no more hits can be accepted in the background until the captcha is entered. (It would
 			// be pretty cool if we could pull up the captcha image in the background and just show it and the form to enter it from another page).
@@ -1054,6 +1151,7 @@ Watcher.prototype.parseHitPage = function(data) {
 		return new Array(hit);
 	}
 }
+Watcher.replacerArray = ["id", "time", "type", "name", "option", "auto", "alert", "stopOnCatch", "state", "isRunning", "isOn", "isUpdated", "url"];
 /** Watcher Stack and Queue
 	Stack - Grab as many as possible right away
 		Limit - The number of HITs to stack at once
