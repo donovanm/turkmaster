@@ -3,7 +3,7 @@
 // @namespace   12345
 // @description Testing out stuff for a notifier for Mturk
 // @include     https://www.mturk.com/mturk/*
-// @version     0.91
+// @version     0.92
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js
 // @grant       none
 // ==/UserScript==
@@ -487,6 +487,13 @@ function requestWebNotifications() {
 	});
 }
 
+function pauseEvent(e){
+    if(e.stopPropagation) e.stopPropagation();
+    if(e.preventDefault) e.preventDefault();
+    e.cancelBubble=true;
+    e.returnValue=false;
+    return false;
+}
 
 // This is the Hit object
 function Hit(attrs) {
@@ -569,10 +576,11 @@ function createDispatchPanel() {
 		#dispatcher .watcher .last_updated { position: absolute; right: 40px; bottom: 5px; color: #aaa }\
 		#dispatcher .watcher .icons { visibility: hidden; left: 5px; bottom: 5px }\
 		#dispatcher .watcher .icons img { opacity: 0.2 }\
-		#dispatcher .watcher .color_code { position: absolute; left: 0; top: 0; bottom: 0; width: 5px }\
-		#dispatcher .watcher .color_code.hit 		{ background-color: rgba(234, 111, 111, .7); }\
-		#dispatcher .watcher .color_code.requester 	{ background-color: rgba(51, 147, 255, .7); }\
-		#dispatcher .watcher .color_code.url 		{ background-color: rgba(58, 158, 59, .7); }");
+		#dispatcher .watcher .color_code { position: absolute; left: 0; top: 0; bottom: 0; width: 9px; cursor: row-resize }\
+		#dispatcher .watcher .color_code div { position: absolute; left: 0; top: 0; bottom: 0; width: 5px }\
+		#dispatcher .watcher .color_code.hit div		{ background-color: rgba(234, 111, 111, .7); }\
+		#dispatcher .watcher .color_code.requester div 	{ background-color: rgba(51, 147, 255, .7); }\
+		#dispatcher .watcher .color_code.url div		{ background-color: rgba(58, 158, 59, .7); }");
 }
 
 // The details panel for each watcher
@@ -740,11 +748,40 @@ Dispatch.prototype.remove = function(watcher) {
 	watcher.DOMElement.remove();
 	watcher.stop();
 }
+Dispatch.prototype.moveUp = function(watcher) {
+	if (watcher != this.watchers[0]) {
+		watcher.DOMElement.insertBefore(watcher.DOMElement.prev());
+		
+		var i = this.getWatcherIndex(watcher);
+		var temp = this.watchers[i-1];
+		this.watchers[i-1] = watcher;
+		this.watchers[i] = temp;
+	}
+}
+Dispatch.prototype.moveDown = function(watcher) {
+	if (watcher != this.watchers[this.watchers.length-1]) {
+		watcher.DOMElement.insertAfter(watcher.DOMElement.next());
+		
+		var i = this.getWatcherIndex(watcher);
+		var temp = this.watchers[i + 1];
+		this.watchers[i + 1] = watcher;
+		this.watchers[i] = temp;
+	}
+}
 Dispatch.prototype.getWatcherById = function(id) {
 	if (this.watchers.length > 0) {
 		for (i = 0; i < this.watchers.length; ++i) {
 			if (this.watchers[i].id == id)
 				return this.watchers[i];
+		}
+	}
+	return null;
+}
+Dispatch.prototype.getWatcherIndex = function(watcher) {
+	if (this.watchers.length > 0) {
+		for (i = 0; i < this.watchers.length; ++i) {
+			if (this.watchers[i] == watcher)
+				return i;
 		}
 	}
 	return null;
@@ -918,7 +955,7 @@ Watcher.prototype.getHTML = function() {
 		<div class=\"bottom\">\
 			<div class=\"last_updated\" title=\"Last checked\">" + ((typeof this.date != 'undefined') ? this.getFormattedTime() : "n/a") + "</div>\
 		</div>\
-		<div class=\"color_code\"></div>\
+		<div class=\"color_code\"><div></div></div>\
 		</div>";
 		
 	$(div).append(html);
@@ -934,16 +971,81 @@ Watcher.prototype.getHTML = function() {
 		colorCode.addClass("url");
 		colorCode.attr('title', "URL Watcher");
 	}
-	colorCode.hover(function() { $(this).css('width', "10px") }, function() { $(this).css('width', '') });
-	
+	colorCode.attr('title', colorCode.attr('title') + "\nClick and drag to re-order");
+	colorCode.hover(function() { $("div", this).css('width', "9px") }, function() { if (!isDragging) $("div", this).css('width', '') });
+
 	var _this = this;
 
+	
+	// Drag watchers
+	var isDragging = false;
+	var startY, startOffsetY, startOffsetX, limit, height; 
+	colorCode.on("mousedown", function(e) {
+		e=e || window.event;
+		pauseEvent(e);
+
+		height = div.outerHeight(true) - 3.25;
+		startY = e.clientY;
+		startOffsetY = div.offset().top;
+		startOffsetX = div.offset().left;
+		isDragging = true;
+		// console.log("Mousedown at " + startY);
+		// console.log("Mousedown offset at " + startOffsetY);
+		limit = Math.min(dispatch.DOMElement.outerHeight(true), height * (dispatch.watchers.length + .75)) - height;
+		// console.log("Limit = " + limit);
+		
+		div.css('cursor', "row-resize");
+		div.css('z-index', "100");
+	});
+	$(window).on("mouseup", function(e) {
+		if (isDragging) {
+			// console.log("Mouseup at " + e.clientY);
+			// console.log("Mouseup offset at " + $(div).offset().top);
+			isDragging = false;
+			$("div", colorCode).css('width', '');
+			div.css('cursor', '');
+			div.css('z-index', "auto");
+			
+			div.offset({ top: startOffsetY, left: startOffsetX });
+			dispatch.save();
+		}
+	});
+	$(window).on("mousemove", function(e) {
+		if (isDragging) {
+			var diffY = e.clientY - startY;
+			var newOffset = startOffsetY + diffY;
+			// console.log(JSON.stringify({startY:startY,clientY:e.clientY,diffY:diffY,newOffset:newOffset}));
+
+			if (newOffset < 28) {
+				newOffset = 28;
+			} else if (newOffset > limit) {
+				newOffset = limit;
+			} else {
+				if (diffY > height / 2) {
+					startY += height;
+					startOffsetY += height;
+					dispatch.moveDown(_this);
+					// console.log("Moving down...");
+				} else if (-diffY > height / 2) {
+					startY -= height;
+					startOffsetY -= height;
+					dispatch.moveUp(_this);
+					// console.log("Moving down...");
+				}
+			}
+			$(div).offset({ top: newOffset, left: startOffsetX });
+		}
+	});
+	
 	$(".delete", div).click(function() {
 		dispatch.remove(_this);
 	});
-	$(".icons img", div).hover(function() { $(this).css('opacity', "1") }, function() { $(this).css('opacity', '') });
-	$(".delete img", div).hover(function() {$(this).attr('src', "http://imgur.com/guRzYEL.png")}, function() {$(this).attr('src', "http://imgur.com/5snaSxU.png")});
-	$(".edit img", div).hover(function() {$(this).attr('src', "http://imgur.com/VTHXHI4.png")}, function() {$(this).attr('src', "http://imgur.com/peEhuHZ.png")});
+	$(".edit", div).click(function() {
+		dispatch.moveDown(_this);
+	});
+	$(".icons img", div).hover(function() { if (!isDragging) $(this).css('opacity', "1") }, function() { $(this).css('opacity', '') });
+	$(".delete img", div).hover(function() {if (!isDragging) $(this).attr('src', "http://imgur.com/guRzYEL.png")}, function() {$(this).attr('src', "http://imgur.com/5snaSxU.png")});
+	$(".edit img", div).hover(function() {if (!isDragging) $(this).attr('src', "http://imgur.com/VTHXHI4.png")}, function() {$(this).attr('src', "http://imgur.com/peEhuHZ.png")});
 
 	$(".on_off", div).click(function() { _this.toggleOnOff(); } );
 	$("a.name", div).click(function() { _this.markViewed(); });
