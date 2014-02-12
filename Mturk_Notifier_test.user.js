@@ -150,7 +150,7 @@ function addForm() {
 	$("input[value='Save']", form).click(function() {
 		var duration = parseInt($("#watcherDuration", form).val(), 10);
 		var type = (pageType.HIT) ? 'hit' : (pageType.REQUESTER) ? 'requester' : (pageType.SEARCH) ? 'url' : '';
-		var auto = $("input#autoaccept", form).get(0).checked;
+		var auto = (pageType.HIT) ? $("input#autoaccept", form).get(0).checked : false;
 		sendMessage({
 			header: 'add_watcher',
 			content: {
@@ -174,12 +174,23 @@ function addForm() {
 		else if (event.keyCode == 27)										// Cancel
 			form.hide();
 	});
-	
-	if (document.URL.match(/prevRequester=/)) {
-		var requester = document.URL.match(/prevRequester=([^&]*)/)[1]
-		$("#watcherName", form).val(requester.replace('+', ' '));
+
+	var name = "";
+	if (pageType.REQUESTER) {
+		if ($(".title_orange_text_bold").length > 0) {
+			name = $(".title_orange_text_bold").text().match(/Created by '(.+)'/);
+			name = (typeof name !== 'undefined') ? name[1] : "";
+		} else if (document.URL.match(/prevRequester=/)) {
+			name = document.URL.match(/prevRequester=([^&]*)/)[1]
+		}
+	} else if (pageType.SEARCH) {
+		name = document.URL.match(/searchWords=([^&]*)/);
+		name = (typeof name !== 'undefined') ? name[1] : "";
 	}
 	
+	if (name != "")
+	$("#watcherName", form).val(name.replace('+', ' '));
+
 	$("body").append(form);
 	return form;
 }
@@ -954,7 +965,7 @@ Watcher.prototype.getHTML = function() {
 			<a class=\"delete\" href=\"javascript:void(0)\"><img src=\"http://imgur.com/5snaSxU.png\" /></a>\
 		</span>\
 		<div class=\"bottom\">\
-			<div class=\"last_updated\" title=\"Last checked\">" + ((typeof this.date != 'undefined') ? this.getFormattedTime() : "n/a") + "</div>\
+			<div class=\"last_updated\" title=\"Last checked: " + ((typeof this.date != 'undefined') ? this.date.toString() : "n/a") + "\">" + ((typeof this.date != 'undefined') ? this.getFormattedTime() : "n/a") + "</div>\
 		</div>\
 		<div class=\"color_code\"><div></div></div>\
 		</div>";
@@ -1175,7 +1186,7 @@ Watcher.prototype.updateLastChecked = function() {
 }
 Watcher.prototype.updateWatcherPanel = function() {
 	this.updateLastChecked();
-	$("#dispatcher #" + this.id + " .last_updated").text(this.getformattedTime());
+	$("#dispatcher #" + this.id + " .last_updated").text(this.getformattedTime()).attr('title', "Last checked: " + this.date.toString());
 }
 Watcher.prototype.getformattedTime = function() {
 	var time = this.date;
