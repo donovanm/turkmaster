@@ -3,10 +3,15 @@
 // @namespace   12345
 // @description Testing out stuff for a notifier for Mturk
 // @include     https://www.mturk.com/mturk/*
-// @version     0.9
+// @version     0.91
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js
 // @grant       none
 // ==/UserScript==
+
+var settings = {
+	sound: true,
+	animation: true
+}
 
 var pageType ={
 		MAIN:		true,	// This is so remote watcher requests don't add new watchers to multiple pages and cause mturk errors.
@@ -15,11 +20,6 @@ var pageType ={
 		REQUESTER:	false,
 		SEARCH:		false
 };
-
-var settings = {
-	sound: true,
-	animation: true
-}
 
 var wasViewed = false;
 var dispatch;
@@ -37,6 +37,7 @@ $(document).ready(function(){
 		// loadHits();
 		dispatch.load();
 		requestMain();
+		preloadImages();
 	}
 	
 	if (pageType.HIT || pageType.REQUESTER || pageType.SEARCH)
@@ -76,6 +77,19 @@ function requestMain() {
 	sendMessage({ header: "request_main" });
 }
 
+function preloadImages() {
+	var images = [
+		'http://imgur.com/guRzYEL.png',
+		'http://imgur.com/5snaSxU.png',
+		'http://imgur.com/VTHXHI4.png',
+		'http://imgur.com/peEhuHZ.png'
+	];
+
+	$(images).each(function(){
+		$('<img>')[0].src = this;
+	});
+}
+
 function addWatchButton() {
 	var type = (pageType.HIT) ? 'hit' : (pageType.REQUESTER) ? 'requester' : (pageType.SEARCH) ? 'page' : '';
 	var form = addForm();
@@ -110,7 +124,6 @@ function addWatchButton() {
 
 function addForm() {
 	var id = (document.URL.match(/groupId=([A-Z0-9]+)/) || document.URL.match(/requesterId=([A-Z0-9]+)/) || [,document.URL])[1];
-	// console.log(id);
 		
 	var form = $("<div>").attr('id', 'add_watcher_form').append(
 		$("<h3>").text("Add a watcher"),
@@ -120,10 +133,12 @@ function addForm() {
 			$("<label>").text(" Time ").append(
 				$("<input>").attr('id', "watcherDuration").attr('type', "text"))
 			),
-		$("<p>").append(
-			$("<input>").attr('type', "checkbox").attr('id', "autoaccept"),
-			$("<label>").attr('for', "autoaccept").text("Auto-accept")
-			),
+		(pageType.HIT) ?
+			$("<p>").append(
+				$("<input>").attr('type', "checkbox").attr('id', "autoaccept"),
+				$("<label>").attr('for', "autoaccept").text("Auto-accept")
+				)
+			: "",
 		$("<p>").addClass("form_buttons").append(
 			$("<input>").attr('type', "button").attr('value', "Save"),
 			$("<input>").attr('type', "button").attr('value', "Cancel")
@@ -159,6 +174,11 @@ function addForm() {
 		else if (event.keyCode == 27)										// Cancel
 			form.hide();
 	});
+	
+	if (document.URL.match(/prevRequester=/)) {
+		var requester = document.URL.match(/prevRequester=([^&]*)/)[1]
+		$("#watcherName", form).val(requester.replace('+', ' '));
+	}
 	
 	$("body").append(form);
 	return form;
@@ -353,7 +373,7 @@ function onMessageReceived(header, message) {
 			break;
 		case 'add_watcher' : 
 			var msg = message;
-			dispatch.add(new Watcher({id: msg.id, time: msg.duration, type: msg.type , name: msg.name, options: {auto:msg.auto}})).start();
+			dispatch.add(new Watcher({id: msg.id, time: msg.duration, type: msg.type , name: msg.name, option: {auto:msg.auto}})).start();
 			break;
 		case 'mute_hit' :
 			var id = message.split(',')[0];
@@ -375,10 +395,11 @@ function onMessageReceived(header, message) {
 		case 'request_denied' :
 			dispatch.onRequestMainDenied();
 			break;
+		case 'show_main' :
+			alert("Showing the main dashboard. (Close this Mturk page to establish a notifier in a different tab or window)");
+			break;
 		}
 	} else if (header == 'new_hits' && (!pageType.DASHBOARD || (pageType.DASHBOARD && !pageType.MAIN))) {
-		// Notify server if the tab was in focus when the message was received. This is so we can determine whether or 
-		// not to send a browser notification that'll show up everywhere.
 		var hits = message.hits;
 		
 		// Re-create the hits so their methods can be used
@@ -393,7 +414,7 @@ function onMessageReceived(header, message) {
 function sendMessage(message) {
 	var header = message.header;
 	var content = message.content || new Date().getTime();		// Make the content a timestamp when there's no actual content
-	var timestamp = message.timestamp && new Date().getTime();	// If wanted, adds a timestamp to the content so a message with the same content will still trigger the event
+	var timestamp = message.timestamp && new Date().getTime();	// If wanted, adds a timestamp to the content so messages with the same content will still trigger the event consecutively
 	localStorage.setItem('notifier_msg_' + header, JSON.stringify({ content: content, timestamp: timestamp}));
 }
 
@@ -403,15 +424,16 @@ function sendMessage(message) {
 	return		bool			Returns true if all hits have the same requester
 **/
 function isSameRequester(hits) {
-	if (this.length == 1) return false;
 	if (hits.length > 1) {
 		var compareRequester = hits[0].requester;
 		for (i = 1; i < hits.length; ++i) {
 			if (compareRequester != hits[i].requester)
 				return false;
 		}
+		return true;
+	} else {
+		return false;
 	}
-	return true;
 }
 
 function sendBrowserNotification(hits, watcher) {
@@ -520,15 +542,16 @@ function createDispatchPanel() {
 			.append($(pageElements))
 	);
 	dispatch.DOMElement = dispatch.getHTML();
-	$("body").prepend(dispatch.DOMElement);
-	addStyle("#dispatcher { background-color: #f5f5f5; position: fixed; top: 0px; float: left; height: 100%;  width: 270px; font: 8pt Helvetica;  margin-left: -5px; margin }\
-		#content_container { position: absolute; left: 270px; top: 0; right: 0; border-left: 2px solid #dadada }\
+	$("body").css('margin', "0").prepend(dispatch.DOMElement);
+	addStyle("#dispatcher { background-color: #f5f5f5; position: fixed; top: 0px; float: left; height: 100%;  width: 270px; font: 8pt Helvetica;  margin-left: 0px; margin }\
+		#content_container { position: absolute; left: 270px; top: 0; right: 0; border-left: 2px solid #dadada; }\
 		#dispatcher #controller { text-align: center; font: 200% Candara; position: relative; height: 25px; }\
 		#dispatcher #controller .on_off { margin: 7px 5px 0 0 }\
 		#dispatcher #controller .on_off a { font: 80% Helvetica }\
-		#dispatcher #watcher_container { position: absolute; top: 25px; bottom: 0; overflow-y:auto; width: 100%}\
-		#dispatcher #watcher_container a.close { text-decoration: none; color: #555; background-color: #fff; padding: 3px 10px; border: 1px solid #aaa; border-radius: 2px }\
-		#dispatcher #watcher_container a.close:hover { background-color: #def; border-color: #aaa }\
+		#dispatcher #watcher_container { position: absolute; top: 25px; bottom: 0; overflow-y:auto; width: 100%;}\
+		#dispatcher #watcher_container p { margin: 30px 0px }\
+		#dispatcher #watcher_container .error_button a { text-decoration: none; color: #555; background-color: #fff; padding: 3px 10px; margin: 5px; border: 1px solid #aaa; border-radius: 2px }\
+		#dispatcher #watcher_container .error_button a:hover { background-color: #def; border-color: #aaa }\
 		#dispatcher #settings { float: left; margin: 3px 2px }\
 		#dispatcher div { font-size: 8pt }\
 		#dispatcher .watcher { margin: 3px; background-color: #fff; position: relative; border-bottom: 1px solid #ddd; border-right: 1px solid #ddd; }\
@@ -544,7 +567,8 @@ function createDispatchPanel() {
 		#dispatcher .watcher .bottom a:hover { color: #cef; }\
 		#dispatcher .watcher .details { font-size: 150%; font-weight: bold }\
 		#dispatcher .watcher .last_updated { position: absolute; right: 40px; bottom: 5px; color: #aaa }\
-		#dispatcher .watcher .edit { visibility: hidden; position: absolute: left: 5px; bottom: 5px; }\
+		#dispatcher .watcher .icons { visibility: hidden; left: 5px; bottom: 5px }\
+		#dispatcher .watcher .icons img { opacity: 0.2 }\
 		#dispatcher .watcher .color_code { position: absolute; left: 0; top: 0; bottom: 0; width: 5px }\
 		#dispatcher .watcher .color_code.hit 		{ background-color: rgba(234, 111, 111, .7); }\
 		#dispatcher .watcher .color_code.requester 	{ background-color: rgba(51, 147, 255, .7); }\
@@ -615,7 +639,7 @@ IgnoreList.prototype.load = function() {
 		console.log("No ignored items found");
 	}
 	var _this = this;
-	setInterval(function(){ _this.save() }, 60000);
+	setInterval(function(){ _this.save() }, this.time);
 }
 IgnoreList.prototype.clear = function() {
 	this.items = new Array();
@@ -654,7 +678,6 @@ function Dispatch() {
 	this.isLoading = false;
 }
 Dispatch.prototype.start = function() {
-	// For now start all watchers
 	if (this.watchers.length > 0) {
 		var count = 0;
 		for (i = 0; i < this.watchers.length; ++i) {
@@ -700,6 +723,8 @@ Dispatch.prototype.load = function() {
 	if (data != null) {
 		watchers = JSON.parse(data);
 		for(var i = 0; i < watchers.length; i++) this.add(new Watcher(watchers[i]));
+	} else {
+		loadHits();
 	}
 	this.isLoading = false;
 }
@@ -713,6 +738,7 @@ Dispatch.prototype.remove = function(watcher) {
 	this.watchers = newArray;
 	
 	watcher.DOMElement.remove();
+	watcher.stop();
 }
 Dispatch.prototype.getWatcherById = function(id) {
 	if (this.watchers.length > 0) {
@@ -744,19 +770,23 @@ Dispatch.prototype.hideWatchers = function() {
 	$("#watcher_container")
 		.css('background-color', "#f9f9f9")
 		.css('color', "#ff6b6b")
-		.css('padding', "5px")
-		.css('text-align', "center")
-		.append($("<p>")
-			.text("There is already a notifier running on a different page."))
-		.append($("<a>")
-			.html("Close")
-			.addClass("close")
-			.attr('href', "javascript:void(0)")
-			.click(function() {
-				$("#dispatcher").css('display', "none");
-				$("#content_container").css('left', "0px");
-				})
-			);
+		.css('text-align', "center").append(
+			$("<p>").text("There is already a notifier running on a different page."),
+			$("<p>").addClass("error_button").append(
+				$("<a>")
+					.html("Close")
+					.attr('href', "javascript:void(0)")
+					.click(function() {
+						$("#dispatcher").css('display', "none");
+						$("#content_container").css('left', "0px");
+					}),
+				$("<a>")
+					.html("Show")
+					.attr('href', "javascript:void(0)")
+					.click(function() {
+						sendMessage({ header: 'show_main' });
+					})
+			));
 }
 Dispatch.prototype.getHTML = function() {
 	// Create the HTML to display the dispatcher
@@ -804,7 +834,20 @@ Dispatch.prototype.onRequestMainDenied = function() {
 	
 	Experimental.
 **/
-function QuickWatcher() { var requester = new Array(); }
+// function QuickWatcher(watchers) {
+	// var watchers = filterWatchers(watchers);	// We only want Requester and Hit watchers
+	// var watcher = new Watcher({ id: "https://www.mturk.com/mturk/findhits?match=false", time: 1000, type: 'url', name: "Quick Watcher"}); // Watches for all new hits every second
+// }
+// QuickWatcher.filterWatchers = function(watchers) {
+	// var filteredWatchers = new Array();
+	
+	// for (var i = 0; i < watchers.length; i++) {
+		// if (watchers[i].type == 'requester' || watchers[i].type == 'hit')
+			// filteredWatchers.push(watchers[i]);
+	// }
+	
+	// return filteredWatchers;
+// }
 
 /**	The Watcher object. This is what controls the pages that are monitored and how often
 
@@ -824,9 +867,9 @@ function Watcher(attrs) {
 	
 	// Required attributes
 	this.id   = attrs.id;
-	this.time = attrs.time;
+	this.time = attrs.time || 60000;
 	this.type = attrs.type;
-	this.name = attrs.name;
+	this.name = attrs.name || this.id;
 	
 	// Options
 	this.option = {};
@@ -834,7 +877,7 @@ function Watcher(attrs) {
 	this.option.auto 			= (typeof option.auto !== 'undefined') ? option.auto : false;
 	this.option.alert 			= (typeof option.alert !== 'undefined') ? option.alert : false;
 	this.option.stopOnCatch 	= (typeof option.stopOnCatch !== 'undefined') ? option.stopOnCatch : true;
-
+	
 	// Figure out the URL
 	this.url = attrs.url;
 	if (typeof this.url === 'undefined') {
@@ -867,7 +910,11 @@ Watcher.prototype.getHTML = function() {
 		<div>\
 		<div class=\"on_off\"><a" + (this.state.isOn ? " class=\"selected\"" : "") + ">ON</a><a" + (!this.state.isOn ? " class=\"selected\"" : "") + ">OFF</a></div>\
 		<a class=\"name\" href=\"" + this.getURL() + "\" target=\"_blank\">" + ((typeof this.name != 'undefined') ? this.name : this.id) + "</a><br />" +
-		(this.time / 1000) + " seconds <a class=\"edit\" href=\"javascript:void(0)\">Delete</a>\
+		(this.time / 1000) + " seconds \
+		<span class=\"icons\">\
+			<a class=\"edit\" href=\"javascript:void(0)\"><img src=\"http://imgur.com/peEhuHZ.png\" /></a>\
+			<a class=\"delete\" href=\"javascript:void(0)\"><img src=\"http://imgur.com/5snaSxU.png\" /></a>\
+		</span>\
 		<div class=\"bottom\">\
 			<div class=\"last_updated\" title=\"Last checked\">" + ((typeof this.date != 'undefined') ? this.getFormattedTime() : "n/a") + "</div>\
 		</div>\
@@ -887,18 +934,22 @@ Watcher.prototype.getHTML = function() {
 		colorCode.addClass("url");
 		colorCode.attr('title', "URL Watcher");
 	}
+	colorCode.hover(function() { $(this).css('width', "10px") }, function() { $(this).css('width', '') });
 	
 	var _this = this;
 
-	$(".edit", div).click(function() {
+	$(".delete", div).click(function() {
 		dispatch.remove(_this);
 	});
+	$(".icons img", div).hover(function() { $(this).css('opacity', "1") }, function() { $(this).css('opacity', '') });
+	$(".delete img", div).hover(function() {$(this).attr('src', "http://imgur.com/guRzYEL.png")}, function() {$(this).attr('src', "http://imgur.com/5snaSxU.png")});
+	$(".edit img", div).hover(function() {$(this).attr('src', "http://imgur.com/VTHXHI4.png")}, function() {$(this).attr('src', "http://imgur.com/peEhuHZ.png")});
 
 	$(".on_off", div).click(function() { _this.toggleOnOff(); } );
 	$("a.name", div).click(function() { _this.markViewed(); });
 	$(".details", div).mouseout(function() { _this.markViewed(); });
 	$(".details", div).mouseover(function() { showDetailsPanel(_this); });
-	$(div).hover(function() { $(".edit", this).css('visibility', 'visible'); }, function() { $(".edit", this).css('visibility', 'hidden'); });
+	$(div).hover(function() { $(".icons", this).css('visibility', 'visible'); }, function() { $(".icons", this).css('visibility', 'hidden'); });
 	
 	this.DOMElement = div;
 	return div;
@@ -1067,7 +1118,7 @@ Watcher.prototype.sendHits = function(hits) {
 			// page was visible when it received the hits, this will cancel out.
 			if (!document.hasFocus()) {
 				var _this = this;
-				setTimeout(function() { sendBrowserNotification(hits, _this); }, 100);
+				setTimeout(function() { sendBrowserNotification(hits, _this); }, 200);
 			}
 		}
 	}
@@ -1338,8 +1389,8 @@ function NotificationGroup(title, hits, isSticky, watcher) {
 	var _this = this;
 	setTimeout(function() {
 		if (typeof _this.onTimeout != 'undefined' && _this.onTimeout != null) {
-			_this.onTimeout(_this);
 			_this.hasTimedOut = true;
+			_this.onTimeout(_this);
 		}
 	}, this.timeout);	
 
@@ -1419,7 +1470,7 @@ NotificationHit.prototype.createDOMElement = function() {
 	
 	$(muteButton).text((typeof dispatch !== 'undefined' && dispatch.isMuted(id)) ? "muted" : "mute");
 	$(muteButton).click(function () {
-		if (!pageType.DASHBOARD) {
+		if (!pageType.DASHBOARD || (pageType.DASHBOARD && !pageType.MAIN)) {
 			if ($(this).text() == "mute")
 				sendMessage({ header: "mute_hit", content: id, timestamp: true });
 			else
