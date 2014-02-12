@@ -384,6 +384,7 @@ function onMessageReceived(header, message) {
 			break;
 		case 'add_watcher' : 
 			var msg = message;
+			// console.log(JSON.stringify(msg,null,4));
 			dispatch.add(new Watcher({id: msg.id, time: msg.duration, type: msg.type , name: msg.name, option: {auto:msg.auto}})).start();
 			break;
 		case 'mute_hit' :
@@ -926,13 +927,13 @@ function Watcher(attrs) {
 	this.option.auto 			= (typeof option.auto !== 'undefined') ? option.auto : false;
 	this.option.alert 			= (typeof option.alert !== 'undefined') ? option.alert : false;
 	this.option.stopOnCatch 	= (typeof option.stopOnCatch !== 'undefined') ? option.stopOnCatch : true;
-	
+	// console.log(JSON.stringify(option,null,4));
 	// Figure out the URL
 	this.url = attrs.url;
 	if (typeof this.url === 'undefined') {
 		switch(this.type) {
 			case 'hit':
-				this.url = "https://www.mturk.com/mturk/preview" + (this.auto ? "andaccept" : "") + "?groupId=" + this.id;
+				this.url = "https://www.mturk.com/mturk/preview" + (this.option.auto ? "andaccept" : "") + "?groupId=" + this.id;
 				break;
 			case 'requester':
 				this.url = "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&requesterId=" + this.id;
@@ -992,7 +993,7 @@ Watcher.prototype.getHTML = function() {
 	// Drag watchers
 	var isDragging = false;
 	var startY, startOffsetY, startOffsetX, limit, height; 
-	colorCode.on("mousedown", function(e) {
+	div.on("mousedown", function(e) {
 		e=e || window.event;
 		pauseEvent(e);
 
@@ -1001,10 +1002,7 @@ Watcher.prototype.getHTML = function() {
 		startOffsetY = div.offset().top;
 		startOffsetX = div.offset().left;
 		isDragging = true;
-		// console.log("Mousedown at " + startY);
-		// console.log("Mousedown offset at " + startOffsetY);
 		limit = Math.min(dispatch.DOMElement.outerHeight(true), height * (dispatch.watchers.length + .75)) - height;
-		// console.log("Limit = " + limit);
 		
 		div.css('cursor', "row-resize");
 		div.css('z-index', "100");
@@ -1013,9 +1011,6 @@ Watcher.prototype.getHTML = function() {
 	});
 	$(window).on("mouseup", function(e) {
 		if (isDragging) {
-			// console.log("Mouseup at " + e.clientY);
-			// console.log("Mouseup offset at " + $(div).offset().top);
-			isDragging = false;
 			$("div", colorCode).css('width', '');
 			div.css('cursor', '');
 			div.css('z-index', "auto");
@@ -1023,13 +1018,13 @@ Watcher.prototype.getHTML = function() {
 			div.css('opacity', "1");
 			$(".name", div).removeClass("no_hover");
 			dispatch.save();
+			isDragging = false;
 		}
 	});
 	$(window).on("mousemove", function(e) {
 		if (isDragging) {
 			var diffY = e.clientY - startY;
 			var newOffset = startOffsetY + diffY;
-			// console.log(JSON.stringify({startY:startY,clientY:e.clientY,diffY:diffY,newOffset:newOffset}));
 
 			if (newOffset < 28) {
 				newOffset = 28;
@@ -1040,12 +1035,10 @@ Watcher.prototype.getHTML = function() {
 					startY += height;
 					startOffsetY += height;
 					dispatch.moveDown(_this);
-					// console.log("Moving down...");
 				} else if (-diffY > height / 2) {
 					startY -= height;
 					startOffsetY -= height;
 					dispatch.moveUp(_this);
-					// console.log("Moving down...");
 				}
 			}
 			$(div).offset({ top: newOffset, left: startOffsetX });
@@ -1303,14 +1296,14 @@ Watcher.prototype.parseHitPage = function(data) {
 		if (hasCaptcha) console.log("Has captcha");
 
 		var uid = $("input[name='hitId']", data).attr("value");
-		var hit = new Hit({id: this.id, uid: uid, isAutoAccept: this.auto});
+		var hit = new Hit({id: this.id, uid: uid, isAutoAccept: this.option.auto});
 		hit.requester = $("form:nth-child(7) > div:nth-child(9) > div:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2)", data).text().trim();
 		hit.title = $(".capsulelink_bold > div:nth-child(1)", data).text().trim();
 		hit.reward = $("td.capsule_field_text:nth-child(5) > span:nth-child(1)", data).text().trim();
 		hit.available = $("td.capsule_field_text:nth-child(8)", data).text().trim();
 		hit.time = $("td.capsule_field_text:nth-child(11)", data).text().trim();
 		
-		if ((hasCaptcha || this.auto) && this.state.isRunning)
+		if ((hasCaptcha || this.option.auto) && this.state.isRunning)
 			// We should probably toggle off all auto-accept hits when we encounter a captcha. Maybe send a special message to all mturk windows while we're at it.
 			// The special message could be some kind of banner that says that no more hits can be accepted in the background until the captcha is entered. (It would
 			// be pretty cool if we could pull up the captcha image in the background and just show it and the form to enter it from another page).
