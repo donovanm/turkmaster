@@ -25,7 +25,11 @@ var wasViewed = false;
 var dispatch;
 var notificationPanel; 
 
-
+if(!('contains' in String.prototype)) {
+       String.prototype.contains = function(str, startIndex) {
+                return -1 !== String.prototype.indexOf.call(this, str, startIndex);
+       };
+ }
 
 $(document).ready(function(){
 	checkPageType();
@@ -564,7 +568,7 @@ function createDispatchPanel() {
 	$("body").css('margin', "0").prepend(dispatch.DOMElement);
 	addStyle("#dispatcher { background-color: #f5f5f5; position: fixed; top: 0px; float: left; height: 100%;  width: 270px; font: 8pt Helvetica;  margin-left: 0px; margin }\
 		#content_container { position: absolute; left: 270px; top: 0; right: 0; border-left: 2px solid #dadada; }\
-		#dispatcher #controller { text-align: center; font: 200% Candara; position: relative; height: 25px; }\
+		#dispatcher #controller { text-align: center; font: 200% Candara; color: #585858; position: relative; height: 25px; }\
 		#dispatcher #controller .on_off { margin: 7px 5px 0 0 }\
 		#dispatcher #controller .on_off a { font: 80% Helvetica }\
 		#dispatcher #watcher_container { position: absolute; top: 25px; bottom: 0; overflow-y:auto; width: 100%;}\
@@ -586,7 +590,7 @@ function createDispatchPanel() {
 		#dispatcher .watcher .bottom a:link { color: black; }\
 		#dispatcher .watcher .bottom a:hover { color: #cef; }\
 		#dispatcher .watcher .details { font-size: 150%; font-weight: bold }\
-		#dispatcher .watcher .last_updated { position: absolute; right: 40px; bottom: 5px; color: #aaa }\
+		#dispatcher .watcher .last_updated { position: absolute; right: 30px; bottom: 5px; color: #aaa }\
 		#dispatcher .watcher .icons { visibility: hidden; left: 5px; bottom: 5px }\
 		#dispatcher .watcher .icons img { opacity: 0.2 }\
 		#dispatcher .watcher .color_code { position: absolute; left: 0; top: 0; bottom: 0; width: 9px; cursor: row-resize }\
