@@ -3,14 +3,15 @@
 // @namespace   12345
 // @description Testing out stuff for a notifier for Mturk
 // @include     https://www.mturk.com/mturk/*
-// @version     0.92
+// @version     0.94
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js
 // @grant       none
 // ==/UserScript==
 
 var settings = {
 	sound: true,
-	animation: true
+	animation: true,
+	preloadHits: false
 }
 
 var pageType ={
@@ -38,8 +39,10 @@ $(document).ready(function(){
 		dispatch = new Dispatch();
 		createDispatchPanel();
 		createDetailsPanel();
-		// loadHits();
-		dispatch.load();
+		if (settings.preloadHits)
+			loadHits();
+		else
+			dispatch.load();
 		requestMain();
 		preloadImages();
 	}
@@ -257,6 +260,26 @@ function loadHits() {
 	// Add a few watchers. Won't be done like this in the future
 	dispatch.isLoading = true;
 	dispatch.add(new Watcher({
+		id: "A2SUM2D7EOAK1T",
+		time: 120000,
+		type: 'requester',
+		name: 'Crowdsource'}));
+	dispatch.add(new Watcher({
+		id: "AX7NXUM5E66CV",
+		time: 120000,
+		type: 'requester',
+		name: 'Global Media'}));
+	dispatch.add(new Watcher({
+		id: "2593XERSQV669CRFVPUH3WA0RLF19Y",
+		time: 120000,
+		type: 'hit',
+		name: '411 something'}));
+	dispatch.add(new Watcher({
+		id: "249OVHVKCJ016ES446Y9SQWB8AQ57K",
+		time: 120000,
+		type: 'hit',
+		name: 'Brian Muller'}));
+	dispatch.add(new Watcher({
 		id: "A11L036EBWKONR",
 		time: 14000,
 		type: 'requester',
@@ -322,15 +345,56 @@ function loadHits() {
 		type: 'hit',
 		name: "ACME Transcription",
 		option: {alert:true}}));
+	dispatch.add(new Watcher({
+		id: "A2S0QCZG8DTNJC",
+		time: 20000,
+		type: 'requester',
+		name: "Procore Development*",
+		option: {alert:true}}));	// Procore Development
+	dispatch.add(new Watcher({
+		id: "A1ZCUBP2G0ZGZM",
+		time: 200000,
+		type: 'requester',
+		name: "Bluejay Labs*",
+		option: {alert:true}})); // Bluejay
+	dispatch.add(new Watcher({
+		id: "AO1GS3CMM2IGY",
+		time: 180000,
+		type: 'requester',
+		name: "Five Star"})); // Five Star
+	dispatch.add(new Watcher({
+		id: "A2PZOEIMR3MMZ",
+		time: 120000,
+		type: 'requester',
+		name: "John Hopkins sentiments"})); // John Hopkins
+	dispatch.add(new Watcher({
+		id: "A3S6NXOO11XCIC",
+		time: 45000,
+		type: 'requester',
+		name: "Mturk Evaluation"})); // Mturk Evaluation
+	dispatch.add(new Watcher({
+		id: "ALZUWU3P4QQSG",
+		time: 45000,
+		type: 'requester',
+		name: "Nate Ricklin"})); // Nate!
+	dispatch.add(new Watcher({
+		id: "A1HTPXGAZGXM4J",
+		time: 45000,
+		type: 'requester',
+		name: "AJ Ghergich (like AndyK)"})); // Find the email
+	dispatch.add(new Watcher({
+		id: "A3LT3IDU51G3EO",
+		time: 45000,
+		type: 'requester',
+		name: "Jeff Strong"})); // Jeff Strong keywords
+ 		
 	// dispatch.add(new Watcher("2HGWQIHPCGJ6H9UR6LWXR0JPSTN175", 15000, 'hit', "Taskrabbit Auto", {auto:true}));
 	// dispatch.add(new Watcher("2FH56XBAT2D9NQFBUKUQAJG7U3M04G", 15000, 'hit', "$10 hit", {auto:true}));
 	// dispatch.add(new Watcher("2RTSP6AUC26HG6O1Q2UVAFK2DRN29X", 13000, 'hit', "$20 Market Research", {auto:true}));
 	// dispatch.add(new Watcher("2PBXCNHMVHVKTTYQLPT7AJ7GOYX13M", 15000, 'hit', "Receipt hit"));
 	// dispatch.add(new Watcher("2YEAJIA0RYNJTANGW8R5HMJ0YM4613", 60000, 'hit', "RnR caption", true)); // RnR caption
 	// dispatch.add(new Watcher("A19NF3HMR2SC0H", 10000, 'requester', "Sirius Project"));
-/*	dispatch.add(new Watcher("A2S0QCZG8DTNJC", 20000, 'requester', "Procore Development*", {alert:true}));	// Procore Development
-	dispatch.add(new Watcher("A1ZCUBP2G0ZGZM", 200000, 'requester', "Bluejay Labs*", {alert:true})); // Bluejay
-	dispatch.add(new Watcher("https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=Nate+Ricklin&minReward=0.00&x=7&y=1", 45000, 'url', "Nate Ricklin")); // Nate Ricklin
+/*	dispatch.add(new Watcher("https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=Nate+Ricklin&minReward=0.00&x=7&y=1", 45000, 'url', "Nate Ricklin")); // Nate Ricklin
 	dispatch.add(new Watcher("AI2HRFAYYSAW7", 60000, 'requester', "PickFu")); // PickFu
 	// dispatch.add(new Watcher("https://www.mturk.com/mturk/findhits?match=false", 20000, 'url', "Newest HITs")); // Newist HITs
 	// dispatch.add(new Watcher("ALS85546QW4UL", 120000, 'requester', "Sunghyun Park ($1 movie hits)"));
@@ -343,12 +407,10 @@ function loadHits() {
 	// dispatch.add(new Watcher("A14AT838CPSKA6", 240000, 'requester', "Venue Quality")); // Venue Quality
 	dispatch.add(new Watcher("A6YG5FKV2TAVC", 300000, 'requester', "Agent Agent"));	// Agent Agent
 	dispatch.add(new Watcher("https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=set+master&minReward=0.00&x=0&y=0", 180000, 'url', "SET Master")); // SET Master
-	dispatch.add(new Watcher("AO1GS3CMM2IGY", 180000, 'requester', "Five Star")); // Five Star
 	// dispatch.add(new Watcher("AU22B6CPBQVG4", 600000, 'requester', "Dan Barowy (autoqual)", true));
 	// dispatch.add(new Watcher("A1FDJ65X0XFT5M", 180000, 'requester', "ATA (Twitter sentiments check TO)")); // ATA
 	dispatch.add(new Watcher("A5QQWO2U81GM6", 180000, 'requester', "VoxPopMe (transcription)")); // VoxPopMe
 	dispatch.add(new Watcher("A2BXT12GC0UVMU", 300000, 'requester', "Ghinwa F Choueiter (tag a blog)")); // Ghinwa F Choueiter (tag a blog)
-	dispatch.add(new Watcher("A2PZOEIMR3MMZ", 120000, 'requester', "John Hopkins sentiments")); // John Hopkins
 	dispatch.add(new Watcher("A1TI16GBKWZ4M8", 600000, 'requester', "OCMP")); // OCMP
 	// dispatch.add(new Watcher("A3T8FT460R1D09", 300000, 'requester', "Penserra Securities")); // Penserra Securities
 	// dispatch.add(new Watcher("A3M0FXH8S3MV1V", 240000, 'requester', "SkillPages (potentially good)")); // SkillPages (needs private qual - password in qual test)
@@ -377,7 +439,7 @@ function loadHits() {
 	*/
 	// dispatch.add(new Watcher("A244AEXZLYKAD9", 90000, 'requester', "Affective Cog Neuro Lab 09")); // Good batch if they put out one I can qualify for
 	dispatch.isLoading = false;
-	// dispatch.save();
+	dispatch.save();
 }
 
 function onMessageReceived(header, message) {
@@ -518,12 +580,15 @@ function Hit(attrs) {
 	this.uid 			= attrs.uid;
 	this.isAutoAccept 	= attrs.isAutoAccept || false;
 	this.requester 		= attrs.requester;
+    this.requesterID    = attrs.requesterID;
 	this.url 			= attrs.url;
 	this.title 			= attrs.title;
 	this.reward 		= attrs.reward;
 	this.description 	= attrs.description;
 	this.available 		= attrs.available;
 	this.time 			= attrs.time;
+	this.isQualified	= attrs.isQualified;
+	this.canPreview		= (typeof attrs.canPreview !== 'undefined') ? attrs.canPreview : true;
 }
 Hit.prototype.getURL = function(type) {
 	switch(type) {
@@ -531,7 +596,7 @@ Hit.prototype.getURL = function(type) {
 		return "https://www.mturk.com/mturk/preview?groupId=" + this.id;
 		break;
 	case 'accept':
-		return "https://www.mturk.com/mturk/previewandaccept?groupId=" + this.id;
+		return (this.isQualified) ? "https://www.mturk.com/mturk/previewandaccept?groupId=" + this.id : null;
 		break;
 	case 'auto':
 		return "https://www.mturk.com/mturk/previewandaccept?groupId=" + this.id + "&autoAcceptEnabled=true";
@@ -547,6 +612,24 @@ Hit.prototype.getURL = function(type) {
 		return "";
 	}
 }
+Hit.containsId = function(hitId, hits) {
+	// console.log("hitId and hits");
+	// console.log(hitId, hits);
+
+	for (var i = 0, len = hits.length; i < len; i++) {
+		if (hitId == hits[i].id)
+			return true;
+	}
+	return false;
+}
+Hit.indexOf = function(hitId, hits) {
+    for (var i = 0, len = hits.length; i < len; i++) {
+        if (hitId == hits[i].id)
+            return i;
+    }
+    return -1;
+}
+Hit.constructor.prototype.toString = function() { return this.title }
 
 // Message object
 function Message() {
@@ -605,7 +688,7 @@ function createDetailsPanel() {
 	var div = $('<div>').attr('id', 'details_panel').addClass('notification_panel');
 	addStyle("#details_panel {\
 		background-color: #fff;\
-		position: fixed; top: 0px;\
+		position: absolute; top: 0px;\
 		margin-left: 1px;\
 		width: 500;\
 		border: 1px solid #e3e3e3;\
@@ -709,10 +792,10 @@ Dispatch.prototype.start = function() {
 			// Don't start them all at the same time. There is a 2 second delay
 			// between each start. It had to be done in a self-executing function
 			// in order for the setTimeout to work properly.
-			if (this.getWatcher(i).state.isOn) {
+			if (this.watchers[i].state.isOn) {
 				(function (watcher, x){
 						watcher.timer = setTimeout(function() { watcher.start(); }, x * 2000);
-				})(this.getWatcher(i), count++);
+				})(this.watchers[i], count++);
 			}
 		}
 	}
@@ -728,11 +811,14 @@ Dispatch.prototype.stop = function() {
 	this.interruptStart = true;
 }
 Dispatch.prototype.add = function(watcher) {
-	this.watchers.push(watcher);
+	if (!(watcher instanceof QuickWatcher || watcher instanceof Catcher))
+		this.watchers.push(watcher);
 	$("#watcher_container", this.DOMElement).append(watcher.getHTML());
 
-	if (!this.isLoading)
+	if (!this.isLoading) {
 		this.save();
+		this.quickWatcher.onWatchersChanged(this.watchers);
+	}
 
 	return watcher;
 }
@@ -740,11 +826,25 @@ Dispatch.prototype.save = function() {
 	console.log("Saving " + this.watchers.length + " watchers...");
 	// console.log(JSON.stringify(dispatch.watchers,Watcher.replacerArray,4));
 	localStorage.setItem('notifier_watchers', JSON.stringify(dispatch.watchers,Watcher.replacerArray));
+//	localStorage.setItem('notifier_watchers_backup', JSON.stringify(dispatch.watchers,Watcher.replacerArray));
 }
 Dispatch.prototype.load = function() {
 	this.isLoading = true;
 	var data = localStorage.getItem('notifier_watchers');
 	var watchers;
+	// console.log(JSON.stringify(data,null,4));
+	this.quickWatcher = new QuickWatcher({
+		id: "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=&minReward=0.00&qualifiedFor=on&x=9&y=14",
+		time: 1250,
+		type: 'url',
+		name: "Quick Watcher"});
+	this.add(this.quickWatcher);
+	this.add(new Catcher({name:"History"}, this.quickWatcher));
+	this.add(new PriceCatcher({name:"Hits over $1", price:1, notify:true}, this.quickWatcher));
+	this.add(new AvailableCatcher({name: "Over 50 remaining", min:50}, this.quickWatcher));
+    this.add(new WordCatcher({name: "Transcription hits", word:"transcribe", notify:true}, this.quickWatcher));
+    this.add(new WordCatcher({name: "Qualification hits", word:"qual", notify:true}, this.quickWatcher));
+
 	if (data != null) {
 		watchers = JSON.parse(data);
 		for(var i = 0; i < watchers.length; i++) this.add(new Watcher(watchers[i]));
@@ -752,6 +852,8 @@ Dispatch.prototype.load = function() {
 		loadHits();
 	}
 	this.isLoading = false;
+	
+	this.quickWatcher.onWatchersChanged(this.watchers);
 }
 Dispatch.prototype.remove = function(watcher) {
 	var newArray = new Array();
@@ -764,6 +866,8 @@ Dispatch.prototype.remove = function(watcher) {
 	
 	watcher.DOMElement.remove();
 	watcher.stop();
+	
+	this.quickWatcher.onWatchersChanged(this.watchers);
 }
 Dispatch.prototype.moveUp = function(watcher) {
 	if (watcher != this.watchers[0]) {
@@ -888,20 +992,226 @@ Dispatch.prototype.onRequestMainDenied = function() {
 	
 	Experimental.
 **/
-// function QuickWatcher(watchers) {
-	// var watchers = filterWatchers(watchers);	// We only want Requester and Hit watchers
+function QuickWatcher(attrs) {
+	Watcher.call(this, attrs);
 	// var watcher = new Watcher({ id: "https://www.mturk.com/mturk/findhits?match=false", time: 1000, type: 'url', name: "Quick Watcher"}); // Watches for all new hits every second
-// }
-// QuickWatcher.filterWatchers = function(watchers) {
-	// var filteredWatchers = new Array();
+}
+QuickWatcher.prototype = new Watcher();
+QuickWatcher.prototype.constructor = QuickWatcher;	
+QuickWatcher.filterWatchers = function(watchers) {
+	var filteredWatchers = new Array();
 	
-	// for (var i = 0; i < watchers.length; i++) {
-		// if (watchers[i].type == 'requester' || watchers[i].type == 'hit')
-			// filteredWatchers.push(watchers[i]);
-	// }
+	for (var i = 0; i < watchers.length; i++) {
+		if (watchers[i].type == 'requester' || watchers[i].type == 'hit')
+			filteredWatchers.push(watchers[i]);
+	}
 	
-	// return filteredWatchers;
-// }
+	return filteredWatchers;
+}
+QuickWatcher.prototype.sendHits = function(hits) {
+	// console.log(JSON.stringify(hits,null,4));
+	if (typeof hits != 'undefined' && hits.length > 0) {
+		hits = this.filterMessages(hits);
+
+		this.notifyListeners(hits);
+		
+		var watchers = this.watchers;
+		// console.log("Watching these watchers: ");
+		// console.log(watchers);
+		var matches = new Array();
+		for (var i = 0; i < hits.length; i++) {
+			var hit = hits[i];
+			
+			for (var j = 0; j < watchers.length; j++) {
+				// console.log("requester.id = " + hit.requesterID + " watcher.id = " + watchers[j].id);
+				if (watchers[j].state.isOn && ((watchers[j].type == 'hit' && hit.id == watchers[j].id)	|| (watchers[j].type == 'requester' && hit.requesterID == watchers[j].id))) {
+					// console.log("Found a match!");
+					// console.log(watchers[j]);
+					matches.push({ watcher: watchers[j], hit: hit });
+				} else {
+					// console.log("No match found");
+				}
+			}
+		}
+		
+		if (matches.length > 0) {
+			console.log("Found matches");
+			console.log(matches);
+			
+			var groups = QuickWatcher.groupMatches(matches);
+			// console.log("groupMatches = ");
+			// console.log(groups);
+			for (var id in groups) {
+				// console.log(id);
+				// console.log("groups=");
+				// console.log(groups);
+				var watcher = dispatch.getWatcherById(id);
+				
+				// Have the watcher load its page to auto-accept if necessary
+				if (watcher.type == 'hit' && watcher.option.auto)
+					watcher.getData();
+				else
+					watcher.setHits(groups[id]);
+			}
+		}
+		
+	}
+}
+QuickWatcher.groupMatches = function(matches) {
+	// return Groups object { array [ {watcher: watcher, hits: hit[]} ]}
+	// console.log("Matches: ");
+	// console.log(matches);
+	var groups = new Array();
+	// group[0] = { watcher: matches[0].watcher, hits: [matches[0].hit] };
+	for (var i = 0; i < matches.length; i++) {
+		var id = matches[i].watcher.id;
+		
+		if (!(id in groups))
+			groups[id] = [];
+			
+		groups[id].push(matches[i].hit);
+		// console.log("Groups:");
+		// console.log(groups);
+	}
+	return (groups);
+}
+QuickWatcher.prototype.onWatchersChanged = function(watchers) {
+	this.watchers = QuickWatcher.filterWatchers(watchers);	// We only want Requester and Hit watchers
+}
+QuickWatcher.prototype.addListener = function(listener) {
+	if (typeof this.listeners === 'undefined')
+		this.listeners = new Array();
+	this.listeners.push(listener)
+}
+QuickWatcher.prototype.notifyListeners = function(hits) {
+	// console.log("notifyListeners() called:", this.listeners);
+	if (typeof this.listeners !== 'undefined' && this.listeners.length > 0 && hits.length > 0) {
+		for (var i = 0; i < this.listeners.length; i++) {
+			this.listeners[i].onHitsChanged(hits);
+		}
+	}
+}
+
+function QuickWatcherListener(context) {
+	this.context = context;
+}
+QuickWatcherListener.prototype.onHitsChanged = function(hits) {
+	this.context.setHits(hits);
+}
+
+function Catcher(attrs, quickWatcher) {
+	Watcher.call(this, attrs);
+	this.type = 'url';
+	this.listener = new QuickWatcherListener(this);
+	if (typeof quickWatcher !== 'undefined')
+		this.observe(quickWatcher);
+
+    attrs = attrs || {};
+    this.notify = attrs.notify || false;
+
+//    this.DOMElement.css("left", "50px");
+//    console.log("Catcher: ", this);
+}
+Catcher.prototype = new Watcher();
+Catcher.prototype.observe = function(quickWatcher) {
+	quickWatcher.addListener(this.listener);
+}
+Catcher.prototype.setHits = function(hits) {
+    if (typeof hits !== 'undefined') {
+        if (Object.prototype.toString.call(hits) != '[object Array]')
+            hits = new Array(hits);
+        this.sendHits(hits);
+    }
+}
+Catcher.prototype.sendHits = function(hits) {
+	// console.log("Catcher.sendHits() called");
+	// This is where we will filter and store hits with certain attributes. Different subclasses will filter in different ways
+	// or we'll use some kind of filter classes.
+
+	// For now, maybe store every new hit we see?
+	var hasNewHits = false;
+    var filteredHits = new Array();
+	for (var i = 0; i < hits.length; i++) {
+		if (this.checkConditions(hits[i])) {
+			var index = Hit.indexOf(hits[i].id, this.lastHits);
+
+            if (index != -1)
+                this.lastHits[index] = hits[i];
+            else
+                this.lastHits.unshift(hits[i]);
+
+            filteredHits.push(hits[i]);
+			hasNewHits = true;
+		}
+	}
+	if (hasNewHits) {
+//		console.log("Catcher DOMElement", this.DOMElement);
+		this.updateWatcherPanel();
+        this.onChanged();
+		this.newHits = filteredHits;
+		// console.log("New hits = ", this.newHits);
+        if (this.notify) {
+            sendMessage({ header: "new_hits", content: {'title':this.name, 'hits':filteredHits} });
+            notificationPanel.add(new NotificationGroup(this.name, filteredHits));
+        }
+    }
+	// console.log("Stored hits = ", this.lastHits);
+}
+Catcher.prototype.checkConditions = function(hit) {
+	return !Hit.containsId(hit, this.lastHits);
+}
+Catcher.prototype.getHTML = function() {
+    Watcher.prototype.getHTML.apply(this);
+
+    $(".color_code", this.DOMElement).removeClass("color_code");
+    $(".time", this.DOMElement).remove();
+    $("br", this.DOMElement).remove();
+    $(".bottom", this.DOMElement).remove();
+    $(".icons", this.DOMElement).remove();
+
+    this.DOMElement.css("margin-left", "20px");
+    this.DOMElement.css("padding", "0");
+    return this.DOMElement;
+}
+
+function PriceCatcher(attrs, quickWatcher) {
+	Catcher.call(this, attrs, quickWatcher);
+	this.attrs = attrs || {};
+	this.price = this.attrs.price || .50;
+}
+PriceCatcher.prototype = new Catcher();
+PriceCatcher.prototype.constructor = PriceCatcher;
+PriceCatcher.prototype.checkConditions = function(hit) {
+	var reward = parseFloat(hit.reward.substring(1));
+	// console.log("checkConditions = ", reward >= this.price, "reward=", reward, "this.price=", this.price);
+	return (!Hit.containsId(hit, this.lastHits) && reward >= this.price);
+}
+
+function AvailableCatcher(attrs, quickWatcher) {
+	Catcher.call(this, attrs, quickWatcher);
+	this.attrs = attrs || {};
+	this.min = this.attrs.min || 50;
+}
+AvailableCatcher.prototype = new Catcher();
+AvailableCatcher.prototype.constructor = AvailableCatcher;
+AvailableCatcher.prototype.checkConditions = function(hit) {
+	// console.log("Available", hit.available, "Minimum", this.min);
+	return (
+        !Hit.containsId(hit, this.lastHits)
+        && parseInt(hit.available) >= this.min
+        && hit.requesterID != "A2SUM2D7EOAK1T"
+        );
+}
+
+function WordCatcher(attrs, quickWatcher) {
+    Catcher.call(this, attrs, quickWatcher);
+    this.word = attrs.word;
+}
+WordCatcher.prototype = new Catcher();
+WordCatcher.prototype.constructor = WordCatcher;
+WordCatcher.prototype.checkConditions = function(hit) {
+    return (hit.title.toLowerCase().contains(this.word));
+}
 
 /**	The Watcher object. This is what controls the pages that are monitored and how often
 
@@ -912,6 +1222,8 @@ function Watcher(attrs) {
 	this.lastHits = new Array();
 	this.newHits = new Array();
 
+	attrs = attrs || {};
+	
 	// Default states
 	this.state = {};
 	state = attrs.state || {};
@@ -950,6 +1262,7 @@ function Watcher(attrs) {
 				break;
 		}
 	}
+
 	return this;
 }
 Watcher.prototype.toString = function() {
@@ -964,7 +1277,7 @@ Watcher.prototype.getHTML = function() {
 		<div>\
 		<div class=\"on_off\"><a" + (this.state.isOn ? " class=\"selected\"" : "") + ">ON</a><a" + (!this.state.isOn ? " class=\"selected\"" : "") + ">OFF</a></div>\
 		<a class=\"name\" href=\"" + this.getURL() + "\" target=\"_blank\">" + ((typeof this.name != 'undefined') ? this.name : this.id) + "</a><br />" +
-		(this.time / 1000) + " seconds \
+		"<span class=\"time\">" + (this.time / 1000) + " seconds </span>\
 		<span class=\"icons\">\
 			<a class=\"edit\" href=\"javascript:void(0)\"><img src=\"http://imgur.com/peEhuHZ.png\" /></a>\
 			<a class=\"delete\" href=\"javascript:void(0)\"><img src=\"http://imgur.com/5snaSxU.png\" /></a>\
@@ -1173,17 +1486,20 @@ Watcher.prototype.alert = function () {
 	}
 }
 Watcher.prototype.highlight = function() {
-	$("#dispatcher #" + this.id + " div.details").css('background-color', 'rgba(218, 240, 251, 1)');
+//	$("#dispatcher #" + this.id + " div.details").css('background-color', 'rgba(218, 240, 251, 1)');
+	$("div.details", this.DOMElement).css('background-color', 'rgba(218, 240, 251, 1)');
 }
 Watcher.prototype.unhighlight = function() {
-	$("#dispatcher #" + this.id + " div.details").css('background-color', 'rgba(234, 234, 234, 1)');
+//	$("#dispatcher #" + this.id + " div.details").css('background-color', 'rgba(234, 234, 234, 1)');
+	$("div.details", this.DOMElement).css('background-color', 'rgba(234, 234, 234, 1)');
 }
 Watcher.prototype.updateLastChecked = function() {
 	this.date = new Date();
 }
 Watcher.prototype.updateWatcherPanel = function() {
 	this.updateLastChecked();
-	$("#dispatcher #" + this.id + " .last_updated").text(this.getformattedTime()).attr('title', "Last checked: " + this.date.toString());
+	// $("#dispatcher #" + this.id + " .last_updated").text(this.getformattedTime()).attr('title', "Last checked: " + this.date.toString());
+	$(".last_updated", this.DOMElement).text(this.getformattedTime()).attr('title', "Last checked: " + this.date.toString());
 }
 Watcher.prototype.getformattedTime = function() {
 	var time = this.date;
@@ -1206,6 +1522,10 @@ Watcher.prototype.getformattedTime = function() {
 		return str;
 }
 Watcher.prototype.setHits = function(hits) {
+	// if (!(this instanceof QuickWatcher)) {
+		// console.log("Set hits: ");
+		// console.log(hits);
+	// }
 	if (typeof hits !== 'undefined') {
 		if (Object.prototype.toString.call(hits) != '[object Array]')
 			hits = new Array(hits);
@@ -1218,7 +1538,7 @@ Watcher.prototype.sendHits = function(hits) {
 	// In the near future this will have to be changed to show when HITs go away completely
 	if (typeof hits != 'undefined' && hits.length > 0) {
 		hits = this.filterMessages(hits);
-		
+		// console.log(JSON.stringify(hits,null,4));
 		if (hits.length > 0) {
 			wasViewed = false;
 
@@ -1268,19 +1588,36 @@ Watcher.prototype.parseListing = function(data) {
 		qryAvailable = base + "tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(3) > table > tbody > tr:nth-child(2) > td:nth-child(2)";
 		qryTime = base + "tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > table > tbody > tr:nth-child(2) > td:nth-child(2)";
 
+		// body > div:nth-child(7) > table:nth-child(3) > tbody:nth-child(1) > tr:nth-child(3) > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > 
+		// tr:nth-child(2) > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(3) > span:nth-child(1) > a:nth-child(2)
 		var hit = new Hit();
 		hit.requester = $(qryRequester, data).text();
-		hit.requesterID = $(qryRequester, data).attr("href");
-		hit.url = $(qryUrl, data).attr("href");
+		hit.requesterID = $(qryRequester, data).attr("href").match(/requesterId=([A-Z0-9]+)/)[1];
 		hit.title = $(qryTitle, data).text().trim();
 		hit.reward = $(qryReward, data).text().trim();
 		hit.available = $(qryAvailable, data).text().trim();
 		hit.time = $(qryTime, data).text().trim();
 		
-		var idMatch = hit.url.match(/groupId=([A-Z0-9]+)/);
-		if (idMatch != null)
-			hit.id = idMatch[1];
+		var urlData = $(qryUrl, data);
+		hit.url = urlData.attr("href");
 
+		var idMatch = hit.url.match(/(group|notqualified\?hit|requestqualification\?qualification)Id=([A-Z0-9]+)/);
+
+		if (idMatch != null) {
+			hit.id = idMatch[2];
+		}
+		
+		hit.isQualified = true;
+		hit.canPreview = false;
+		
+		urlData.each(function() {
+			if (typeof this.href !== 'undefined') {
+				if (this.href.contains("qual"))
+					hit.isQualified = false;
+				else if (this.href.contains("preview"))
+					hit.canPreview = true;
+			}
+		});
 		hits[i] = hit;
 	}
 	return hits;
@@ -1553,7 +1890,7 @@ NotificationHit.prototype.createDOMElement = function() {
 			.attr('href', hit.getURL('preview'))
 			.attr('title', hit.title)
 			.text(hit.title))
-		.append((!this.isSameReq) ? $('<a>').attr('href', hit.requesterID).attr('target', "_blank").
+		.append((!this.isSameReq) ? $('<a>').attr('href', "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&requesterId=" + hit.requesterID).attr('target', "_blank").
 			append($('<strong>').html(hit.requester)) : "")
 		.append($('<p>')
 			.html(hit.reward + " - " + hit.available + " remaining"))
@@ -1561,7 +1898,7 @@ NotificationHit.prototype.createDOMElement = function() {
 		.append($('<div>').addClass("mute"));
 
 	// Add links
-	if (typeof hit.id != 'undefined' && hit.id != "undefined") {
+	if (typeof hit.id != 'undefined' && hit.id != "undefined" && hit.isQualified) {
 		if (this.hit.isAutoAccept) {
 			$(".links", notification)
 				.append($('<a>').addClass("hit_link").attr('href', hit.getURL('view')).attr('target', "_blank").html("View"))
@@ -1575,7 +1912,10 @@ NotificationHit.prototype.createDOMElement = function() {
 		}
 	} else {
 		$(notification).addClass("not_qualified")
-		$(".links", notification).append($('<em>').html("Not Qualified&nbsp;&nbsp;"));
+		$(".links", notification)
+			.append((hit.canPreview) ?
+				$('<a>').addClass("hit_link").attr('href', hit.getURL('preview')).attr('target', "_blank").html("Preview") : "")
+			.append($('<em>').html("Not Qualified&nbsp;&nbsp;"));
 	}
 	
 	
