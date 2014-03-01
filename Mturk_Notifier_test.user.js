@@ -125,8 +125,7 @@ function addWatchButton() {
 			location = $(".error_title");
 	}
 	location.append(button);
-	addWatcherStyle();
-
+	addFormStyle();
 }
 
 function addForm() {
@@ -182,6 +181,7 @@ function addForm() {
 			form.hide();
 	});
 
+	// Add name to form if available
 	var name = "";
 	if (pageType.REQUESTER) {
 		if ($(".title_orange_text_bold").length > 0) {
@@ -202,7 +202,7 @@ function addForm() {
 	return form;
 }
 
-function addWatcherStyle() {
+function addFormStyle() {
 	addStyle("\
 		#add_watcher_form {\
 			position: fixed;\
@@ -395,7 +395,6 @@ function onMessageReceived(header, message) {
 			break;
 		case 'add_watcher' : 
 			var msg = message;
-			// console.log(JSON.stringify(msg,null,4));
 			dispatch.add(new Watcher({id: msg.id, time: msg.duration, type: msg.type , name: msg.name, option: {auto:msg.auto}})).start();
 			break;
 		case 'mute_hit' :
@@ -521,20 +520,15 @@ Hit.prototype.getURL = function(type) {
 	switch(type) {
 	case 'preview':
 		return "https://www.mturk.com/mturk/preview?groupId=" + this.id;
-		break;
 	case 'accept':
 		return (this.isQualified) ? "https://www.mturk.com/mturk/previewandaccept?groupId=" + this.id : null;
-		break;
 	case 'auto':
 		return "https://www.mturk.com/mturk/previewandaccept?groupId=" + this.id + "&autoAcceptEnabled=true";
-		break;
 	case 'view':
 		return "https://www.mturk.com/mturk/continue?hitId=" + this.uid;
-		break;
 	case 'return':
 		// This will need to be changed. It's the same as 'view' until more testing is done on AMT's return functionality
 		return "https://www.mturk.com/mturk/preview?hitId=" + this.uid;
-		break;
 	default:
 		return "";
 	}
@@ -549,7 +543,7 @@ Hit.indexOf = function(hitId, hits) {
 Hit.isSameRequester = function(hits) {
 	if (hits.length > 1) {
 		var compareRequester = hits[0].requester;
-		for (i = 1; i < hits.length; ++i) {
+		for (var i = 1, len = hits.length; i < len; ++i) {
 			if (compareRequester != hits[i].requester)
 				return false;
 		}
@@ -641,7 +635,7 @@ function showDetailsPanel(watcher) {
 		if (watcher.lastHits.length > 0) {
 			$(panel).append((new NotificationGroup(null, watcher.lastHits, false, watcher)).getDOMElement());
 		} else {
-			$(panel).append($('<div>').append('<h2>').css('text-align', 'center').html("<br />There are no HITs avaialable.<br />"));
+			$(panel).append($('<div>').append('<h2>').css('text-align', 'center').html("<br />There are no HITs avaialable.<br /><br />"));
 		}
 	}
 	$(panel).show();
@@ -761,11 +755,7 @@ Dispatch.prototype.load = function() {
 	this.isLoading = true;
 	var data = localStorage.getItem('notifier_watchers');
 	var watchers;
-	this.quickWatcher = new QuickWatcher({
-		id: "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=&minReward=0.00&qualifiedFor=on&x=9&y=14",
-		time: 1250,
-		type: 'url',
-		name: "Quick Watcher"});
+	this.quickWatcher = new QuickWatcher();
 	this.add(this.quickWatcher);
 	this.add(Catcher.create({name:"History"}, this.quickWatcher));
 	this.add(Catcher.create({name:"Hits over $1", notify:true}, this.quickWatcher).addFilter('price', 1));
@@ -922,9 +912,13 @@ Dispatch.prototype.onRequestMainDenied = function() {
 	
 	Experimental.
 **/
-function QuickWatcher(attrs) {
+function QuickWatcher() {
+	var attrs = {
+		id: "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=&minReward=0.00&qualifiedFor=on&x=9&y=14",
+		time: 1250,
+		type: 'url',
+		name: "Quick Watcher"}
 	Watcher.call(this, attrs);
-	// var watcher = new Watcher({ id: "https://www.mturk.com/mturk/findhits?match=false", time: 1000, type: 'url', name: "Quick Watcher"}); // Watches for all new hits every second
 }
 QuickWatcher.prototype = new Watcher();
 QuickWatcher.prototype.constructor = QuickWatcher;	
@@ -1014,9 +1008,8 @@ QuickWatcher.prototype.addListener = function(listener) {
 	this.listeners.push(listener)
 }
 QuickWatcher.prototype.notifyListeners = function(hits) {
-	// console.log("notifyListeners() called:", this.listeners);
 	if (typeof this.listeners !== 'undefined' && this.listeners.length > 0 && hits.length > 0) {
-		for (var i = 0; i < this.listeners.length; i++) {
+		for (var i = 0, len = this.listeners.length; i < len; i++) {
 			this.listeners[i].onHitsChanged(hits);
 		}
 	}
@@ -1044,9 +1037,6 @@ function Catcher(attrs, quickWatcher) {
 
     attrs = attrs || {};
     this.notify = attrs.notify || false;
-
-//    this.DOMElement.css("left", "50px");
-//    console.log("Catcher: ", this);
 }
 Catcher.prototype = new Watcher();
 Catcher.prototype.observe = function(quickWatcher) {
@@ -1096,12 +1086,7 @@ Catcher.prototype.sendHits = function(hits) {
 	// console.log("Stored hits = ", this.lastHits);
 }
 Catcher.prototype.checkFilters = function(hit) {
-	if (typeof this.filters !== 'undefined' && this.filters.length > 0) {
-		for (var i = 0, lim = this.filters.length; i < lim; i++)
-			if (!this.filters[i].check(hit))
-				return false;
-	}
-	return true;
+	return (typeof this.filter !== 'undefined') ? this.filter.check(hit) : true;
 }
 Catcher.prototype.getHTML = function() {
     Watcher.prototype.getHTML.apply(this);
@@ -1119,11 +1104,10 @@ Catcher.prototype.getHTML = function() {
     return this.DOMElement;
 }
 Catcher.prototype.addFilter = function(type, value) {
-	var filter = Filter.create(type, value, this);
-	if (typeof this.filters === 'undefined')
-		this.filters = [];
-	this.filters.push(filter);
-	
+	if (typeof this.filter === 'undefined')
+		this.filter = Filter.create(type, value, this);
+	else
+		this.filter.add(type, value);
 	return this;
 }
 Catcher.create = function(attrs, quickWatcher) {
@@ -1131,8 +1115,15 @@ Catcher.create = function(attrs, quickWatcher) {
 	return catcher;
 }
 
-function Filter(catcher) { this.catcher = catcher; }
-Filter.prototype.check = function(hit) { /* Do something */ }
+function Filter(value, catcher) { this.value = value; this.catcher = catcher; }
+Filter.prototype.check = function(hit) { return true }
+Filter.prototype.add = function(type, value) {
+	if (typeof this.filter === 'undefined')
+		this.filter = Filter.create(type, value, this.catcher);
+	else
+		this.filter.add(type, value);
+}
+Filter.prototype.checkFilter = function(hit) { return (typeof this.filter !== 'undefined') ? this.filter.check(hit) : true }
 Filter.create = function(type, value, context) {
 	var filter;
 	if (type == 'price')
@@ -1142,39 +1133,28 @@ Filter.create = function(type, value, context) {
 	else if (type == 'word')
 		filter = new WordFilter(value, context);
 	else
-		filter = new Filter(context);
+		filter = new Filter(null, context);
 	return filter;
 }
 
-function PriceFilter(price, catcher) {
-	Filter.call(this, catcher);
-	this.price = price;
-}
+// TODO make sure we don't need prototype.constructor when saving/loading to determine correct type of filter
+function PriceFilter(value, catcher) { Filter.call(this, value, catcher); }
 PriceFilter.prototype = new Filter();
-PriceFilter.prototype.constructor = PriceFilter;
 PriceFilter.prototype.check = function(hit) {
 	var reward = parseFloat(hit.reward.substring(1));
-	return (reward >= this.price);
+	return reward >= this.value && this.checkFilter(hit);
 }
 
-function AvailableFilter(min, catcher) {
-	Filter.call(this, catcher);
-	this.min = min;
-}
+function AvailableFilter(value, catcher) { Filter.call(this, value, catcher); }
 AvailableFilter.prototype = new Filter();
-AvailableFilter.prototype.constructor = AvailableFilter;
 AvailableFilter.prototype.check = function(hit) {
-	return (parseInt(hit.available) >= this.min);
+	return parseInt(hit.available) >= this.value && this.checkFilter(hit);
 }
 
-function WordFilter(word, catcher) {
-	Filter.call(this, catcher);
-	this.word = word;
-}
+function WordFilter(value, catcher) { Filter.call(this, value, catcher); }
 WordFilter.prototype = new Filter();
-WordFilter.prototype.constructor = WordFilter;
 WordFilter.prototype.check = function(hit) {
-	return (hit.title.toLowerCase().contains(this.word));
+	return hit.title.toLowerCase().contains(this.value) && this.checkFilter(hit);
 }
 
 /**	The Watcher object. This is what controls the pages that are monitored and how often
@@ -1384,7 +1364,6 @@ Watcher.prototype.filterMessages = function(newHits) {
 		this.isChanged = false;
 		
 		for (i = 0; i < newHits.length; ++i) {
-		
 			// Check if the hit is on the ignore list first before wasting time going through the comparisons
 			if (!dispatch.isMuted(newHits[i].id)) {
 				// Compare URLs for now. Should just use IDs in the future
