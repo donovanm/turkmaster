@@ -308,7 +308,6 @@ function loadHits() {
 		time: 25000,
 		type: 'url',
 		name: "Surveys $0.75 and up"})); //$.75 surveys
-	// dispatch.add(new Watcher("https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=study&minReward=0.50&qualifiedFor=on&x=13&y=10", 22000, 'url', "Studies $0.50 and up")); //$.50 studies
 	dispatch.add(new Watcher({
 		id: "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=survey&minReward=0.25&qualifiedFor=on&x=13&y=10",
 		time: 30000,
@@ -324,15 +323,12 @@ function loadHits() {
 		time: 60000,
 		type: 'url',
 		name: "Transcription HITs"})); // Transcription HITs
-	// dispatch.add(new Watcher("https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=Laura+Harrison&minReward=0.00&x=7&y=1", 10000, 'url', "Easy $8 survey"));
-	// dispatch.add(new Watcher("2FH56XBAT2D5VV0DSCUQ8JGA0ZV048", 20000, 'hit', "25 seconds of audio")); // crowdsurf hit
 	dispatch.add(new Watcher({
 		id: "2C4PHMVHVKCJ6T0G85VJB9LU493538",
 		time: 180000,
 		type: 'hit',
 		name: "Crowdsource .20 keywords",
 		option: {alert:true}})); // crowdsource
-
 	dispatch.add(new Watcher({
 		id: "2KGJ1XERSQV6DMLJAXK3PVWF2PL088",
 		time: 20000,
@@ -387,57 +383,6 @@ function loadHits() {
 		time: 45000,
 		type: 'requester',
 		name: "Jeff Strong"})); // Jeff Strong keywords
- 		
-	// dispatch.add(new Watcher("2HGWQIHPCGJ6H9UR6LWXR0JPSTN175", 15000, 'hit', "Taskrabbit Auto", {auto:true}));
-	// dispatch.add(new Watcher("2FH56XBAT2D9NQFBUKUQAJG7U3M04G", 15000, 'hit', "$10 hit", {auto:true}));
-	// dispatch.add(new Watcher("2RTSP6AUC26HG6O1Q2UVAFK2DRN29X", 13000, 'hit', "$20 Market Research", {auto:true}));
-	// dispatch.add(new Watcher("2PBXCNHMVHVKTTYQLPT7AJ7GOYX13M", 15000, 'hit', "Receipt hit"));
-	// dispatch.add(new Watcher("2YEAJIA0RYNJTANGW8R5HMJ0YM4613", 60000, 'hit', "RnR caption", true)); // RnR caption
-	// dispatch.add(new Watcher("A19NF3HMR2SC0H", 10000, 'requester', "Sirius Project"));
-/*	dispatch.add(new Watcher("https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=Nate+Ricklin&minReward=0.00&x=7&y=1", 45000, 'url', "Nate Ricklin")); // Nate Ricklin
-	dispatch.add(new Watcher("AI2HRFAYYSAW7", 60000, 'requester', "PickFu")); // PickFu
-	// dispatch.add(new Watcher("https://www.mturk.com/mturk/findhits?match=false", 20000, 'url', "Newest HITs")); // Newist HITs
-	// dispatch.add(new Watcher("ALS85546QW4UL", 120000, 'requester', "Sunghyun Park ($1 movie hits)"));
-	dispatch.add(new Watcher("A32WH2887E2DAC", 300000, 'requester', "Grant Stewart"));
-	dispatch.add(new Watcher("A11HABGEZWI0OZ", 30000, 'requester', "Jason Kaminsky"));	// Kaminsky
-	dispatch.add(new Watcher("AKEBQYX32KM19", 45000, 'requester', "Crowdsurf"));		// Crowdsurf
-	dispatch.add(new Watcher("A1EXB5EHTKUO8O", 600000, 'requester', "FoodEssentials")); // Foodessentials
-	dispatch.add(new Watcher("https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=Scott Appling&minReward=0.00&x=0&y=0", 60000, 'url', "Scott Appling (twitter)"));
-	dispatch.add(new Watcher("https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=taskrabbit&minReward=0.00&x=0&y=0", 30000, 'url', "Taskrabbit")); // Taskrabbit
-	// dispatch.add(new Watcher("A14AT838CPSKA6", 240000, 'requester', "Venue Quality")); // Venue Quality
-	dispatch.add(new Watcher("A6YG5FKV2TAVC", 300000, 'requester', "Agent Agent"));	// Agent Agent
-	dispatch.add(new Watcher("https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=set+master&minReward=0.00&x=0&y=0", 180000, 'url', "SET Master")); // SET Master
-	// dispatch.add(new Watcher("AU22B6CPBQVG4", 600000, 'requester', "Dan Barowy (autoqual)", true));
-	// dispatch.add(new Watcher("A1FDJ65X0XFT5M", 180000, 'requester', "ATA (Twitter sentiments check TO)")); // ATA
-	dispatch.add(new Watcher("A5QQWO2U81GM6", 180000, 'requester', "VoxPopMe (transcription)")); // VoxPopMe
-	dispatch.add(new Watcher("A2BXT12GC0UVMU", 300000, 'requester', "Ghinwa F Choueiter (tag a blog)")); // Ghinwa F Choueiter (tag a blog)
-	dispatch.add(new Watcher("A1TI16GBKWZ4M8", 600000, 'requester', "OCMP")); // OCMP
-	// dispatch.add(new Watcher("A3T8FT460R1D09", 300000, 'requester', "Penserra Securities")); // Penserra Securities
-	// dispatch.add(new Watcher("A3M0FXH8S3MV1V", 240000, 'requester', "SkillPages (potentially good)")); // SkillPages (needs private qual - password in qual test)
-	dispatch.add(new Watcher("A2S0VJE25JPZ4P", 120000, 'requester', "Turknology")); // Business classification ($0.20 batch)
-	dispatch.add(new Watcher("A1M46I0H8KNEEX", 600000, 'requester', "Crowd Watson")); // Crowd Watson
-	dispatch.add(new Watcher("A1ABWLJ5FAEBU5", 600000, 'requester', "Tyler Wry (batches)")); // Tyler Wry
-	dispatch.add(new Watcher("A3AKVXFARRH128", 600000, 'requester', "SaasSoft LLC. (tombstone)")); // SaasSoft LLC.
-	// dispatch.add(new Watcher("A2PZOEIMR3MMZ", 400000, 'requester', "Sentiment hits"));
-	dispatch.add(new Watcher("A2WSI50PTXWAEL", 300000, 'requester', "Daniel Holst 75c batch")); // Using Crowd Sourcing to Measure Surgical Performance
-	dispatch.add(new Watcher("A1G19FR6J7V23R", 300000, 'requester', "Dialogue Systems (speaking batch)")); // .45 batch
-	dispatch.add(new Watcher("A1BR3YO0W5G0TS", 300000, 'requester', "Zoya")); // Supposed to be decent
-	// dispatch.add(new Watcher("A35RS8L3O9PKNB", 420000, 'requester', "VidAngel")); // VidAngel
-	dispatch.add(new Watcher("A2MCCC2QUF1Y5E", 60000, 'requester', "James Goldsmith"));
-	// dispatch.add(new Watcher("A1402D8IUJQZ0D", 600000, 'requester', "World Vision")); // World Vision
-	// dispatch.add(new Watcher("A2FRGMSACA9M8H", 310000, 'requester'));	// Two Lakes
-	// dispatch.add(new Watcher("https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=natalia kogay&minReward=0", 301000, 'url', "Natalia Kogay"));	// Natalia Kogay (search)
-	// dispatch.add(new Watcher("A3L9KG1K0UGWDO", 60000, 'requester', "JenniferK (transcription)")); // JenniferK (transcription)
-	// dispatch.add(new Watcher("A3A1AJ4RPLTOLY", 60000, 'requester', "ACME Data Collection")); // ACME Data Collection
-	// dispatch.add(new Watcher("A17PCU7QWXDWDU", 80000, 'requester', "John Gallagher (transcription)")); // John Gallagher (transcription)
-	dispatch.add(new Watcher("A10LQ5X6HAAY6V", 600000, 'requester', "TELEDIA-CMU")); // TELEDIA-CMU (judge sentiments)
-	// dispatch.add(new Watcher("A31NSBEMK3AKS1", 600000, 'requester', "TR (business info batches)")); // Business info $0.15
-	dispatch.add(new Watcher("A3PBUB3OM54I27", 100000, 'requester', "cslab")); // cslab (batches)
-	dispatch.add(new Watcher("A2UHX2LSVVA3N4", 100000, 'requester', "Michael Iarrobino")); // Michael Iarrobino (newsletter batch)
-	dispatch.add(new Watcher("A3EG46USIUDWGA", 80000, 'requester', "KB (decent batches)")); // KB (decent batches)
-	dispatch.add(new Watcher("https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=amazon+requester&minReward=0.00&qualifiedFor=on&x=6&y=8", 600000, 'url', "Amazon Requester (qualified)")); // Trying to find some Amazon Requester hits I can do or at least quals
-	*/
-	// dispatch.add(new Watcher("A244AEXZLYKAD9", 90000, 'requester', "Affective Cog Neuro Lab 09")); // Good batch if they put out one I can qualify for
 	dispatch.isLoading = false;
 	dispatch.save();
 }
@@ -494,24 +439,6 @@ function sendMessage(message) {
 	var content = message.content || new Date().getTime();		// Make the content a timestamp when there's no actual content
 	var timestamp = message.timestamp && new Date().getTime();	// If wanted, adds a timestamp to the content so messages with the same content will still trigger the event consecutively
 	localStorage.setItem('notifier_msg_' + header, JSON.stringify({ content: content, timestamp: timestamp}));
-}
-
-/** This function takes an array of hits and determines if they are all from the same requester
-
-	argument	Hit[] hits		Array of hits to be evaluated
-	return		bool			Returns true if all hits have the same requester
-**/
-function isSameRequester(hits) {
-	if (hits.length > 1) {
-		var compareRequester = hits[0].requester;
-		for (i = 1; i < hits.length; ++i) {
-			if (compareRequester != hits[i].requester)
-				return false;
-		}
-		return true;
-	} else {
-		return false;
-	}
 }
 
 function sendBrowserNotification(hits, watcher) {
@@ -612,16 +539,6 @@ Hit.prototype.getURL = function(type) {
 		return "";
 	}
 }
-Hit.containsId = function(hitId, hits) {
-	// console.log("hitId and hits");
-	// console.log(hitId, hits);
-
-	for (var i = 0, len = hits.length; i < len; i++) {
-		if (hitId == hits[i].id)
-			return true;
-	}
-	return false;
-}
 Hit.indexOf = function(hitId, hits) {
     for (var i = 0, len = hits.length; i < len; i++) {
         if (hitId == hits[i].id)
@@ -629,7 +546,18 @@ Hit.indexOf = function(hitId, hits) {
     }
     return -1;
 }
-Hit.constructor.prototype.toString = function() { return this.title }
+Hit.isSameRequester = function(hits) {
+	if (hits.length > 1) {
+		var compareRequester = hits[0].requester;
+		for (i = 1; i < hits.length; ++i) {
+			if (compareRequester != hits[i].requester)
+				return false;
+		}
+		return true;
+	} else {
+		return false;
+	}
+}
 
 // Message object
 function Message() {
@@ -662,7 +590,7 @@ function createDispatchPanel() {
 		#dispatcher div { font-size: 8pt }\
 		#dispatcher .watcher { margin: 3px; background-color: #fff; position: relative; border-bottom: 1px solid #ddd; border-right: 1px solid #ddd; }\
 		#dispatcher .watcher .details { width: 25px; text-align: center; float: right; background-color: rgba(234, 234, 234, 1); position: absolute; top: 0; bottom: 0; right: 0; font: 90% Verdana; color: #fff; }\
-		#dispatcher .watcher .name { font: 110% Helvetica; color: black; text-decoration: none; font-weight: bold}\
+		#dispatcher .watcher .name { font: 130% Helvetica; color: black; text-decoration: none}\
 		#dispatcher .watcher .name:hover { text-decoration: underline }\
 		#dispatcher .watcher .name.no_hover:hover { text-decoration: none }\
 		#dispatcher .on_off{ float: right; cursor: pointer }\
@@ -703,19 +631,21 @@ function createDetailsPanel() {
 	$("body").append(div);
 }
 
+var lastWatcher = "";
 function showDetailsPanel(watcher) {
-	var hits = watcher.lastHits;
-	var type = watcher.type;
 	var panel = $("#details_panel");
-	
-	$("*", panel).remove();
 
-	if (hits.length > 0) {
-		$(panel).append((new NotificationGroup(null, hits, false, watcher)).getDOMElement());
-	} else {
-		$(panel).append($('<div>').append('<h2>').css('text-align', 'center').text("There are no HITs avaialable."));
+	// Only change the panel contents if it's a different watcher or the same one, but updated
+	if (watcher != lastWatcher || (watcher == lastWatcher && watcher.isUpdated)) {
+		$("*", panel).remove();
+		if (watcher.lastHits.length > 0) {
+			$(panel).append((new NotificationGroup(null, watcher.lastHits, false, watcher)).getDOMElement());
+		} else {
+			$(panel).append($('<div>').append('<h2>').css('text-align', 'center').html("<br />There are no HITs avaialable.<br />"));
+		}
 	}
 	$(panel).show();
+	lastWatcher = watcher;
 }
 
 
@@ -824,26 +754,26 @@ Dispatch.prototype.add = function(watcher) {
 }
 Dispatch.prototype.save = function() {
 	console.log("Saving " + this.watchers.length + " watchers...");
-	// console.log(JSON.stringify(dispatch.watchers,Watcher.replacerArray,4));
-	localStorage.setItem('notifier_watchers', JSON.stringify(dispatch.watchers,Watcher.replacerArray));
-//	localStorage.setItem('notifier_watchers_backup', JSON.stringify(dispatch.watchers,Watcher.replacerArray));
+	// localStorage.setItem('notifier_watchers', JSON.stringify(dispatch.watchers,Watcher.replacerArray));
+	// localStorage.setItem('notifier_watchers_backup', JSON.stringify(dispatch.watchers,Watcher.replacerArray));
 }
 Dispatch.prototype.load = function() {
 	this.isLoading = true;
 	var data = localStorage.getItem('notifier_watchers');
 	var watchers;
-	// console.log(JSON.stringify(data,null,4));
 	this.quickWatcher = new QuickWatcher({
 		id: "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=&minReward=0.00&qualifiedFor=on&x=9&y=14",
 		time: 1250,
 		type: 'url',
 		name: "Quick Watcher"});
 	this.add(this.quickWatcher);
-	this.add(new Catcher({name:"History"}, this.quickWatcher));
-	this.add(new PriceCatcher({name:"Hits over $1", price:1, notify:true}, this.quickWatcher));
-	this.add(new AvailableCatcher({name: "Over 50 remaining", min:50}, this.quickWatcher));
-    this.add(new WordCatcher({name: "Transcription hits", word:"transcribe", notify:true}, this.quickWatcher));
-    this.add(new WordCatcher({name: "Qualification hits", word:"qual", notify:true}, this.quickWatcher));
+	this.add(Catcher.create({name:"History"}, this.quickWatcher));
+	this.add(Catcher.create({name:"Hits over $1", notify:true}, this.quickWatcher).addFilter('price', 1));
+	this.add(Catcher.create({name:"Over 50 remaining"}, this.quickWatcher).addFilter('available', 50));
+	this.add(Catcher.create({name:"Transcriptions over 40c", notify:true}, this.quickWatcher)
+		.addFilter('word', "transcri")
+		.addFilter('price', .40));
+	this.add(Catcher.create({name:"Qualification HITs", notify:true}, this.quickWatcher).addFilter('word', "qualif"));
 
 	if (data != null) {
 		watchers = JSON.parse(data);
@@ -1091,6 +1021,12 @@ QuickWatcher.prototype.notifyListeners = function(hits) {
 		}
 	}
 }
+QuickWatcher.prototype.getHTML = function() {
+    Watcher.prototype.getHTML.apply(this);
+	
+	$(".color_code div", this.DOMElement).css('background-color', "#bbb");
+	return this.DOMElement;
+}
 
 function QuickWatcherListener(context) {
 	this.context = context;
@@ -1132,9 +1068,11 @@ Catcher.prototype.sendHits = function(hits) {
 	var hasNewHits = false;
     var filteredHits = new Array();
 	for (var i = 0; i < hits.length; i++) {
-		if (this.checkConditions(hits[i])) {
+		// if (this.checkConditions(hits[i])) {
+		if (this.checkFilters(hits[i])) {
 			var index = Hit.indexOf(hits[i].id, this.lastHits);
 
+			// Update the hit info if it's already in the list, otherwise add the hit to the top
             if (index != -1)
                 this.lastHits[index] = hits[i];
             else
@@ -1157,8 +1095,13 @@ Catcher.prototype.sendHits = function(hits) {
     }
 	// console.log("Stored hits = ", this.lastHits);
 }
-Catcher.prototype.checkConditions = function(hit) {
-	return !Hit.containsId(hit, this.lastHits);
+Catcher.prototype.checkFilters = function(hit) {
+	if (typeof this.filters !== 'undefined' && this.filters.length > 0) {
+		for (var i = 0, lim = this.filters.length; i < lim; i++)
+			if (!this.filters[i].check(hit))
+				return false;
+	}
+	return true;
 }
 Catcher.prototype.getHTML = function() {
     Watcher.prototype.getHTML.apply(this);
@@ -1168,49 +1111,70 @@ Catcher.prototype.getHTML = function() {
     $("br", this.DOMElement).remove();
     $(".bottom", this.DOMElement).remove();
     $(".icons", this.DOMElement).remove();
+	$(".name", this.DOMElement).css('font-size', "110%").removeAttr('href').removeAttr('target'); 
+	$(".name:hover", this.DOMElement).css('text-decoration', ""); 
 
-    this.DOMElement.css("margin-left", "20px");
+    this.DOMElement.css("margin", "-5px 3px 3px 15px");
     this.DOMElement.css("padding", "0");
     return this.DOMElement;
 }
-
-function PriceCatcher(attrs, quickWatcher) {
-	Catcher.call(this, attrs, quickWatcher);
-	this.attrs = attrs || {};
-	this.price = this.attrs.price || .50;
+Catcher.prototype.addFilter = function(type, value) {
+	var filter = Filter.create(type, value, this);
+	if (typeof this.filters === 'undefined')
+		this.filters = [];
+	this.filters.push(filter);
+	
+	return this;
 }
-PriceCatcher.prototype = new Catcher();
-PriceCatcher.prototype.constructor = PriceCatcher;
-PriceCatcher.prototype.checkConditions = function(hit) {
+Catcher.create = function(attrs, quickWatcher) {
+	var catcher = new Catcher(attrs, quickWatcher);
+	return catcher;
+}
+
+function Filter(catcher) { this.catcher = catcher; }
+Filter.prototype.check = function(hit) { /* Do something */ }
+Filter.create = function(type, value, context) {
+	var filter;
+	if (type == 'price')
+		filter = new PriceFilter(value, context);
+	else if (type == 'available')
+		filter = new AvailableFilter(value, context);
+	else if (type == 'word')
+		filter = new WordFilter(value, context);
+	else
+		filter = new Filter(context);
+	return filter;
+}
+
+function PriceFilter(price, catcher) {
+	Filter.call(this, catcher);
+	this.price = price;
+}
+PriceFilter.prototype = new Filter();
+PriceFilter.prototype.constructor = PriceFilter;
+PriceFilter.prototype.check = function(hit) {
 	var reward = parseFloat(hit.reward.substring(1));
-	// console.log("checkConditions = ", reward >= this.price, "reward=", reward, "this.price=", this.price);
-	return (!Hit.containsId(hit, this.lastHits) && reward >= this.price);
+	return (reward >= this.price);
 }
 
-function AvailableCatcher(attrs, quickWatcher) {
-	Catcher.call(this, attrs, quickWatcher);
-	this.attrs = attrs || {};
-	this.min = this.attrs.min || 50;
+function AvailableFilter(min, catcher) {
+	Filter.call(this, catcher);
+	this.min = min;
 }
-AvailableCatcher.prototype = new Catcher();
-AvailableCatcher.prototype.constructor = AvailableCatcher;
-AvailableCatcher.prototype.checkConditions = function(hit) {
-	// console.log("Available", hit.available, "Minimum", this.min);
-	return (
-        !Hit.containsId(hit, this.lastHits)
-        && parseInt(hit.available) >= this.min
-        && hit.requesterID != "A2SUM2D7EOAK1T"
-        );
+AvailableFilter.prototype = new Filter();
+AvailableFilter.prototype.constructor = AvailableFilter;
+AvailableFilter.prototype.check = function(hit) {
+	return (parseInt(hit.available) >= this.min);
 }
 
-function WordCatcher(attrs, quickWatcher) {
-    Catcher.call(this, attrs, quickWatcher);
-    this.word = attrs.word;
+function WordFilter(word, catcher) {
+	Filter.call(this, catcher);
+	this.word = word;
 }
-WordCatcher.prototype = new Catcher();
-WordCatcher.prototype.constructor = WordCatcher;
-WordCatcher.prototype.checkConditions = function(hit) {
-    return (hit.title.toLowerCase().contains(this.word));
+WordFilter.prototype = new Filter();
+WordFilter.prototype.constructor = WordFilter;
+WordFilter.prototype.check = function(hit) {
+	return (hit.title.toLowerCase().contains(this.word));
 }
 
 /**	The Watcher object. This is what controls the pages that are monitored and how often
@@ -1522,10 +1486,6 @@ Watcher.prototype.getformattedTime = function() {
 		return str;
 }
 Watcher.prototype.setHits = function(hits) {
-	// if (!(this instanceof QuickWatcher)) {
-		// console.log("Set hits: ");
-		// console.log(hits);
-	// }
 	if (typeof hits !== 'undefined') {
 		if (Object.prototype.toString.call(hits) != '[object Array]')
 			hits = new Array(hits);
@@ -1588,8 +1548,6 @@ Watcher.prototype.parseListing = function(data) {
 		qryAvailable = base + "tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(3) > table > tbody > tr:nth-child(2) > td:nth-child(2)";
 		qryTime = base + "tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > table > tbody > tr:nth-child(2) > td:nth-child(2)";
 
-		// body > div:nth-child(7) > table:nth-child(3) > tbody:nth-child(1) > tr:nth-child(3) > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > 
-		// tr:nth-child(2) > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(3) > span:nth-child(1) > a:nth-child(2)
 		var hit = new Hit();
 		hit.requester = $(qryRequester, data).text();
 		hit.requesterID = $(qryRequester, data).attr("href").match(/requesterId=([A-Z0-9]+)/)[1];
@@ -1850,9 +1808,9 @@ function NotificationGroup(title, hits, isSticky, watcher) {
 NotificationGroup.prototype.createDOMElement = function() {
 	var div = $('<div>').addClass("notification_group")
 		.append((this.title != null) ? $('<h3>').html(this.title) : "")
-		.append((isSameRequester(this.hits)) ? $('<h4>').html(this.hits[0].requester) : "");
+		.append((Hit.isSameRequester(this.hits)) ? $('<h4>').html(this.hits[0].requester) : "");
 	
-	var isSameReq = isSameRequester(this.hits);
+	var isSameReq = Hit.isSameRequester(this.hits);
 	for (var i = 0; i < this.hits.length; i++)
 		$(div).append((new NotificationHit(this.hits[i], isSameReq, (typeof this.watcher != 'undefined') ? this.watcher : null)).getDOMElement());
 	
