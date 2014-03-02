@@ -24,7 +24,8 @@ var pageType ={
 
 var wasViewed = false;
 var dispatch;
-var notificationPanel; 
+var notificationPanel;
+var loader;
 
 if(!('contains' in String.prototype)) {
        String.prototype.contains = function(str, startIndex) {
@@ -36,6 +37,7 @@ $(document).ready(function(){
 	checkPageType();
 	
 	if (pageType.DASHBOARD) {
+		loader = new Loader();
 		dispatch = new Dispatch();
 		createDispatchPanel();
 		createDetailsPanel();
@@ -1498,9 +1500,7 @@ Watcher.prototype.sendHits = function(hits) {
 }
 Watcher.prototype.getData = function() {
 	var _this = this;
-	$.get(this.url, function(data) {
-		_this.onDataReceived($(data));
-	});
+	loader.load(this, this.url, function(data) { _this.onDataReceived($(data)); });
 }
 Watcher.prototype.onDataReceived = function(data) {
 	var error = $(".error_title", data);
@@ -1599,6 +1599,42 @@ Watcher.replacerArray = ["id", "time", "type", "name", "option", "auto", "alert"
 			
 	Queue - Grab one at a time, paced about as fast as they can be done
 **/
+
+
+// TODO Need to check for "exceeded the maximum" somewhere. Probably in the Watcher.onDataReceived
+function Loader() {
+	this.queue = [];
+	this.time = 1000;
+	var _this = this;
+	this.interval = setInterval(function(){ _this.next() }, this.time);
+}
+Loader.prototype.load = function(watcher, url, callback) {
+	if (!this.hasWatcher(watcher, this.queue)) {
+		if (watcher instanceof QuickWatcher)
+			this.queue.unshift({url: url, callback: callback, watcher: watcher});
+		else
+			this.queue.push({url: url, callback: callback, watcher: watcher});
+	}
+}
+Loader.prototype.hasWatcher = function(watcher, queue) {
+	if (queue.length > 0) {
+		for (var i = 0, len = queue.length; i < len; i++)
+			if (queue[i].watcher == watcher)
+				return true;
+	}
+	return false;
+}
+Loader.prototype.next = function() {
+	if (this.queue.length > 0) {
+		var info = this.queue.shift();
+		this.getData(info.url, info.callback);
+	}
+}
+Loader.prototype.getData = function(url, callback) {
+	// console.log("Queue(" + this.queue.length + "): ", JSON.stringify(this.queue,["url", "watcher", "name"],4));
+	console.log("Queue(" + this.queue.length + ")");
+	$.get(url, callback);
+}
 
 /** The NotificationPanel object. This holds and manipulates incoming notification groups
 
