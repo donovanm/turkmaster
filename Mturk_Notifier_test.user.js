@@ -3,7 +3,7 @@
 // @namespace   12345
 // @description Testing out stuff for a notifier for Mturk
 // @include     https://www.mturk.com/mturk/*
-// @version     0.94
+// @version     0.95
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js
 // @grant       none
 // ==/UserScript==
@@ -750,7 +750,7 @@ Dispatch.prototype.add = function(watcher) {
 }
 Dispatch.prototype.save = function() {
 	console.log("Saving " + this.watchers.length + " watchers...");
-	// localStorage.setItem('notifier_watchers', JSON.stringify(dispatch.watchers,Watcher.replacerArray));
+	localStorage.setItem('notifier_watchers', JSON.stringify(dispatch.watchers,Watcher.replacerArray));
 	// localStorage.setItem('notifier_watchers_backup', JSON.stringify(dispatch.watchers,Watcher.replacerArray));
 }
 Dispatch.prototype.load = function() {
@@ -761,10 +761,14 @@ Dispatch.prototype.load = function() {
 	this.add(this.quickWatcher);
 	this.add(Catcher.create({name:"History"}, this.quickWatcher));
 	this.add(Catcher.create({name:"Hits over $1", notify:true}, this.quickWatcher).addFilter('price', 1));
-	this.add(Catcher.create({name:"Over 50 remaining"}, this.quickWatcher).addFilter('available', 50));
+	this.add(Catcher.create({name:"Over 50 remaining"}, this.quickWatcher)
+		.addFilter('available', 50)
+		.addFilter('requester', "A2SUM2D7EOAK1T")
+	);
 	this.add(Catcher.create({name:"Transcriptions over 40c", notify:true}, this.quickWatcher)
 		.addFilter('word', "transcri")
-		.addFilter('price', .40));
+		.addFilter('price', .40)
+	);
 	this.add(Catcher.create({name:"Qualification HITs", notify:true}, this.quickWatcher).addFilter('word', "qualif"));
 
 	if (data != null) {
@@ -1134,6 +1138,8 @@ Filter.create = function(type, value, context) {
 		filter = new AvailableFilter(value, context);
 	else if (type == 'word')
 		filter = new WordFilter(value, context);
+	else if (type == 'requester')
+		filter = new RequesterFilter(value, context);
 	else
 		filter = new Filter(null, context);
 	return filter;
@@ -1158,6 +1164,14 @@ WordFilter.prototype = new Filter();
 WordFilter.prototype.check = function(hit) {
 	return hit.title.toLowerCase().contains(this.value) && this.checkFilter(hit);
 }
+
+function RequesterFilter(value, catcher) { Filter.call(this, value, catcher); }
+RequesterFilter.prototype = new Filter();
+RequesterFilter.prototype.check = function(hit) {
+	return (hit.requesterID != this.value) && this.checkFilter(hit);
+}
+
+
 
 /**	The Watcher object. This is what controls the pages that are monitored and how often
 
