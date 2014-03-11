@@ -720,7 +720,7 @@ Dispatch.prototype.start = function() {
 			// in order for the setTimeout to work properly.
 			if (this.watchers[i].state.isOn) {
 				(function (watcher, x){
-						watcher.timer = setTimeout(function() { watcher.start(); }, x * 2000);
+						watcher.timer = setTimeout(function() { watcher.start(); }, x * 0000); // Let's try 0ms
 				})(this.watchers[i], count++);
 			}
 		}
@@ -1171,8 +1171,6 @@ RequesterFilter.prototype.check = function(hit) {
 	return (hit.requesterID != this.value) && this.checkFilter(hit);
 }
 
-
-
 /**	The Watcher object. This is what controls the pages that are monitored and how often
 
 **/
@@ -1519,8 +1517,10 @@ Watcher.prototype.getData = function() {
 Watcher.prototype.onDataReceived = function(data) {
 	var error = $(".error_title", data);
 	if (error.length > 0) {
-		if (error.text().contains("You have exceeded"))
+		if (error.text().contains("You have exceeded")) {
+			console.error("Exceeded the maximum rate!");
 			return;
+		}
 	}
 
 	if (this.type == 'hit')
@@ -1618,16 +1618,31 @@ Watcher.replacerArray = ["id", "time", "type", "name", "option", "auto", "alert"
 // TODO Need to check for "exceeded the maximum" somewhere. Probably in the Watcher.onDataReceived
 function Loader() {
 	this.queue = [];
-	this.time = 1000;
+	this.time = 5000;
+	this.count = 0;
+	this.paused = true;
 	var _this = this;
-	this.interval = setInterval(function(){ _this.next() }, this.time);
+	// this.interval = setInterval(function(){ _this.count = 0; console.log(new Date().toString()); _this.next() }, this.time);
 }
 Loader.prototype.load = function(watcher, url, callback) {
 	if (!this.hasWatcher(watcher, this.queue)) {
-		if (watcher instanceof QuickWatcher)
-			this.queue.unshift({url: url, callback: callback, watcher: watcher});
-		else
+		if (watcher instanceof QuickWatcher && this.queue.length > 0) {
+			// If it's the quickwatcher put it in the second slot instead of at the end
+			// var temp = this.queue.shift;
+			// this.queue.unshift({url: url, callback: callback, watcher: watcher});
+			// this.queue.unshift(temp);
 			this.queue.push({url: url, callback: callback, watcher: watcher});
+		} else {
+			this.queue.push({url: url, callback: callback, watcher: watcher});
+		}
+
+		// TODO Check if total in queue is 1. If so, we need to start looping by calling this.next()
+		// This means the queue had been emptied and should have been stopped previous to this.
+		if (this.queue.length == 1 && this.paused) {
+			this.paused = false;
+			this.next();
+		}
+
 	}
 }
 Loader.prototype.hasWatcher = function(watcher, queue) {
@@ -1639,15 +1654,46 @@ Loader.prototype.hasWatcher = function(watcher, queue) {
 	return false;
 }
 Loader.prototype.next = function() {
+	// console.log("Loader.next() was called - Queue Length = " + this.queue.length);
+	// console.log(JSON.stringify(this.queue,["watcher","name"],4));
 	if (this.queue.length > 0) {
 		var info = this.queue.shift();
 		this.getData(info.url, info.callback);
+	} else {
+		this.paused = true;
 	}
 }
 Loader.prototype.getData = function(url, callback) {
 	// console.log("Queue(" + this.queue.length + "): ", JSON.stringify(this.queue,["url", "watcher", "name"],4));
-	console.log("Queue(" + this.queue.length + ")");
-	$.get(url, callback);
+	// console.log("Queue(" + this.queue.length + ")");
+	// console.log("this.count=" + this.count);
+	// console.log("Loader.count=" + Loader.count);
+	// $.get(url, callback);
+
+	// TODO Instead of $.get(url,callback), we need to replace callback with an anonymous function
+	// that will call both the callback as well as this.next() if necessary. This will hopefully allow
+	// us to load pages as quick as possible without causing errors. My theory is that if we let a
+	// page fully load before loading the next one (like the DB and Pending scripts, etc) there won't
+	// be too many simultaneous connections which is what I think causes the error.
+
+	var _this = this;
+	$.get(url, function(data) {
+		callback(data);
+
+		if (++_this.count < 5) {
+			// console.log("Calling this.next(), Loader.count = " + _this.count);
+			_this.next();
+		} else {
+			_this.paused = true;
+			_this.count = 0;
+			setTimeout(function() {
+				if (_this.paused)
+					_this.next();
+			}, 1250);
+		}
+		// else
+		// 	setTimeout(function(){Loader.count = 0; _this.next()}, 1000);
+	})
 }
 
 /** The NotificationPanel object. This holds and manipulates incoming notification groups
