@@ -790,16 +790,16 @@ Dispatch.prototype.load = function() {
 	this.quickWatcher = new QuickWatcher();
 	this.add(this.quickWatcher);
 	this.add(Catcher.create({name:"History"}, this.quickWatcher));
-	this.add(Catcher.create({name:"Hits over $1", notify:true}, this.quickWatcher).addFilter('price', 1));
+	this.add(Catcher.create({name:"Hits over $1", notify:true}, this.quickWatcher).addFilter(Filter.PRICE, 1));
 	this.add(Catcher.create({name:"Over 50 remaining"}, this.quickWatcher)
-		.addFilter('available', 50)
-		.addFilter('requester', "A2SUM2D7EOAK1T")
+		.addFilter(Filter.AVAILABLE, 50)
+		.addFilter(Filter.REQUESTER, "A2SUM2D7EOAK1T")
 	);
 	this.add(Catcher.create({name:"Transcriptions over 40c", notify:true}, this.quickWatcher)
-		.addFilter('word', "transcri")
-		.addFilter('price', .40)
+		.addFilter(Filter.WORD, "transcri")
+		.addFilter(Filter.PRICE, .40)
 	);
-	this.add(Catcher.create({name:"Qualification HITs", notify:true}, this.quickWatcher).addFilter('word', "qualif"));
+	this.add(Catcher.create({name:"Qualification HITs", notify:true}, this.quickWatcher).addFilter(Filter.WORD, "qualif"));
 
 	if (data != null) {
 		watchers = JSON.parse(data);
@@ -979,10 +979,9 @@ QuickWatcher.prototype.sendHits = function(hits) {
 		hits = this.filterMessages(hits);
 
 		this.notifyListeners(hits);
+
 		
 		var watchers = this.watchers;
-		// console.log("Watching these watchers: ");
-		// console.log(watchers);
 		var matches = new Array();
 		for (var i = 0; i < hits.length; i++) {
 			var hit = hits[i];
@@ -1022,6 +1021,9 @@ QuickWatcher.prototype.sendHits = function(hits) {
 		
 	}
 }
+/**
+*	Takes an array of hits and groups them in to "sub"-arrays by watcher ID
+**/
 QuickWatcher.groupMatches = function(matches) {
 	// return Groups object { array [ {watcher: watcher, hits: hit[]} ]}
 	// console.log("Matches: ");
@@ -1156,55 +1158,65 @@ Catcher.create = function(attrs, quickWatcher) {
 	return catcher;
 }
 
+
 function Filter(value, catcher) { this.value = value; this.catcher = catcher; }
+// Enums
+Filter.PRICE = 1;
+Filter.AVAILABLE = 2;
+Filter.WORD = 3;
+Filter.REQUESTER = 4;
+
+// This is meant to be over-ridden. Returns true if the hit passes the requirements of the filter.
 Filter.prototype.check = function(hit) { return true }
+
+/**
+*	Adds a filter to the current filter. If this filter already has a filter assigned, tell the assigned filter to
+*	to add the filter. This continues down the chain until we reach the last filter and the new filter to it.
+**/
 Filter.prototype.add = function(type, value) {
 	if (typeof this.filter === 'undefined')
 		this.filter = Filter.create(type, value, this.catcher);
 	else
 		this.filter.add(type, value);
 }
+
+// Returns true if the hit passes the child filter or no child filter exists.
 Filter.prototype.checkFilter = function(hit) { return (typeof this.filter !== 'undefined') ? this.filter.check(hit) : true }
+
+// Filter factory. Creates a filter object based on the type given. Define filter.check() to determine if a hit value passes the filter.
 Filter.create = function(type, value, context) {
-	var filter;
-	if (type == 'price')
-		filter = new PriceFilter(value, context);
-	else if (type == 'available')
-		filter = new AvailableFilter(value, context);
-	else if (type == 'word')
-		filter = new WordFilter(value, context);
-	else if (type == 'requester')
-		filter = new RequesterFilter(value, context);
-	else
-		filter = new Filter(null, context);
+	var filter = new Filter(value, context);
+
+	switch (type) {
+	case Filter.PRICE:
+		filter.check = function(hit) {
+			var reward = parseFloat(hit.reward.substring(1));
+			return reward >= this.value && this.checkFilter(hit);				
+		}
+		break;
+
+	case Filter.AVAILABLE:
+		filter.check = function(hit) {
+			return parseInt(hit.available) >= this.value && this.checkFilter(hit);
+		}
+		break;
+
+	case Filter.WORD:
+		filter.check = function(hit) {
+			return hit.title.toLowerCase().contains(this.value) && this.checkFilter(hit);
+		}
+		break;
+
+	case Filter.REQUESTER:
+		filter.check = function(hit) {
+			return (hit.requesterID != this.value) && this.checkFilter(hit);
+		}
+		break;
+	}
 	return filter;
 }
 
-// TODO make sure we don't need prototype.constructor when saving/loading to determine correct type of filter
-function PriceFilter(value, catcher) { Filter.call(this, value, catcher); }
-PriceFilter.prototype = new Filter();
-PriceFilter.prototype.check = function(hit) {
-	var reward = parseFloat(hit.reward.substring(1));
-	return reward >= this.value && this.checkFilter(hit);
-}
 
-function AvailableFilter(value, catcher) { Filter.call(this, value, catcher); }
-AvailableFilter.prototype = new Filter();
-AvailableFilter.prototype.check = function(hit) {
-	return parseInt(hit.available) >= this.value && this.checkFilter(hit);
-}
-
-function WordFilter(value, catcher) { Filter.call(this, value, catcher); }
-WordFilter.prototype = new Filter();
-WordFilter.prototype.check = function(hit) {
-	return hit.title.toLowerCase().contains(this.value) && this.checkFilter(hit);
-}
-
-function RequesterFilter(value, catcher) { Filter.call(this, value, catcher); }
-RequesterFilter.prototype = new Filter();
-RequesterFilter.prototype.check = function(hit) {
-	return (hit.requesterID != this.value) && this.checkFilter(hit);
-}
 
 /**	The Watcher object. This is what controls the pages that are monitored and how often
 
@@ -1668,7 +1680,7 @@ function Loader() {
 	// this.interval = setInterval(function(){ _this.count = 0; console.log(new Date().toString()); _this.next() }, this.time);
 }
 Loader.prototype.load = function(watcher, url, callback) {
-	if (!this.hasWatcher(watcher, this.queue)) {
+	if (!this.isQueued(watcher)) {
 		if (watcher instanceof QuickWatcher && this.queue.length > 0) {
 			// If it's the quickwatcher put it in the second slot instead of at the end
 			// var temp = this.queue.shift;
@@ -1688,10 +1700,10 @@ Loader.prototype.load = function(watcher, url, callback) {
 
 	}
 }
-Loader.prototype.hasWatcher = function(watcher, queue) {
-	if (queue.length > 0) {
-		for (var i = 0, len = queue.length; i < len; i++)
-			if (queue[i].watcher == watcher)
+Loader.prototype.isQueued = function(watcher) {
+	if (this.queue.length > 0) {
+		for (var i = 0, len = this.queue.length; i < len; i++)
+			if (this.queue[i].watcher == watcher)
 				return true;
 	}
 	return false;
