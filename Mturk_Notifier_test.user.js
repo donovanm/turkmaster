@@ -22,6 +22,7 @@ var pageType ={
 		SEARCH:		false
 };
 
+var loadError = false;
 var wasViewed = false;
 var dispatch;
 var notificationPanel;
@@ -61,7 +62,7 @@ $(document).ready(function(){
 $(window).unload(function() {
 	if (pageType.DASHBOARD && pageType.MAIN) {
 		dispatch.ignoreList.save();
-		dispatch.save();
+		// dispatch.save();
 	}
 });
 
@@ -88,10 +89,10 @@ function requestMain() {
 
 function preloadImages() {
 	var images = [
-		'http://imgur.com/guRzYEL.png',
-		'http://imgur.com/5snaSxU.png',
-		'http://imgur.com/VTHXHI4.png',
-		'http://imgur.com/peEhuHZ.png'
+		'http://i.imgur.com/guRzYEL.png',
+		'http://i.imgur.com/5snaSxU.png',
+		'http://i.imgur.com/VTHXHI4.png',
+		'http://i.imgur.com/peEhuHZ.png'
 	];
 
 	$(images).each(function(){
@@ -147,6 +148,12 @@ function addForm() {
 				$("<label>").attr('for', "autoaccept").text("Auto-accept")
 				)
 			: "",
+		(pageType.HIT) ?
+			$("<p>").append(
+				$("<input>").attr('type', "checkbox").attr('id', "stopaccept").attr('checked', "checked"),
+				$("<label>").attr('for', "stopaccept").text("Stop on accept")
+				)
+			: "",
 		$("<p>").addClass("form_buttons").append(
 			$("<input>").attr('type', "button").attr('value', "Save"),
 			$("<input>").attr('type', "button").attr('value', "Cancel")
@@ -159,6 +166,7 @@ function addForm() {
 		var duration = parseInt($("#watcherDuration", form).val(), 10);
 		var type = (pageType.HIT) ? 'hit' : (pageType.REQUESTER) ? 'requester' : (pageType.SEARCH) ? 'url' : '';
 		var auto = (pageType.HIT) ? $("input#autoaccept", form).get(0).checked : false;
+		var stop = (pageType.HIT) ? $("input#stopaccept", form).get(0).checked : false;
 		sendMessage({
 			header: 'add_watcher',
 			content: {
@@ -166,7 +174,8 @@ function addForm() {
 				duration: duration * 1000,
 				type: type,
 				name: $("#watcherName", form).val(),
-				auto: auto
+				auto: auto,
+				stopOnCatch: stop
 			},
 			timestamp: true
 		});
@@ -397,7 +406,16 @@ function onMessageReceived(header, message) {
 			break;
 		case 'add_watcher' : 
 			var msg = message;
-			dispatch.add(new Watcher({id: msg.id, time: msg.duration, type: msg.type , name: msg.name, option: {auto:msg.auto}})).start();
+			dispatch.add(new Watcher({
+				id: msg.id,
+				time: msg.duration,
+				type: msg.type,
+				name: msg.name,
+				option: {
+				 	auto: msg.auto,
+				 	stopOnCatch: msg.stopOnCatch
+				}
+			})).start();
 			break;
 		case 'mute_hit' :
 			var id = message.split(',')[0];
@@ -423,16 +441,25 @@ function onMessageReceived(header, message) {
 			alert("Showing the main dashboard. (Close this Mturk page to establish a notifier in a different tab or window)");
 			break;
 		}
-	} else if (header == 'new_hits' && (!pageType.DASHBOARD || (pageType.DASHBOARD && !pageType.MAIN))) {
-		var hits = message.hits;
-		
-		// Re-create the hits so their methods can be used
-		for(var i = hits.length; i--;) hits[i] = new Hit(hits[i]);
+	} else if (!pageType.DASHBOARD || (pageType.DASHBOARD && !pageType.MAIN)) {
 
-		// Show the hits and let the dashboard know it was seen
-		if (document.hasFocus())
-			sendMessage({ header: "notification_viewed" });
-		notificationPanel.add(new NotificationGroup(message.title, hits));
+		switch(header) {
+		case 'new_hits' :
+			var hits = message.hits;
+			
+			// Re-create the hits so their methods can be used
+			for(var i = hits.length; i--;) hits[i] = new Hit(hits[i]);
+
+			// Show the hits and let the dashboard know it was seen
+			if (document.hasFocus())
+				sendMessage({ header: "notification_viewed" });
+			notificationPanel.add(new NotificationGroup(message.title, hits));
+			break;
+
+		case 'captcha' :
+			if (document.hasFocus())
+				alert("Captcha Alert!");
+		}
 	}
 }
 function sendMessage(message) {
@@ -575,31 +602,32 @@ function createDispatchPanel() {
 	$("body").css('margin', "0").prepend(dispatch.DOMElement);
 	addStyle("#dispatcher { background-color: #f5f5f5; position: fixed; top: 0px; float: left; height: 100%;  width: 270px; font: 8pt Helvetica;  margin-left: 0px; margin }\
 		#content_container { position: absolute; left: 270px; top: 0; right: 0; border-left: 2px solid #dadada; }\
-		#dispatcher #controller { text-align: center; font: 200% Candara; color: #585858; position: relative; height: 25px; }\
+		#dispatcher #controller { text-align: center; font: 160% Candara; color: #585858; position: relative; height: 20px; }\
 		#dispatcher #controller .on_off { margin: 7px 5px 0 0 }\
 		#dispatcher #controller .on_off a { font: 80% Helvetica }\
-		#dispatcher #watcher_container { position: absolute; top: 25px; bottom: 0; overflow-y:auto; width: 100%;}\
+		#dispatcher #watcher_container { position: absolute; top: 20px; bottom: 0; overflow-y:auto; width: 100%;}\
 		#dispatcher #watcher_container p { margin: 30px 0px }\
 		#dispatcher #watcher_container .error_button a { text-decoration: none; color: #555; background-color: #fff; padding: 3px 10px; margin: 5px; border: 1px solid #aaa; border-radius: 2px }\
 		#dispatcher #watcher_container .error_button a:hover { background-color: #def; border-color: #aaa }\
 		#dispatcher #settings { float: left; margin: 3px 2px }\
-		#dispatcher div { font-size: 8pt }\
+		#dispatcher div { font-size: 7pt }\
 		#dispatcher .watcher { margin: 3px; background-color: #fff; position: relative; border-bottom: 1px solid #ddd; border-right: 1px solid #ddd; }\
 		#dispatcher .watcher .details { width: 25px; text-align: center; float: right; background-color: rgba(234, 234, 234, 1); position: absolute; top: 0; bottom: 0; right: 0; font: 90% Verdana; color: #fff; }\
-		#dispatcher .watcher .name { font: 130% Helvetica; color: black; text-decoration: none}\
+		#dispatcher .watcher .name { font: 130% Helvetica; color: black; text-decoration: none; display: inline-block; margin-top: -3px}\
 		#dispatcher .watcher .name:hover { text-decoration: underline }\
 		#dispatcher .watcher .name.no_hover:hover { text-decoration: none }\
+		#dispatcher .watcher .time { display: block; float: left }\
 		#dispatcher .on_off{ float: right; cursor: pointer }\
 		#dispatcher .on_off a { margin: 1px; font: 70% Helvetica; }\
 		#dispatcher .on_off a.selected { background-color: #cef; border-radius: 3px; padding: 3px 6px; }\
 		#dispatcher .watcher div:nth-child(2) {  margin-right: 25px; padding: 5px 5px 5px 10px;}\
-		#dispatcher .watcher .bottom { margin-top: 0px;  }\
+		#dispatcher .watcher .bottom { margin: 0 0 -5px; color: #aaa }\
 		#dispatcher .watcher .bottom a:link { color: black; }\
 		#dispatcher .watcher .bottom a:hover { color: #cef; }\
 		#dispatcher .watcher .details { font-size: 150%; font-weight: bold }\
-		#dispatcher .watcher .last_updated { position: absolute; right: 30px; bottom: 5px; color: #aaa }\
-		#dispatcher .watcher .icons { visibility: hidden; left: 5px; bottom: 5px }\
-		#dispatcher .watcher .icons img { opacity: 0.2 }\
+		#dispatcher .watcher .last_updated { position: absolute; right: 30px; bottom: 0px }\
+		#dispatcher .watcher .icons { visibility: hidden; margin-left: 10px; bottom: 5px }\
+		#dispatcher .watcher .icons img { opacity: 0.2; height: 1.2em }\
 		#dispatcher .watcher .color_code { position: absolute; left: 0; top: 0; bottom: 0; width: 9px; cursor: row-resize }\
 		#dispatcher .watcher .color_code div { position: absolute; left: 0; top: 0; bottom: 0; width: 5px }\
 		#dispatcher .watcher .color_code.hit div		{ background-color: rgba(234, 111, 111, .7); }\
@@ -749,9 +777,11 @@ Dispatch.prototype.add = function(watcher) {
 	return watcher;
 }
 Dispatch.prototype.save = function() {
-	console.log("Saving " + this.watchers.length + " watchers...");
-	localStorage.setItem('notifier_watchers', JSON.stringify(dispatch.watchers,Watcher.replacerArray));
-	// localStorage.setItem('notifier_watchers_backup', JSON.stringify(dispatch.watchers,Watcher.replacerArray));
+    if (!loadError) {
+        console.log("Saving " + this.watchers.length + " watchers...");
+        localStorage.setItem('notifier_watchers', JSON.stringify(dispatch.watchers,Watcher.replacerArray));
+		// localStorage.setItem('notifier_watchers_backup', JSON.stringify(dispatch.watchers,Watcher.replacerArray));
+    }
 }
 Dispatch.prototype.load = function() {
 	this.isLoading = true;
@@ -773,7 +803,12 @@ Dispatch.prototype.load = function() {
 
 	if (data != null) {
 		watchers = JSON.parse(data);
-		for(var i = 0; i < watchers.length; i++) this.add(new Watcher(watchers[i]));
+        try {
+			for(var i = 0; i < watchers.length; i++) this.add(new Watcher(watchers[i]));
+        } catch(e) {
+            loadError = true;
+            alert("Error loading saved list");
+        }
 	} else {
 		loadHits();
 	}
@@ -921,7 +956,7 @@ Dispatch.prototype.onRequestMainDenied = function() {
 function QuickWatcher() {
 	var attrs = {
 		id: "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=&minReward=0.00&qualifiedFor=on&x=9&y=14",
-		time: 1250,
+		time: 2500,
 		type: 'url',
 		name: "Quick Watcher"}
 	Watcher.call(this, attrs);
@@ -1234,13 +1269,13 @@ Watcher.prototype.getHTML = function() {
 	var html = "<div class=\"details\"> > </div>\
 		<div>\
 		<div class=\"on_off\"><a" + (this.state.isOn ? " class=\"selected\"" : "") + ">ON</a><a" + (!this.state.isOn ? " class=\"selected\"" : "") + ">OFF</a></div>\
-		<a class=\"name\" href=\"" + this.getURL() + "\" target=\"_blank\">" + ((typeof this.name != 'undefined') ? this.name : this.id) + "</a><br />" +
-		"<span class=\"time\">" + (this.time / 1000) + " seconds </span>\
-		<span class=\"icons\">\
-			<a class=\"edit\" href=\"javascript:void(0)\"><img src=\"http://imgur.com/peEhuHZ.png\" /></a>\
-			<a class=\"delete\" href=\"javascript:void(0)\"><img src=\"http://imgur.com/5snaSxU.png\" /></a>\
-		</span>\
+		<a class=\"name\" href=\"" + this.getURL() + "\" target=\"_blank\">" + ((typeof this.name != 'undefined') ? this.name : this.id) + "</a>\
 		<div class=\"bottom\">\
+            <span class=\"time\">" + (this.time / 1000) + " seconds </span>\
+            <span class=\"icons\">\
+                <a class=\"edit\" href=\"javascript:void(0)\"><img src=\"http://i.imgur.com/peEhuHZ.png\" /></a>\
+                <a class=\"delete\" href=\"javascript:void(0)\"><img src=\"http://i.imgur.com/5snaSxU.png\" /></a>\
+            </span>\
 			<div class=\"last_updated\" title=\"Last checked: " + ((typeof this.date != 'undefined') ? this.date.toString() : "n/a") + "\">" + ((typeof this.date != 'undefined') ? this.getFormattedTime() : "n/a") + "</div>\
 		</div>\
 		<div class=\"color_code\"><div></div></div>\
@@ -1327,8 +1362,8 @@ Watcher.prototype.getHTML = function() {
 		dispatch.moveDown(_this);
 	});
 	$(".icons img", div).hover(function() { if (!isDragging) $(this).css('opacity', "1") }, function() { $(this).css('opacity', '') });
-	$(".delete img", div).hover(function() {if (!isDragging) $(this).attr('src', "http://imgur.com/guRzYEL.png")}, function() {$(this).attr('src', "http://imgur.com/5snaSxU.png")});
-	$(".edit img", div).hover(function() {if (!isDragging) $(this).attr('src', "http://imgur.com/VTHXHI4.png")}, function() {$(this).attr('src', "http://imgur.com/peEhuHZ.png")});
+	$(".delete img", div).hover(function() {if (!isDragging) $(this).attr('src', "http://i.imgur.com/guRzYEL.png")}, function() {$(this).attr('src', "http://i.imgur.com/5snaSxU.png")});
+	$(".edit img", div).hover(function() {if (!isDragging) $(this).attr('src', "http://i.imgur.com/VTHXHI4.png")}, function() {$(this).attr('src', "http://i.imgur.com/peEhuHZ.png")});
 
 	$(".on_off", div).click(function() { _this.toggleOnOff(); } );
 	$("a.name", div).click(function() { _this.markViewed(); });
@@ -1374,7 +1409,7 @@ Watcher.prototype.filterMessages = function(newHits) {
 	// For now just showing new hits
 	var filteredHits = new Array();
 
-	if (typeof this.lastHits != 'undefined' && this.lastHits.length > 0) {
+	if (typeof this.lastHits !== 'undefined' && this.lastHits.length > 0) {
 		this.isChanged = false;
 		
 		for (i = 0; i < newHits.length; ++i) {
@@ -1397,6 +1432,9 @@ Watcher.prototype.filterMessages = function(newHits) {
 
 		if (this.isChanged)
 			this.onChanged();
+
+		if (this.option.auto && !this.option.stopOnCatch)
+			this.onChanged(); // Might add a different method for this case, but using onChanged for now
 
 		this.lastHits = newHits;
 		this.newHits = filteredHits;
@@ -1439,6 +1477,7 @@ Watcher.prototype.alert = function () {
 	
 	if (sound.canPlayType('audio/ogg;codecs="vorbis"') && settings.sound) {
 		sound.src = "http://rpg.hamsterrepublic.com/wiki-images/3/3e/Heal8-Bit.ogg";
+		sound.volume = .3;
 		sound.play();
 	}
 }
@@ -1464,8 +1503,9 @@ Watcher.prototype.getformattedTime = function() {
 	var hours = time.getHours();
 	var ampm = "am";
 	
-	if (hours > 12) {
-		hours -= 12;
+	if (hours >= 12) {
+		if (hours > 12)
+			hours -= 12;
 		ampm = "pm";
 	} else if (hours == 0) {
 		hours = 12;
@@ -1585,7 +1625,10 @@ Watcher.prototype.parseHitPage = function(data) {
 		// If it's newly available, alert the user and start auto-stacking if that's desired.
 		//TODO We need to test for "You are not qualified to accept this HIT."
 		
-		if (hasCaptcha) console.log("Has captcha");
+		if (hasCaptcha) {
+			console.log("Has captcha");
+			sendMessage({header: 'captcha'});
+		}
 
 		var uid = $("input[name='hitId']", data).attr("value");
 		var hit = new Hit({id: this.id, uid: uid, isAutoAccept: this.option.auto});
@@ -1595,7 +1638,7 @@ Watcher.prototype.parseHitPage = function(data) {
 		hit.available = $("td.capsule_field_text:nth-child(8)", data).text().trim();
 		hit.time = $("td.capsule_field_text:nth-child(11)", data).text().trim();
 		
-		if ((hasCaptcha || this.option.auto) && this.state.isRunning)
+		if ((hasCaptcha || (this.option.auto && this.option.stopOnCatch)) && this.state.isRunning)
 			// We should probably toggle off all auto-accept hits when we encounter a captcha. Maybe send a special message to all mturk windows while we're at it.
 			// The special message could be some kind of banner that says that no more hits can be accepted in the background until the captcha is entered. (It would
 			// be pretty cool if we could pull up the captcha image in the background and just show it and the form to enter it from another page).
@@ -1689,7 +1732,7 @@ Loader.prototype.getData = function(url, callback) {
 			setTimeout(function() {
 				if (_this.paused)
 					_this.next();
-			}, 1250);
+			}, 2000);
 		}
 		// else
 		// 	setTimeout(function(){Loader.count = 0; _this.next()}, 1000);
@@ -1734,7 +1777,7 @@ NotificationPanel.prototype.remove = function(notification) {
 NotificationPanel.prototype.show = function() {
 	if (this.isHidden) {
 		if (document.hasFocus() && settings.animation) {
-			this.animatePanel(-400, 0);
+			this.getDOMElement().css('right', "0px");
 		} else {
 			this.getDOMElement().css('right', "0px");
 		}
@@ -1744,7 +1787,7 @@ NotificationPanel.prototype.show = function() {
 NotificationPanel.prototype.hide = function() {
 	if (!this.isHidden) {
 		if (document.hasFocus() && settings.animation) {
-			this.animatePanel(0, -400);
+			this.getDOMElement().css('right', "-400px");
 		} else {
 			this.getDOMElement().css('right', "-400px");
 		}
@@ -1781,12 +1824,17 @@ NotificationPanel.prototype.createPanel = function() {
 			border-size: 1px 0 0 1px;\
 			overflow: auto;\
 			border-radius:  5px 0 0 0;\
+			border-right: 0;\
+			transition: right 0.2s;\
 			}\
 		#receiver .notification_group {\
 			background: #fdfdfd;\
 			border: 1px solid #eaeaea;\
 			padding: 5px;\
 			margin: 10px 0;\
+			opacity: 1;\
+			overflow: hidden;\
+			transition: opacity 0.7s, max-height 0.2s ease-in-out 0.7s, margin 0.2s linear 0.7s, padding 0.2s linear 0.7s;\
 		}\
 		#receiver div { font-size: 8pt; }\
 		#receiver .notification_group h3 { margin: 3px; font-face: verdana }\
@@ -1848,8 +1896,8 @@ NotificationPanel.prototype.onTimeoutListener = function(notification) {
 	if (this.notifications.length > 1) {
 		var _this = this;
 		if (document.hasFocus() && settings.animation) {
-			notification.fadeOut(700);
-			setTimeout(function() { _this.remove(notification) }, 705);
+			notification.fadeOut();
+			setTimeout(function() { _this.remove(notification) }, 905);
 		} else {
 			setTimeout(function() { _this.remove(notification) }, 705);
 		}
@@ -1890,6 +1938,9 @@ NotificationGroup.prototype.createDOMElement = function() {
 		$(div).append((new NotificationHit(this.hits[i], isSameReq, (typeof this.watcher != 'undefined') ? this.watcher : null)).getDOMElement());
 	
 	this.DOMElement = div;
+
+	setTimeout(function() { div.css('max-height', div.height()); console.log("Setting max-height to", div.height() + 50) }, 1000);
+
 }
 NotificationGroup.prototype.getDOMElement = function() {
 	return this.DOMElement;
@@ -1901,7 +1952,10 @@ NotificationGroup.prototype.hasAutoAccept = function() {
 	return hasAutoAccept;
 }
 NotificationGroup.prototype.fadeOut = function(duration) {
-	$(this.getDOMElement()).fadeOut(duration);
+	$(this.getDOMElement()).css('opacity', "0");
+	$(this.getDOMElement()).css('max-height', "0");
+	$(this.getDOMElement()).css('padding', "0");
+	$(this.getDOMElement()).css('margin', "0");
 }
 
 /** The Notification object. This holds the notification data for individual hits
