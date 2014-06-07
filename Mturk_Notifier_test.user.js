@@ -613,6 +613,7 @@ function createDispatchPanel() {
 		#dispatcher div { font-size: 7pt }\
 		#dispatcher .watcher { margin: 3px; background-color: #fff; position: relative; border-bottom: 1px solid #ddd; border-right: 1px solid #ddd; }\
 		#dispatcher .watcher .details { width: 25px; text-align: center; float: right; background-color: rgba(234, 234, 234, 1); position: absolute; top: 0; bottom: 0; right: 0; font: 90% Verdana; color: #fff; }\
+		#dispatcher .watcher .details.updated { background-color: rgba(218, 240, 251, 1) }\
 		#dispatcher .watcher .name { font: 130% Helvetica; color: black; text-decoration: none; display: inline-block; margin-top: -3px}\
 		#dispatcher .watcher .name:hover { text-decoration: underline }\
 		#dispatcher .watcher .name.no_hover:hover { text-decoration: none }\
@@ -628,8 +629,10 @@ function createDispatchPanel() {
 		#dispatcher .watcher .last_updated { position: absolute; right: 30px; bottom: 0px }\
 		#dispatcher .watcher .icons { visibility: hidden; margin-left: 10px; bottom: 5px }\
 		#dispatcher .watcher .icons img { opacity: 0.2; height: 1.2em }\
+		#dispatcher .watcher .icons img:hover { opacity: 1 }\
 		#dispatcher .watcher .color_code { position: absolute; left: 0; top: 0; bottom: 0; width: 9px; cursor: row-resize }\
-		#dispatcher .watcher .color_code div { position: absolute; left: 0; top: 0; bottom: 0; width: 5px }\
+		#dispatcher .watcher .color_code div { position: absolute; left: 0; top: 0; bottom: 0; width: 5px; transition: width 0.15s }\
+		#dispatcher .watcher .color_code:hover div { width: 9px }\
 		#dispatcher .watcher .color_code.hit div		{ background-color: rgba(234, 111, 111, .7); }\
 		#dispatcher .watcher .color_code.requester div 	{ background-color: rgba(51, 147, 255, .7); }\
 		#dispatcher .watcher .color_code.url div		{ background-color: rgba(58, 158, 59, .7); }");
@@ -801,17 +804,33 @@ Dispatch.prototype.load = function() {
 	);
 	this.add(Catcher.create({name:"Qualification HITs", notify:true}, this.quickWatcher).addFilter(Filter.WORD, "qualif"));
 
+
+	// if (data != null) {
+	// 	watchers = JSON.parse(data);
+ //        try {
+	// 		for(var i = 0; i < watchers.length; i++) this.add(new Watcher(watchers[i]));
+ //        } catch(e) {
+ //            loadError = true;
+ //            alert("Error loading saved list");
+ //        }
+	// } else {
+	// 	loadHits();
+	// }
+
+
 	if (data != null) {
 		watchers = JSON.parse(data);
-        try {
-			for(var i = 0; i < watchers.length; i++) this.add(new Watcher(watchers[i]));
-        } catch(e) {
-            loadError = true;
-            alert("Error loading saved list");
+		try {
+			// for(var i = 0; i < watchers.length; i++) this.add(new Watcher(watchers[i]));
+			for(var i = 0; i < watchers.length; i++) 	$("#watcher_container", this.DOMElement).append(WatcherUI.create(new Watcher(watchers[i])));
+		} catch(e) {
+			loadError = true;
+			alert("Error loading saved list");
         }
 	} else {
 		loadHits();
 	}
+
 	this.isLoading = false;
 	
 	this.quickWatcher.onWatchersChanged(this.watchers);
@@ -1071,6 +1090,7 @@ QuickWatcherListener.prototype.onHitsChanged = function(hits) {
 	this.context.setHits(hits);
 }
 
+
 function Catcher(attrs, quickWatcher) {
 	Watcher.call(this, attrs);
 	this.type = 'url';
@@ -1218,7 +1238,180 @@ Filter.create = function(type, value, context) {
 
 
 
+
+function WatcherUI() { /* Nothing */ };
+WatcherUI.create = function(watcher) {
+	// Create jQuery Element...
+	var div = $("<div>").addClass("watcher")
+		.html("<div class=\"details\"> > </div>\
+		<div>\
+		<div class=\"on_off\"><a" + (watcher.state.isOn ? " class=\"selected\"" : "") + ">ON</a><a" + (!watcher.state.isOn ? " class=\"selected\"" : "") + ">OFF</a></div>\
+		<a class=\"name\" href=\"" + watcher.getURL() + "\" target=\"_blank\">" + ((typeof watcher.name != 'undefined') ? watcher.name : watcher.id) + "</a>\
+		<div class=\"bottom\">\
+            <span class=\"time\">" + (watcher.time / 1000) + " seconds </span>\
+            <span class=\"icons\">\
+                <a class=\"edit\" href=\"javascript:void(0)\"><img src=\"http://i.imgur.com/peEhuHZ.png\" /></a>\
+                <a class=\"delete\" href=\"javascript:void(0)\"><img src=\"http://i.imgur.com/5snaSxU.png\" /></a>\
+            </span>\
+			<div class=\"last_updated\" title=\"Last checked: " + ((typeof watcher.date != 'undefined') ? watcher.date.toString() : "n/a") + "\">" + ((typeof watcher.date != 'undefined') ? watcher.getFormattedTime() : "n/a") + "</div>\
+		</div>\
+		<div class=\"color_code\"><div></div></div>\
+		</div>");
+
+
+	// Add listeners
+	watcher.addListener(Watcher.START, function() {
+		console.log("Watcher.START detected " + watcher.id);
+		$(".on_off", div).addClass("on");
+
+		// To be removed...
+		$(".on_off a:first-child", div).addClass("selected");
+		$(".on_off a:last-child", div).removeClass("selected");
+	});
+
+	watcher.addListener(Watcher.STOP, function() {
+		$(".on_off", div).removeClass("on");
+
+		// To be removed...
+		$(".on_off a:first-child", div).removeClass("selected");
+		$(".on_off a:last-child", div).addClass("selected");
+	});
+
+	watcher.addListener(Watcher.UPDATE, function(e) {
+		$(".last_updated", div).text(watcher.getFormattedTime());
+	});
+
+	watcher.addListener(Watcher.CHANGE, function() {
+		$(".name", div).text(watcher.name);
+		$(".time", div).text(watcher.interval / 60000 + " seconds");
+	});
+
+	watcher.addListener(Watcher.HITS_CHANGE, function() {
+		$(".details", div).addClass("updated");
+	});
+
+	watcher.addListener(Watcher.DELETE, function() {
+		$(this).remove();
+	});
+
+	watcher.addListener(Watcher.VIEW_DETAILS, function() {
+		$(".details", div).removeClass("updated");
+	});
+
+
+	// Set actions
+	$(".edit", div).click(function() {
+		// showWatcherEditor(watcher);
+	});
+
+	$(".delete", div).click(function() {
+		dispatch.remove(watcher);
+		$(div).remove();
+	});
+
+	$(".details", div).mouseover(function () {
+		showDetailsPanel(watcher);
+		$(this).removeClass("updated");
+	});
+
+	$(".on_off", div).mousedown(function() {
+		watcher.toggleOnOff();
+	});
+
+	var isDragging = false;
+
+	// // Drag watchers
+	// var isDragging = false;
+	// var startY, startOffsetY, startOffsetX, limit, height; 
+	// div.on("mousedown", function(e) {
+	// 	e=e || window.event;
+	// 	pauseEvent(e);
+
+	// 	height = div.outerHeight(true) - 3.25;
+	// 	startY = e.clientY;
+	// 	startOffsetY = div.offset().top;
+	// 	startOffsetX = div.offset().left;
+	// 	isDragging = true;
+	// 	limit = Math.min(dispatch.DOMElement.outerHeight(true), height * (dispatch.watchers.length + .75)) - height;
+		
+	// 	div.css('cursor', "row-resize");
+	// 	div.css('z-index', "100");
+	// 	div.css('opacity', "0.8");
+	// 	$(".name", div).addClass("no_hover");
+	// });
+	// $(window).on("mouseup", function(e) {
+	// 	if (isDragging) {
+	// 		$("div", colorCode).css('width', '');
+	// 		div.css('cursor', '');
+	// 		div.css('z-index', "auto");
+	// 		div.css('top', '');
+	// 		div.css('opacity', "1");
+	// 		$(".name", div).removeClass("no_hover");
+	// 		dispatch.save();
+	// 		isDragging = false;
+	// 	}
+	// });
+	// $(window).on("mousemove", function(e) {
+	// 	if (isDragging) {
+	// 		var diffY = e.clientY - startY;
+	// 		var newOffset = startOffsetY + diffY;
+
+	// 		if (newOffset < 28) {
+	// 			newOffset = 28;
+	// 		} else if (newOffset > limit) {
+	// 			newOffset = limit;
+	// 		} else {
+	// 			if (diffY > height / 2) {
+	// 				startY += height;
+	// 				startOffsetY += height;
+	// 				dispatch.moveDown(_this);
+	// 			} else if (-diffY > height / 2) {
+	// 				startY -= height;
+	// 				startOffsetY -= height;
+	// 				dispatch.moveUp(_this);
+	// 			}
+	// 		}
+	// 		$(div).offset({ top: newOffset, left: startOffsetX });
+	// 	}
+	// });
+
+	var colorCode = $(".color_code", div);
+	if (watcher.type == 'hit') {
+		colorCode.addClass("hit");
+		colorCode.attr('title', "HIT Watcher");
+	} else if (watcher.type == 'requester') {
+		colorCode.addClass("requester");
+		colorCode.attr('title', "Requester Watcher");
+	} else if (watcher.type == 'url') {
+		colorCode.addClass("url");
+		colorCode.attr('title', "URL Watcher");
+	}
+	colorCode.attr('title', colorCode.attr('title') + "\nClick and drag to re-order");
+
+
+
+
+	$(".delete img", div).hover(function() {if (!isDragging) $(this).attr('src', "http://i.imgur.com/guRzYEL.png")}, function() {$(this).attr('src', "http://i.imgur.com/5snaSxU.png")});
+	$(".edit img", div).hover(function() {if (!isDragging) $(this).attr('src', "http://i.imgur.com/VTHXHI4.png")}, function() {$(this).attr('src', "http://i.imgur.com/peEhuHZ.png")});
+
+	div.hover(
+		function() { $(".icons", this).css('visibility', 'visible'); },
+		function() { $(".icons", this).css('visibility', 'hidden'); }
+	);
+
+	return div;
+}
+
 /**	The Watcher object. This is what controls the pages that are monitored and how often
+
+	Events:
+		onStart	- The watcher has started to check the desired page with a time interval
+		onStop	- The time interval has stopped
+		onUpdate	- The watcher has just checked the page for hits
+		onChange	- Attributes of the watcher changed, like name, interval time, etc.
+		onDelete	- When a watcher has been deleted
+		onHitsChange	- The watcher updated and found a different set of hits from last time
+		onCaptcha?	- The watcher encounters a captcha. Not sure if this should be handled by the Watcher or Loader (maybe both)
 
 **/
 function Watcher(attrs) {
@@ -1268,123 +1461,25 @@ function Watcher(attrs) {
 		}
 	}
 
+	// Listeners
+	this.listener = {
+		onstart:		[],
+		onstop:			[],
+		onupdate:		[],
+		onchange:		[],
+		onhitschange:	[],
+		ondelete:		[],
+		onviewdetails:	[]
+	};
+
 	return this;
 }
 Watcher.prototype.toString = function() {
 	return this.name;
 }
 Watcher.prototype.getHTML = function() {
-	// Create the HTML (with the necessary variables to visualize the watcher)
-	var div = $('<div>')
-		.attr('id', this.id)
-		.addClass("watcher");
-	var html = "<div class=\"details\"> > </div>\
-		<div>\
-		<div class=\"on_off\"><a" + (this.state.isOn ? " class=\"selected\"" : "") + ">ON</a><a" + (!this.state.isOn ? " class=\"selected\"" : "") + ">OFF</a></div>\
-		<a class=\"name\" href=\"" + this.getURL() + "\" target=\"_blank\">" + ((typeof this.name != 'undefined') ? this.name : this.id) + "</a>\
-		<div class=\"bottom\">\
-            <span class=\"time\">" + (this.time / 1000) + " seconds </span>\
-            <span class=\"icons\">\
-                <a class=\"edit\" href=\"javascript:void(0)\"><img src=\"http://i.imgur.com/peEhuHZ.png\" /></a>\
-                <a class=\"delete\" href=\"javascript:void(0)\"><img src=\"http://i.imgur.com/5snaSxU.png\" /></a>\
-            </span>\
-			<div class=\"last_updated\" title=\"Last checked: " + ((typeof this.date != 'undefined') ? this.date.toString() : "n/a") + "\">" + ((typeof this.date != 'undefined') ? this.getFormattedTime() : "n/a") + "</div>\
-		</div>\
-		<div class=\"color_code\"><div></div></div>\
-		</div>";
-		
-	$(div).append(html);
-	
-	var colorCode = $(".color_code", div);
-	if (this.type == 'hit') {
-		colorCode.addClass("hit");
-		colorCode.attr('title', "HIT Watcher");
-	} else if (this.type == 'requester') {
-		colorCode.addClass("requester");
-		colorCode.attr('title', "Requester Watcher");
-	} else if (this.type == 'url') {
-		colorCode.addClass("url");
-		colorCode.attr('title', "URL Watcher");
-	}
-	colorCode.attr('title', colorCode.attr('title') + "\nClick and drag to re-order");
-	colorCode.hover(function() { $("div", this).css('width', "9px") }, function() { if (!isDragging) $("div", this).css('width', '') });
-
-	var _this = this;
-
-	
-	// Drag watchers
-	var isDragging = false;
-	var startY, startOffsetY, startOffsetX, limit, height; 
-	div.on("mousedown", function(e) {
-		e=e || window.event;
-		pauseEvent(e);
-
-		height = div.outerHeight(true) - 3.25;
-		startY = e.clientY;
-		startOffsetY = div.offset().top;
-		startOffsetX = div.offset().left;
-		isDragging = true;
-		limit = Math.min(dispatch.DOMElement.outerHeight(true), height * (dispatch.watchers.length + .75)) - height;
-		
-		div.css('cursor', "row-resize");
-		div.css('z-index', "100");
-		div.css('opacity', "0.8");
-		$(".name", div).addClass("no_hover");
-	});
-	$(window).on("mouseup", function(e) {
-		if (isDragging) {
-			$("div", colorCode).css('width', '');
-			div.css('cursor', '');
-			div.css('z-index', "auto");
-			div.css('top', '');
-			div.css('opacity', "1");
-			$(".name", div).removeClass("no_hover");
-			dispatch.save();
-			isDragging = false;
-		}
-	});
-	$(window).on("mousemove", function(e) {
-		if (isDragging) {
-			var diffY = e.clientY - startY;
-			var newOffset = startOffsetY + diffY;
-
-			if (newOffset < 28) {
-				newOffset = 28;
-			} else if (newOffset > limit) {
-				newOffset = limit;
-			} else {
-				if (diffY > height / 2) {
-					startY += height;
-					startOffsetY += height;
-					dispatch.moveDown(_this);
-				} else if (-diffY > height / 2) {
-					startY -= height;
-					startOffsetY -= height;
-					dispatch.moveUp(_this);
-				}
-			}
-			$(div).offset({ top: newOffset, left: startOffsetX });
-		}
-	});
-	
-	$(".delete", div).click(function() {
-		dispatch.remove(_this);
-	});
-	$(".edit", div).click(function() {
-		dispatch.moveDown(_this);
-	});
-	$(".icons img", div).hover(function() { if (!isDragging) $(this).css('opacity', "1") }, function() { $(this).css('opacity', '') });
-	$(".delete img", div).hover(function() {if (!isDragging) $(this).attr('src', "http://i.imgur.com/guRzYEL.png")}, function() {$(this).attr('src', "http://i.imgur.com/5snaSxU.png")});
-	$(".edit img", div).hover(function() {if (!isDragging) $(this).attr('src', "http://i.imgur.com/VTHXHI4.png")}, function() {$(this).attr('src', "http://i.imgur.com/peEhuHZ.png")});
-
-	$(".on_off", div).click(function() { _this.toggleOnOff(); } );
-	$("a.name", div).click(function() { _this.markViewed(); });
-	$(".details", div).mouseout(function() { if (!isDragging) _this.markViewed(); });
-	$(".details", div).mouseover(function() { if (!isDragging) showDetailsPanel(_this); });
-	$(div).hover(function() { $(".icons", this).css('visibility', 'visible'); }, function() { $(".icons", this).css('visibility', 'hidden'); });
-	
-	this.DOMElement = div;
-	return div;
+	this.DOMElement = $("<div>");
+	return $("<div>");
 }
 Watcher.prototype.getURL = function() {
 	return this.url;
@@ -1393,8 +1488,8 @@ Watcher.prototype.isNewHit = function (hit) {
 	return (this.newHits.indexOf(hit) != -1);
 }
 Watcher.prototype.onChanged = function() {
-	this.highlight();
 	this.isUpdated = true;
+	this.notify(Watcher.HITS_CHANGE, null);
 	
 	// Sound alert for auto-accept HIT watchers and watchers that have the alert set on
 	if (this.option.auto || this.option.alert)
@@ -1408,6 +1503,8 @@ Watcher.prototype.start = function() {
 	this.getData();
 	
 	this.state.isRunning = true;
+
+	this.notify(Watcher.START, null);
 	return this;
 }
 Watcher.prototype.stop = function() {
@@ -1415,6 +1512,8 @@ Watcher.prototype.stop = function() {
 	clearInterval(this.interval);
 	clearTimeout(this.timer);
 	this.state.isRunning = false;
+
+	this.notify(Watcher.STOP, null);
 }
 Watcher.prototype.filterMessages = function(newHits) {
 	// Determine which hits, if any, the user should be notified of
@@ -1467,21 +1566,17 @@ Watcher.prototype.filterMessages = function(newHits) {
 Watcher.prototype.toggleOnOff = function() {
 	if (this.state.isOn) {
 		this.stop();
-		$("#" + this.id + " .on_off a:first-child").removeClass("selected");
-		$("#" + this.id + " .on_off a:last-child").addClass("selected");
 		this.state.isOn = false;
 	} else {
 		if (!this.state.isRunning)
 			this.start();
-		$("#" + this.id + " .on_off a:first-child").addClass("selected");
-		$("#" + this.id + " .on_off a:last-child").removeClass("selected");
 		this.state.isOn = true;
 	}
 }
 Watcher.prototype.markViewed = function () {
 	if (this.isUpdated) {
-		this.unhighlight();
 		isUpdated = false;
+		this.notify(Watcher.VIEW_DETAILS, null);
 	}
 }
 Watcher.prototype.alert = function () {
@@ -1493,23 +1588,11 @@ Watcher.prototype.alert = function () {
 		sound.play();
 	}
 }
-Watcher.prototype.highlight = function() {
-//	$("#dispatcher #" + this.id + " div.details").css('background-color', 'rgba(218, 240, 251, 1)');
-	$("div.details", this.DOMElement).css('background-color', 'rgba(218, 240, 251, 1)');
-}
-Watcher.prototype.unhighlight = function() {
-//	$("#dispatcher #" + this.id + " div.details").css('background-color', 'rgba(234, 234, 234, 1)');
-	$("div.details", this.DOMElement).css('background-color', 'rgba(234, 234, 234, 1)');
-}
-Watcher.prototype.updateLastChecked = function() {
-	this.date = new Date();
-}
 Watcher.prototype.updateWatcherPanel = function() {
-	this.updateLastChecked();
-	// $("#dispatcher #" + this.id + " .last_updated").text(this.getformattedTime()).attr('title', "Last checked: " + this.date.toString());
-	$(".last_updated", this.DOMElement).text(this.getformattedTime()).attr('title', "Last checked: " + this.date.toString());
+	this.date = new Date();
+	this.notify(Watcher.UPDATE, null);
 }
-Watcher.prototype.getformattedTime = function() {
+Watcher.prototype.getFormattedTime = function() {
 	var time = this.date;
 	var str = "";
 	var hours = time.getHours();
@@ -1660,6 +1743,77 @@ Watcher.prototype.parseHitPage = function(data) {
 	}
 }
 Watcher.replacerArray = ["id", "time", "type", "name", "option", "auto", "alert", "stopOnCatch", "state", "isRunning", "isOn", "isUpdated", "url"];
+
+Watcher.START = 1;
+Watcher.STOP = 2;
+Watcher.UPDATE = 3;
+Watcher.CHANGE = 4;
+Watcher.HITS_CHANGE = 5;
+Watcher.DELETE = 6;
+Watcher.VIEW_DETAILS = 7;
+
+Watcher.prototype.addListener = function(type, callback) {
+	switch(type) {
+		case Watcher.START:
+			this.listener.onstart.push(callback);
+			break;
+		case Watcher.STOP:
+			this.listener.onstop.push(callback);
+			break;
+		case Watcher.UPDATE:
+			this.listener.onupdate.push(callback);
+			break;
+		case Watcher.CHANGE:
+			this.listener.onchange.push(callback);
+			break;
+		case Watcher.HITS_CHANGE:
+			this.listener.onhitschange.push(callback);
+			break;
+		case Watcher.DELETE:
+			this.listener.ondelete.push(callback);
+			break;
+		case Watcher.VIEW_DETAILS:
+			this.listener.onviewdetails.push(callback);
+			break;
+		default:
+			console.error("Invalid Event type in MusicPlayer.addListener()");
+	}
+}
+
+Watcher.prototype.notify = function(type, data) {
+	switch(type) {
+		case Watcher.START:
+			this.callFunctionArray(this.listener.onstart, data);
+			break;
+		case Watcher.STOP:
+			this.callFunctionArray(this.listener.onstop, data);
+			break;
+		case Watcher.UPDATE:
+			this.callFunctionArray(this.listener.onupdate, data);
+			break;
+		case Watcher.CHANGE:
+			this.callFunctionArray(this.listener.onchange, data);
+			break;
+		case Watcher.HITS_CHANGE:
+			this.callFunctionArray(this.listener.onhitschange, data);
+			break;
+		case Watcher.DELETE:
+			this.callFunctionArray(this.listener.ondelete, data);
+			break;
+		case Watcher.VIEW_DETAILS:
+			this.callFunctionArray(this.listener.onviewdetails, data);
+			break;
+		default:
+			console.error("Unknown event type:", type);
+	}
+}
+
+Watcher.prototype.callFunctionArray = function(functions, data) {
+	if (functions.length > 0)
+		for (var i = 0, len = functions.length; i < len; i++)
+			functions[i](data);
+}
+
 /** Watcher Stack and Queue
 	Stack - Grab as many as possible right away
 		Limit - The number of HITs to stack at once
