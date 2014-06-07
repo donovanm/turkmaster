@@ -40,7 +40,7 @@ $(document).ready(function(){
 	if (pageType.DASHBOARD) {
 		loader = new Loader();
 		dispatch = new Dispatch();
-		createDispatchPanel();
+		DispatchUI.create(dispatch);
 		createDetailsPanel();
 		if (settings.preloadHits)
 			loadHits();
@@ -589,55 +589,6 @@ function Message() {
 		The message will also tell the client whether or not to pop-up the notification.	*/
 }
 
-// Create the panel for dispatch
-function createDispatchPanel() {
-	var pageElements = $("body > *");
-	$("body").html("");
-	$("body").append(
-		$("<div>")
-			.attr('id', "content_container")
-			.append($(pageElements))
-	);
-	dispatch.DOMElement = dispatch.getHTML();
-	$("body").css('margin', "0").prepend(dispatch.DOMElement);
-	addStyle("#dispatcher { background-color: #f5f5f5; position: fixed; top: 0px; float: left; height: 100%;  width: 270px; font: 8pt Helvetica;  margin-left: 0px; margin }\
-		#content_container { position: absolute; left: 270px; top: 0; right: 0; border-left: 2px solid #dadada; }\
-		#dispatcher #controller { text-align: center; font: 160% Candara; color: #585858; position: relative; height: 20px; }\
-		#dispatcher #controller .on_off { margin: 7px 5px 0 0 }\
-		#dispatcher #controller .on_off a { font: 80% Helvetica }\
-		#dispatcher #watcher_container { position: absolute; top: 20px; bottom: 0; overflow-y:auto; width: 100%;}\
-		#dispatcher #watcher_container p { margin: 30px 0px }\
-		#dispatcher #watcher_container .error_button a { text-decoration: none; color: #555; background-color: #fff; padding: 3px 10px; margin: 5px; border: 1px solid #aaa; border-radius: 2px }\
-		#dispatcher #watcher_container .error_button a:hover { background-color: #def; border-color: #aaa }\
-		#dispatcher #settings { float: left; margin: 3px 2px }\
-		#dispatcher div { font-size: 7pt }\
-		#dispatcher .watcher { margin: 3px; background-color: #fff; position: relative; border-bottom: 1px solid #ddd; border-right: 1px solid #ddd; }\
-		#dispatcher .watcher .details { width: 25px; text-align: center; float: right; background-color: rgba(234, 234, 234, 1); position: absolute; top: 0; bottom: 0; right: 0; font: 90% Verdana; color: #fff; }\
-		#dispatcher .watcher .details.updated { background-color: rgba(218, 240, 251, 1) }\
-		#dispatcher .watcher .name { font: 130% Helvetica; color: black; text-decoration: none; display: inline-block; margin-top: -3px}\
-		#dispatcher .watcher .name:hover { text-decoration: underline }\
-		#dispatcher .watcher .name.no_hover:hover { text-decoration: none }\
-		#dispatcher .watcher .time { display: block; float: left }\
-		#dispatcher .on_off{ float: right; cursor: pointer }\
-		#dispatcher .on_off a { margin: 1px; font: 70% Helvetica; }\
-		#dispatcher .on_off a.selected { background-color: #cef; border-radius: 3px; padding: 3px 6px; }\
-		#dispatcher .watcher div:nth-child(2) {  margin-right: 25px; padding: 5px 5px 5px 10px;}\
-		#dispatcher .watcher .bottom { margin: 0 0 -5px; color: #aaa }\
-		#dispatcher .watcher .bottom a:link { color: black; }\
-		#dispatcher .watcher .bottom a:hover { color: #cef; }\
-		#dispatcher .watcher .details { font-size: 150%; font-weight: bold }\
-		#dispatcher .watcher .last_updated { position: absolute; right: 30px; bottom: 0px }\
-		#dispatcher .watcher .icons { visibility: hidden; margin-left: 10px; bottom: 5px }\
-		#dispatcher .watcher .icons img { opacity: 0.2; height: 1.2em }\
-		#dispatcher .watcher .icons img:hover { opacity: 1 }\
-		#dispatcher .watcher .color_code { position: absolute; left: 0; top: 0; bottom: 0; width: 9px; cursor: row-resize }\
-		#dispatcher .watcher .color_code div { position: absolute; left: 0; top: 0; bottom: 0; width: 5px; transition: width 0.15s }\
-		#dispatcher .watcher .color_code:hover div { width: 9px }\
-		#dispatcher .watcher .color_code.hit div		{ background-color: rgba(234, 111, 111, .7); }\
-		#dispatcher .watcher .color_code.requester div 	{ background-color: rgba(51, 147, 255, .7); }\
-		#dispatcher .watcher .color_code.url div		{ background-color: rgba(58, 158, 59, .7); }");
-}
-
 // The details panel for each watcher
 function createDetailsPanel() {
 	var div = $('<div>').attr('id', 'details_panel').addClass('notification_panel');
@@ -733,6 +684,173 @@ IgnoreList.prototype.remove = function(item) {
 	}
 }
 
+
+function Evt() { /* Nothing */ };
+Evt.ADD = 1;
+Evt.REMOVE = 2;
+Evt.START = 3;
+Evt.STOP = 4;
+Evt.CHANGE = 5;
+
+// Watcher.START = 1;
+// Watcher.STOP = 2;
+// Watcher.UPDATE = 3;
+// Watcher.CHANGE = 4;
+// Watcher.HITS_CHANGE = 5;
+// Watcher.DELETE = 6;
+// Watcher.VIEW_DETAILS = 7;
+
+Evt.prototype.addListener = function(type, callback) {
+	switch(type) {
+		case Evt.ADD:
+			this.listener.onadd.push(callback);
+			break;
+		case Evt.REMOVE:
+			this.listener.onremove.push(callback);
+			break;
+		case Evt.START:
+			this.listener.onstart.push(callback);
+			break;
+		case Evt.STOP:
+			this.listener.onstop.push(callback);
+			break;
+		case Evt.CHANGE:
+			this.listener.onchange.push(callback);
+			break;
+		default:
+			console.error("Invalid Event type in addListener()");
+	}
+}
+
+Evt.prototype.notify = function(type, data) {
+	switch(type) {
+		case Evt.ADD:
+			this.callFunctionArray(this.listener.onadd, data);
+			break;
+		case Evt.REMOVE:
+			this.callFunctionArray(this.listener.onremove, data);
+			break;
+		case Evt.START:
+			this.callFunctionArray(this.listener.onstart, data);
+			break;
+		case Evt.STOP:
+			this.callFunctionArray(this.listener.onstop, data);
+			break;
+		case Evt.CHANGE:
+			this.callFunctionArray(this.listener.onchange, data);
+			break;
+		default:
+			console.error("Unknown event type:", type);
+	}
+}
+
+Evt.prototype.callFunctionArray = function(functions, data) {
+	if (functions.length > 0)
+		for (var i = 0, len = functions.length; i < len; i++)
+			functions[i](data);
+}
+
+
+
+function DispatchUI() { /* Nothing */ }
+DispatchUI.create = function(dispatch) {
+	var div = $("<div>").attr('id', "dispatcher")
+		.append($("<div>").attr('id', "controller"))
+		.append($("<div>").attr('id', "watcher_container"));
+
+	// Move dashboard comments to the right and put the dispatch panel on the left
+	var pageElements = $("body > *");
+	$("body").html("");
+	$("body").append(
+		$("<div>")
+			.attr('id', "content_container")
+			.append($(pageElements))
+	);
+
+	$("body").css('margin', "0").prepend(div);
+	addStyle("#dispatcher { background-color: #f5f5f5; position: fixed; top: 0px; float: left; height: 100%;  width: 270px; font: 8pt Helvetica;  margin-left: 0px; margin }\
+		#content_container { position: absolute; left: 270px; top: 0; right: 0; border-left: 2px solid #dadada; }\
+		#dispatcher #controller { text-align: center; font: 160% Candara; color: #585858; position: relative; height: 20px; }\
+		#dispatcher #controller .on_off { margin: 7px 5px 0 0 }\
+		#dispatcher #controller .on_off a { font: 80% Helvetica }\
+		#dispatcher #watcher_container { position: absolute; top: 20px; bottom: 0; overflow-y:auto; width: 100%;}\
+		#dispatcher #watcher_container p { margin: 30px 0px }\
+		#dispatcher #watcher_container .error_button a { text-decoration: none; color: #555; background-color: #fff; padding: 3px 10px; margin: 5px; border: 1px solid #aaa; border-radius: 2px }\
+		#dispatcher #watcher_container .error_button a:hover { background-color: #def; border-color: #aaa }\
+		#dispatcher #settings { float: left; margin: 3px 2px }\
+		#dispatcher div { font-size: 7pt }\
+		#dispatcher .watcher { margin: 3px; background-color: #fff; position: relative; border-bottom: 1px solid #ddd; border-right: 1px solid #ddd; cursor: default; transition: background-color 0.5s; -moz-user-select: none; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; }\
+		#dispatcher .watcher.running .details { background-color: #C3ECFC; background-color: rgba(218, 240, 251, 1); }\
+		#dispatcher .watcher.updated { background-color: #e8f5fc; background-color: rgba(218, 240, 251, 1) }\
+		#dispatcher .watcher .details { width: 25px; text-align: center; float: right; background-color: rgba(234, 234, 234, 1); position: absolute; top: 0; bottom: 0; right: 0; font: 90% Verdana; color: #fff; transition: background-color 0.5s }\
+		#dispatcher .watcher .details.updated { background-color: rgba(218, 240, 251, 1); background-color: #e8f5fc; background-color: rgba(220, 255, 228, 1) }\
+		#dispatcher .watcher .name { font: 130% Helvetica; color: black; text-decoration: none; display: inline-block; margin-top: -3px}\
+		#dispatcher .watcher .name:hover { text-decoration: underline }\
+		#dispatcher .watcher .name.no_hover:hover { text-decoration: none }\
+		#dispatcher .watcher .time { display: block; float: left }\
+		#dispatcher .on_off{ float: right; cursor: pointer }\
+		#dispatcher .on_off a { margin: 1px; font: 70% Helvetica; }\
+		#dispatcher .on_off a:nth-child(2) { background-color: #cef; border-radius: 3px; padding: 3px 6px; }\
+		#dispatcher .on_off.on a:nth-child(1) { background-color: #cef; border-radius: 3px; padding: 3px 6px; }\
+		#dispatcher .on_off.on a:nth-child(2) { background-color: inherit; border-radius: inherit; padding: inherit; }\
+		#dispatcher .watcher div:nth-child(2) {  margin-right: 25px; padding: 5px 5px 5px 10px;}\
+		#dispatcher .watcher .bottom { margin: 0 0 -5px; color: #aaa }\
+		#dispatcher .watcher .bottom a:link { color: black; }\
+		#dispatcher .watcher .bottom a:hover { color: #cef; }\
+		#dispatcher .watcher .details { font-size: 150%; font-weight: bold }\
+		#dispatcher .watcher .last_updated { position: absolute; right: 30px; bottom: 0px }\
+		#dispatcher .watcher .icons { visibility: hidden; margin-left: 10px; bottom: 5px }\
+		#dispatcher .watcher .icons img { opacity: 0.2; height: 1.2em }\
+		#dispatcher .watcher .icons img:hover { opacity: 1 }\
+		#dispatcher .watcher .color_code { position: absolute; left: 0; top: 0; bottom: 0; width: 9px; cursor: row-resize }\
+		#dispatcher .watcher .color_code div { position: absolute; left: 0; top: 0; bottom: 0; width: 5px; transition: width 0.15s }\
+		#dispatcher .watcher .color_code:hover div { width: 9px }\
+		#dispatcher .watcher .color_code.hit div		{ background-color: rgba(234, 111, 111, .7); }\
+		#dispatcher .watcher .color_code.requester div 	{ background-color: rgba(51, 147, 255, .7); }\
+		#dispatcher .watcher .color_code.url div		{ background-color: rgba(58, 158, 59, .7); }");
+
+	
+	var ctrl = $("#controller", div);
+	ctrl.append($("<a>")
+			.attr('id', "settings")
+			.attr('href', "javascript:void(0)")
+			.attr('title', "Settings")
+			.html("<img src=\"http://qrcode.littleidiot.be/qr-little/site/images/icon-settings.png\" />")
+			.click(function() { requestWebNotifications(); })
+		)
+		.append("Mturk Notifier")
+		.append('<div class="on_off"><a>ON</a><a>OFF</a></div>');
+
+	if (dispatch.isRunning) $(".on_off", ctrl).addClass("on");
+
+	$(".on_off", ctrl).mousedown(function() {
+		if (!dispatch.isRunning) {
+			dispatch.start();
+		} else {
+			dispatch.stop();
+		}
+	});
+
+	// Listeners
+	dispatch.addListener(Evt.START, function(e) {
+		$(".on_off", ctrl).addClass("on");
+	});
+
+	dispatch.addListener(Evt.STOP, function() {
+		$(".on_off", ctrl).removeClass("on");
+	});
+
+	dispatch.addListener(Evt.ADD, function(watcher) {
+		$("#watcher_container", div).append(WatcherUI.create(watcher));
+	});
+
+	dispatch.addListener(Evt.REMOVE, function(watcher) {
+		// Nothing to do
+	});
+
+	return div;
+}
+
 /** Dispatch object. Controls all of the watchers.
 
 **/
@@ -741,6 +859,15 @@ function Dispatch() {
 	this.watchers = new Array();
 	this.ignoreList = new IgnoreList();
 	this.isLoading = false;
+
+	// Listeners
+	this.listener = {
+		onadd:		[],
+		onremove:	[],
+		onstart:	[],
+		onstop:		[],
+		onchange:	[]
+	};
 }
 Dispatch.prototype.start = function() {
 	if (this.watchers.length > 0) {
@@ -757,6 +884,7 @@ Dispatch.prototype.start = function() {
 		}
 	}
 	this.isRunning = true;
+	this.notify(Evt.START, null);
 }
 Dispatch.prototype.stop = function() {
 	// Stop all Watchers
@@ -766,10 +894,12 @@ Dispatch.prototype.stop = function() {
 	}
 	this.isRunning = false;
 	this.interruptStart = true;
+	this.notify(Evt.STOP, null)
 }
 Dispatch.prototype.add = function(watcher) {
-	if (!(watcher instanceof QuickWatcher || watcher instanceof Catcher))
+	if (!(watcher instanceof QuickWatcher || watcher instanceof Catcher)) {
 		this.watchers.push(watcher);
+	}
 	$("#watcher_container", this.DOMElement).append(watcher.getHTML());
 
 	if (!this.isLoading) {
@@ -777,6 +907,7 @@ Dispatch.prototype.add = function(watcher) {
 		this.quickWatcher.onWatchersChanged(this.watchers);
 	}
 
+	this.notify(Evt.ADD, watcher);
 	return watcher;
 }
 Dispatch.prototype.save = function() {
@@ -792,37 +923,22 @@ Dispatch.prototype.load = function() {
 	var watchers;
 	this.quickWatcher = new QuickWatcher();
 	this.add(this.quickWatcher);
-	this.add(Catcher.create({name:"History"}, this.quickWatcher));
-	this.add(Catcher.create({name:"Hits over $1", notify:true}, this.quickWatcher).addFilter(Filter.PRICE, 1));
-	this.add(Catcher.create({name:"Over 50 remaining"}, this.quickWatcher)
-		.addFilter(Filter.AVAILABLE, 50)
-		.addFilter(Filter.REQUESTER, "A2SUM2D7EOAK1T")
-	);
-	this.add(Catcher.create({name:"Transcriptions over 40c", notify:true}, this.quickWatcher)
-		.addFilter(Filter.WORD, "transcri")
-		.addFilter(Filter.PRICE, .40)
-	);
-	this.add(Catcher.create({name:"Qualification HITs", notify:true}, this.quickWatcher).addFilter(Filter.WORD, "qualif"));
-
-
-	// if (data != null) {
-	// 	watchers = JSON.parse(data);
- //        try {
-	// 		for(var i = 0; i < watchers.length; i++) this.add(new Watcher(watchers[i]));
- //        } catch(e) {
- //            loadError = true;
- //            alert("Error loading saved list");
- //        }
-	// } else {
-	// 	loadHits();
-	// }
-
+	// this.add(Catcher.create({name:"History"}, this.quickWatcher));
+	// this.add(Catcher.create({name:"Hits over $1", notify:true}, this.quickWatcher).addFilter(Filter.PRICE, 1));
+	// this.add(Catcher.create({name:"Over 50 remaining"}, this.quickWatcher)
+	// 	.addFilter(Filter.AVAILABLE, 50)
+	// 	.addFilter(Filter.REQUESTER, "A2SUM2D7EOAK1T")
+	// );
+	// this.add(Catcher.create({name:"Transcriptions over 40c", notify:true}, this.quickWatcher)
+	// 	.addFilter(Filter.WORD, "transcri")
+	// 	.addFilter(Filter.PRICE, .40)
+	// );
+	// this.add(Catcher.create({name:"Qualification HITs", notify:true}, this.quickWatcher).addFilter(Filter.WORD, "qualif"));
 
 	if (data != null) {
 		watchers = JSON.parse(data);
 		try {
-			// for(var i = 0; i < watchers.length; i++) this.add(new Watcher(watchers[i]));
-			for(var i = 0; i < watchers.length; i++) 	$("#watcher_container", this.DOMElement).append(WatcherUI.create(new Watcher(watchers[i])));
+			for(var i = 0; i < watchers.length; i++) this.add(new Watcher(watchers[i]));
 		} catch(e) {
 			loadError = true;
 			alert("Error loading saved list");
@@ -843,11 +959,12 @@ Dispatch.prototype.remove = function(watcher) {
 			newArray.push(this.watchers[i]);
 	}
 	this.watchers = newArray;
+	this.save();
 	
-	watcher.DOMElement.remove();
-	watcher.stop();
+	watcher.delete();
 	
 	this.quickWatcher.onWatchersChanged(this.watchers);
+	this.notify(Evt.REMOVE, watcher);
 }
 Dispatch.prototype.moveUp = function(watcher) {
 	if (watcher != this.watchers[0]) {
@@ -926,45 +1043,17 @@ Dispatch.prototype.hideWatchers = function() {
 					})
 			));
 }
-Dispatch.prototype.getHTML = function() {
-	// Create the HTML to display the dispatcher
-	var html = $("<div>").attr('id', "dispatcher")
-		.append($("<div>").attr('id', "controller"))
-		.append($("<div>").attr('id', "watcher_container"));
-	
-	$("#controller", html)
-		.append($("<a>")
-			.attr('id', "settings")
-			.attr('href', "javascript:void(0)")
-			.attr('title', "Settings")
-			.html("<img src=\"http://qrcode.littleidiot.be/qr-little/site/images/icon-settings.png\" />")
-			.click(function() { requestWebNotifications(); })
-		)
-		.append("Mturk Notifier")
-		.append("<div class=\"on_off\"><a" + (dispatch.isRunning ? " class=\"selected\"" : "") + ">ON</a><a" + (!dispatch.isRunning ? " class=\"selected\"" : "") + ">OFF</a></div>");
-
-	$("#controller .on_off a", html).click(function() {
-		var on = $("#controller .on_off a:first-child", html);
-		var off = $("#controller .on_off a:last-child", html);
-
-		if (!dispatch.isRunning) {
-			dispatch.start();
-			$(on).addClass("selected");
-			$(off).removeClass("selected");
-		} else {
-			$(on).removeClass("selected");
-			$(off).addClass("selected");
-			dispatch.stop();
-		}
-	});
-	
-	return html;
-}
 Dispatch.prototype.onRequestMainDenied = function() {
 	pageType.MAIN = false;
 	this.hideWatchers();
 	this.ignoreList.stop();
 }
+Dispatch.prototype.addListener = Evt.prototype.addListener;
+Dispatch.prototype.notify = Evt.prototype.notify;
+Dispatch.prototype.callFunctionArray = Evt.prototype.callFunctionArray;
+
+
+
 
 /** The QuickWatcher simply refreshes the first page for new hits (every 1 second or so) and tries to 
 	match any requester on the list that shows up on the page. Could possibly iterate through each
@@ -1243,47 +1332,46 @@ function WatcherUI() { /* Nothing */ };
 WatcherUI.create = function(watcher) {
 	// Create jQuery Element...
 	var div = $("<div>").addClass("watcher")
-		.html("<div class=\"details\"> > </div>\
+		.html('<div class="details"> > </div>\
 		<div>\
-		<div class=\"on_off\"><a" + (watcher.state.isOn ? " class=\"selected\"" : "") + ">ON</a><a" + (!watcher.state.isOn ? " class=\"selected\"" : "") + ">OFF</a></div>\
-		<a class=\"name\" href=\"" + watcher.getURL() + "\" target=\"_blank\">" + ((typeof watcher.name != 'undefined') ? watcher.name : watcher.id) + "</a>\
-		<div class=\"bottom\">\
-            <span class=\"time\">" + (watcher.time / 1000) + " seconds </span>\
-            <span class=\"icons\">\
-                <a class=\"edit\" href=\"javascript:void(0)\"><img src=\"http://i.imgur.com/peEhuHZ.png\" /></a>\
-                <a class=\"delete\" href=\"javascript:void(0)\"><img src=\"http://i.imgur.com/5snaSxU.png\" /></a>\
+		<div class="on_off"><a>ON</a><a>OFF</a></div>\
+		<a class="name" href="' + watcher.getURL() + '" target="_blank">' + ((typeof watcher.name != 'undefined') ? watcher.name : watcher.id) + '</a>\
+		<div class="bottom">\
+            <span class="time">' + (watcher.time / 1000) + ' seconds </span>\
+            <span class="icons">\
+                <a class="edit" href="javascript:void(0)"><img src="http://i.imgur.com/peEhuHZ.png" /></a>\
+                <a class="delete" href="javascript:void(0)"><img src="http://i.imgur.com/5snaSxU.png" /></a>\
             </span>\
-			<div class=\"last_updated\" title=\"Last checked: " + ((typeof watcher.date != 'undefined') ? watcher.date.toString() : "n/a") + "\">" + ((typeof watcher.date != 'undefined') ? watcher.getFormattedTime() : "n/a") + "</div>\
+			<div class="last_updated" title="Last checked: ' + ((typeof watcher.date != 'undefined') ? watcher.date.toString() : "n/a") + '">' + ((typeof watcher.date != 'undefined') ? watcher.getFormattedTime() : "n/a") + '</div>\
 		</div>\
-		<div class=\"color_code\"><div></div></div>\
-		</div>");
+		<div class="color_code"><div></div></div>\
+		</div>');
 
+	if (watcher.state.isOn) $(".on_off", div).addClass("on");
 
 	// Add listeners
 	watcher.addListener(Watcher.START, function() {
-		console.log("Watcher.START detected " + watcher.id);
-		$(".on_off", div).addClass("on");
-
-		// To be removed...
-		$(".on_off a:first-child", div).addClass("selected");
-		$(".on_off a:last-child", div).removeClass("selected");
+		div.addClass("running");
 	});
 
 	watcher.addListener(Watcher.STOP, function() {
-		$(".on_off", div).removeClass("on");
-
-		// To be removed...
-		$(".on_off a:first-child", div).removeClass("selected");
-		$(".on_off a:last-child", div).addClass("selected");
+		div.removeClass("running");
 	});
 
 	watcher.addListener(Watcher.UPDATE, function(e) {
-		$(".last_updated", div).text(watcher.getFormattedTime());
+		$(".last_updated", div).text(watcher.getFormattedTime()).attr('title', "Last checked: " + watcher.date.toString());
+		div.addClass("updated");
+		setTimeout(function() { div.removeClass("updated") }, 1000);
 	});
 
 	watcher.addListener(Watcher.CHANGE, function() {
 		$(".name", div).text(watcher.name);
-		$(".time", div).text(watcher.interval / 60000 + " seconds");
+		$(".time", div).text(watcher.time / 1000 + " seconds");
+
+		if (watcher.state.isOn)
+			$(".on_off", div).addClass("on");
+		else
+			$(".on_off", div).removeClass("on");
 	});
 
 	watcher.addListener(Watcher.HITS_CHANGE, function() {
@@ -1291,7 +1379,7 @@ WatcherUI.create = function(watcher) {
 	});
 
 	watcher.addListener(Watcher.DELETE, function() {
-		$(this).remove();
+		div.remove();
 	});
 
 	watcher.addListener(Watcher.VIEW_DETAILS, function() {
@@ -1306,7 +1394,6 @@ WatcherUI.create = function(watcher) {
 
 	$(".delete", div).click(function() {
 		dispatch.remove(watcher);
-		$(div).remove();
 	});
 
 	$(".details", div).mouseover(function () {
@@ -1515,6 +1602,14 @@ Watcher.prototype.stop = function() {
 
 	this.notify(Watcher.STOP, null);
 }
+Watcher.prototype.delete = function() {
+	this.notify(Watcher.DELETE, this);
+
+	this.stop();
+	this.listener = null;
+	this.newHits = null;
+	this.lastHits = null;
+}
 Watcher.prototype.filterMessages = function(newHits) {
 	// Determine which hits, if any, the user should be notified of
 	// For now just showing new hits
@@ -1572,6 +1667,8 @@ Watcher.prototype.toggleOnOff = function() {
 			this.start();
 		this.state.isOn = true;
 	}
+
+	this.notify(Watcher.CHANGE, null);
 }
 Watcher.prototype.markViewed = function () {
 	if (this.isUpdated) {
@@ -1776,7 +1873,7 @@ Watcher.prototype.addListener = function(type, callback) {
 			this.listener.onviewdetails.push(callback);
 			break;
 		default:
-			console.error("Invalid Event type in MusicPlayer.addListener()");
+			console.error("Invalid Event type in Watcher.addListener()");
 	}
 }
 
@@ -2105,7 +2202,7 @@ NotificationGroup.prototype.createDOMElement = function() {
 	
 	this.DOMElement = div;
 
-	setTimeout(function() { div.css('max-height', div.height()); console.log("Setting max-height to", div.height() + 50) }, 1000);
+	setTimeout(function() { div.css('max-height', div.height()); }, 1000);
 
 }
 NotificationGroup.prototype.getDOMElement = function() {
