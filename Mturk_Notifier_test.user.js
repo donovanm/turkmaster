@@ -799,7 +799,20 @@ DispatchUI.create = function(dispatch) {
 		#dispatcher #watcher_container .error_button a:hover { background-color: #def; border-color: #aaa }\
 		#dispatcher #settings { float: left; margin: 3px 2px }\
 		#dispatcher div { font-size: 7pt }\
-		#dispatcher .watcher { margin: 3px; background-color: #fff; position: relative; border-bottom: 1px solid #ddd; border-right: 1px solid #ddd; cursor: default; transition: background-color 0.5s; -moz-user-select: none; -webkit-touch-callout: none; -webkit-user-select: none; -khtml-user-select: none; }\
+		#dispatcher .watcher {\
+			box-sizing: border-box;\
+			margin: 3px 3px 0;\
+			background-color: #fff;\
+			position: relative;\
+			border-bottom: 1px solid #ddd;\
+			border-right: 1px solid #ddd;\
+			cursor: default;\
+			transition: background-color 0.5s;\
+			-moz-user-select: none;\
+			-webkit-touch-callout: none;\
+			-webkit-user-select: none;\
+			-khtml-user-select: none;\
+		}\
 		#dispatcher .watcher.running .details { background-color: #C3ECFC; background-color: rgba(218, 240, 251, 1); }\
 		#dispatcher .watcher.updated { background-color: #e8f5fc; background-color: rgba(218, 240, 251, 1) }\
 		#dispatcher .watcher .details { width: 25px; text-align: center; float: right; background-color: rgba(234, 234, 234, 1); position: absolute; top: 0; bottom: 0; right: 0; font: 90% Verdana; color: #fff; transition: background-color 0.5s }\
@@ -820,6 +833,7 @@ DispatchUI.create = function(dispatch) {
 		#dispatcher .watcher .details { font-size: 150%; font-weight: bold }\
 		#dispatcher .watcher .last_updated { position: absolute; right: 30px; bottom: 0px }\
 		#dispatcher .watcher .icons { visibility: hidden; margin-left: 10px; bottom: 5px }\
+		#dispatcher .watcher:hover .icons { visibility: visible }\
 		#dispatcher .watcher .icons img { opacity: 0.2; height: 1.2em }\
 		#dispatcher .watcher .icons img:hover { opacity: 1 }\
 		#dispatcher .watcher .color_code { position: absolute; left: 0; top: 0; bottom: 0; width: 9px; cursor: row-resize }\
@@ -920,7 +934,6 @@ Dispatch.prototype.add = function(watcher) {
 	if (!(watcher instanceof QuickWatcher || watcher instanceof Catcher)) {
 		this.watchers.push(watcher);
 	}
-	$("#watcher_container", this.DOMElement).append(watcher.getHTML());
 
 	if (!this.isLoading) {
 		this.save();
@@ -995,22 +1008,20 @@ Dispatch.prototype.remove = function(watcher) {
 }
 Dispatch.prototype.moveUp = function(watcher) {
 	if (watcher != this.watchers[0]) {
-		watcher.DOMElement.insertBefore(watcher.DOMElement.prev());
-		
 		var i = this.getWatcherIndex(watcher);
 		var temp = this.watchers[i-1];
 		this.watchers[i-1] = watcher;
 		this.watchers[i] = temp;
+		this.save();
 	}
 }
 Dispatch.prototype.moveDown = function(watcher) {
 	if (watcher != this.watchers[this.watchers.length-1]) {
-		watcher.DOMElement.insertAfter(watcher.DOMElement.next());
-		
 		var i = this.getWatcherIndex(watcher);
 		var temp = this.watchers[i + 1];
 		this.watchers[i + 1] = watcher;
 		this.watchers[i] = temp;
+		this.save();
 	}
 }
 Dispatch.prototype.getWatcherById = function(id) {
@@ -1252,7 +1263,6 @@ Catcher.prototype.sendHits = function(hits) {
 		}
 	}
 	if (hasNewHits) {
-//		console.log("Catcher DOMElement", this.DOMElement);
 		this.updateWatcherPanel();
         this.onChanged();
 		this.newHits = filteredHits;
@@ -1422,17 +1432,17 @@ WatcherUI.create = function(watcher) {
 	var div = $("<div>").addClass("watcher")
 		.html('<div class="details"> > </div>\
 		<div>\
-		<div class="on_off"><a>ON</a><a>OFF</a></div>\
-		<a class="name" href="' + watcher.getURL() + '" target="_blank">' + ((typeof watcher.name != 'undefined') ? watcher.name : watcher.id) + '</a>\
-		<div class="bottom">\
-            <span class="time">' + (watcher.time / 1000) + ' seconds </span>\
-            <span class="icons">\
-                <a class="edit" href="javascript:void(0)"><img src="http://i.imgur.com/peEhuHZ.png" /></a>\
-                <a class="delete" href="javascript:void(0)"><img src="http://i.imgur.com/5snaSxU.png" /></a>\
-            </span>\
-			<div class="last_updated" title="Last checked: ' + ((typeof watcher.date != 'undefined') ? watcher.date.toString() : "n/a") + '">' + ((typeof watcher.date !== 'undefined') ? watcher.getFormattedTime() : "n/a") + '</div>\
-		</div>\
-		<div class="color_code"><div></div></div>\
+			<div class="on_off"><a>ON</a><a>OFF</a></div>\
+			<a class="name" href="' + watcher.getURL() + '" target="_blank">' + ((typeof watcher.name != 'undefined') ? watcher.name : watcher.id) + '</a>\
+			<div class="bottom">\
+	            <span class="time">' + (watcher.time / 1000) + ' seconds </span>\
+	            <span class="icons">\
+	                <a class="edit" href="javascript:void(0)"><img src="http://i.imgur.com/peEhuHZ.png" /></a>\
+	                <a class="delete" href="javascript:void(0)"><img src="http://i.imgur.com/5snaSxU.png" /></a>\
+	            </span>\
+				<div class="last_updated" title="Last checked: ' + ((typeof watcher.date != 'undefined') ? watcher.date.toString() : "n/a") + '">' + ((typeof watcher.date !== 'undefined') ? watcher.getFormattedTime() : "n/a") + '</div>\
+			</div>\
+			<div class="color_code"><div></div></div>\
 		</div>');
 
 	if (watcher.state.isOn) $(".on_off", div).addClass("on");
@@ -1494,20 +1504,14 @@ WatcherUI.create = function(watcher) {
 	});
 
 	// Drag watchers
-	var startY, startOffsetY, startOffsetX, limit, height; 
+	var startY, limit, height; 
 	div.on("mousedown", function(e) {
-		// e=e || window.event;
-		// pauseEvent(e);
-
 		e.preventDefault();
 
 		// TODO Check target to prevent dragging from a component inside the watcher (i.e. buttons, links, etc.)
-		height = div.outerHeight(true) - 3.25;
+		height = div.outerHeight(true);
 		startY = e.clientY;
-		startOffsetY = div.offset().top;
-		// limit = Math.min(dispatch.DOMElement.outerHeight(true), height * (dispatch.watchers.length + .75)) - height;
-		limit = Math.min($("#dispatch").outerHeight(true), height * (dispatch.watchers.length + .75)) - height;
-		console.log(limit);
+		limit = Math.min($("#watcher_container").outerHeight(true), height * (dispatch.watchers.length + .75)) - height;
 		
 		div.css('cursor', "row-resize");
 		div.css('z-index', "100");
@@ -1520,27 +1524,20 @@ WatcherUI.create = function(watcher) {
 
 	function move(e) {
 		var diffY = e.clientY - startY;
-		var newOffset = startOffsetY + diffY;
 
-		// console.log("diffY", diffY, "startOffsetY", startOffsetY, "newOffset", newOffset);
+		if (diffY > height / 2) {
+			startY += height;
+			diffY -= height;
+			div.insertAfter(div.next());
+			dispatch.moveDown(watcher);
+		} else if (-diffY > height / 2) {
+			startY -= height;
+			diffY += height;
+			div.insertBefore(div.prev());
+			dispatch.moveUp(watcher);
+		}
 
-		// if (newOffset < 28) {
-		// 	newOffset = 28;
-		// } else if (newOffset > limit) {
-		// 	newOffset = limit;
-		// } else {
-		// 	if (diffY > height / 2) {
-		// 		startY += height;
-		// 		startOffsetY += height;
-		// 		dispatch.moveDown(_this);
-		// 	} else if (-diffY > height / 2) {
-		// 		startY -= height;
-		// 		startOffsetY -= height;
-		// 		dispatch.moveUp(_this);
-		// 	}
-		// }
-		div.offset({ top: newOffset });
-		// console.log("Top offset", newOffset);
+		div.css('top', diffY);
 	}
 
 	function up(e) {
@@ -1550,13 +1547,13 @@ WatcherUI.create = function(watcher) {
 
 		$("div", colorCode).css('width', '');
 		div.css('cursor', '');
-		div.css('z-index', "auto");
+		div.css('z-index', '');
 		div.css('top', '');
-		div.css('opacity', "1");
+		div.css('opacity', '');
 		$(".name", div).removeClass("no_hover");
-		// dispatch.save();
 	}
 
+	// Add colors for watcher type
 	var colorCode = $(".color_code", div);
 	if (watcher.type == 'hit') {
 		colorCode.addClass("hit");
@@ -1571,15 +1568,8 @@ WatcherUI.create = function(watcher) {
 	colorCode.attr('title', colorCode.attr('title') + "\nClick and drag to re-order");
 
 
-
-
-	$(".delete img", div).hover(function() {if (!isDragging) $(this).attr('src', "http://i.imgur.com/guRzYEL.png")}, function() {$(this).attr('src', "http://i.imgur.com/5snaSxU.png")});
-	$(".edit img", div).hover(function() {if (!isDragging) $(this).attr('src', "http://i.imgur.com/VTHXHI4.png")}, function() {$(this).attr('src', "http://i.imgur.com/peEhuHZ.png")});
-
-	div.hover(
-		function() { $(".icons", this).css('visibility', 'visible'); },
-		function() { $(".icons", this).css('visibility', 'hidden'); }
-	);
+	$(".delete img", div).hover(function() { $(this).attr('src', "http://i.imgur.com/guRzYEL.png")}, function() {$(this).attr('src', "http://i.imgur.com/5snaSxU.png")});
+	$(".edit img", div).hover(function() { $(this).attr('src', "http://i.imgur.com/VTHXHI4.png")}, function() {$(this).attr('src', "http://i.imgur.com/peEhuHZ.png")});
 
 	return div;
 }
