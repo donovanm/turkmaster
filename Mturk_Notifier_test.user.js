@@ -48,6 +48,8 @@ $(document).ready(function(){
 			dispatch.load();
 		requestMain();
 		preloadImages();
+		// addEditWatcherStyle();
+		addFormStyle();
 	}
 	
 	if (pageType.HIT || pageType.REQUESTER || pageType.SEARCH)
@@ -260,6 +262,24 @@ function addFormStyle() {
 		.watcher_button a:hover { text-decoration: underline; }\
 		.error_title .watcher_button { display: block; margin: 15px }\
 		");
+}
+
+function addEditWatcherStyle() {
+	addStyle("\
+		#editWatcher {\
+			position: fixed;\
+			width: 600px;\
+			top: 50px;\
+			left: 50%;\
+			margin: 50px -300px;\
+			background-color: #fcfcfe;\
+			border: 1px solid #aaa;\
+			border-radius: 1px;\
+			text-align: center;\
+			padding: 20px;\
+			z-index: 100;\
+		}\
+	");
 }
 
 function addStyle(styleText) {
@@ -908,7 +928,14 @@ Dispatch.prototype.add = function(watcher) {
 	}
 
 	this.notify(Evt.ADD, watcher);
+
+	// TODO Add a listener to save the watcher list after a watcher has been changed
+	// var _this = this;
+	// watcher.addListener(Watcher.CHANGE, _this.saveFake());
 	return watcher;
+}
+Dispatch.prototype.saveFake = function () {
+	console.log("Saving watcher list after a watcher has been changed.");
 }
 Dispatch.prototype.save = function() {
     if (!loadError) {
@@ -1326,7 +1353,68 @@ Filter.create = function(type, value, context) {
 }
 
 
+function editWatcher(watcher) {
+	var dialog = $("<div>").attr('id', 'add_watcher_form').append(
+	$("<h3>").text("Add a watcher"),
+	$("<p>").append(
+		$("<label>").text("Name ").append(
+			$("<input>").attr('id', "watcherName").attr('type', "text").val(watcher.name)),
+		$("<label>").text(" Time ").append(
+			$("<input>").attr('id', "watcherDuration").attr('type', "text").val(watcher.time / 1000))
+		),
+	(watcher.type == "hit") ?
+		$("<p>").append(
+			$("<input>").attr('type', "checkbox").attr('id', "autoaccept").prop('checked', watcher.option.auto),
+			$("<label>").attr('for', "autoaccept").text("Auto-accept")
+			)
+		: "",
+	(watcher.type == "hit") ?
+		$("<p>").append(
+			$("<input>").attr('type', "checkbox").attr('id', "stopaccept").prop('checked', watcher.option.stopOnCatch),
+			$("<label>").attr('for', "stopaccept").text("Stop on accept")
+			)
+		: "",
+	$("<p>").append(
+		$("<input>").attr('type', "checkbox").attr('id', "alert").prop('checked', watcher.option.alert),
+		$("<label>").attr('for', "alert").text("Alert")
+		)
+	,
+	$("<p>").addClass("form_buttons").append(
+		$("<input>").attr('type', "button").attr('value', "Save"),
+		$("<input>").attr('type', "button").attr('value', "Cancel")
+		)
+	);
 
+	$("input[value='Save']", dialog).click(function() {
+		watcher.setValues({
+			name:			$("#watcherName", dialog).val(),
+			time: 			parseInt($("#watcherDuration", dialog).val(), 10) * 1000,
+			auto:			$("#auto", dialog).prop('checked'),
+			stopOnCatch:	$("#autostop", dialog).prop('checked'),
+			alert:			$("#alert", dialog).prop('checked')
+		})
+	});
+
+
+	$("input[type='button']", dialog).click(function() { dialog.remove(); dialog.empty(); dialog = null; });
+
+	$(dialog).keypress(function(e) {
+		console.log(e.key, e.keyCode);
+
+		switch(e.keyCode) {
+			case 13:
+				$("input[value='Save']", dialog).click();
+				break;
+			case 27:
+				$(this).remove();
+				$(this).empty();
+				dialog = null;
+		}
+	});
+
+	$("body").append(dialog);
+	$("#watcherDuration", dialog).focus().select();
+}
 
 function WatcherUI() { /* Nothing */ };
 WatcherUI.create = function(watcher) {
@@ -1342,7 +1430,7 @@ WatcherUI.create = function(watcher) {
                 <a class="edit" href="javascript:void(0)"><img src="http://i.imgur.com/peEhuHZ.png" /></a>\
                 <a class="delete" href="javascript:void(0)"><img src="http://i.imgur.com/5snaSxU.png" /></a>\
             </span>\
-			<div class="last_updated" title="Last checked: ' + ((typeof watcher.date != 'undefined') ? watcher.date.toString() : "n/a") + '">' + ((typeof watcher.date != 'undefined') ? watcher.getFormattedTime() : "n/a") + '</div>\
+			<div class="last_updated" title="Last checked: ' + ((typeof watcher.date != 'undefined') ? watcher.date.toString() : "n/a") + '">' + ((typeof watcher.date !== 'undefined') ? watcher.getFormattedTime() : "n/a") + '</div>\
 		</div>\
 		<div class="color_code"><div></div></div>\
 		</div>');
@@ -1389,7 +1477,7 @@ WatcherUI.create = function(watcher) {
 
 	// Set actions
 	$(".edit", div).click(function() {
-		// showWatcherEditor(watcher);
+		editWatcher(watcher);
 	});
 
 	$(".delete", div).click(function() {
@@ -1405,62 +1493,69 @@ WatcherUI.create = function(watcher) {
 		watcher.toggleOnOff();
 	});
 
-	var isDragging = false;
+	// Drag watchers
+	var startY, startOffsetY, startOffsetX, limit, height; 
+	div.on("mousedown", function(e) {
+		// e=e || window.event;
+		// pauseEvent(e);
 
-	// // Drag watchers
-	// var isDragging = false;
-	// var startY, startOffsetY, startOffsetX, limit, height; 
-	// div.on("mousedown", function(e) {
-	// 	e=e || window.event;
-	// 	pauseEvent(e);
+		e.preventDefault();
 
-	// 	height = div.outerHeight(true) - 3.25;
-	// 	startY = e.clientY;
-	// 	startOffsetY = div.offset().top;
-	// 	startOffsetX = div.offset().left;
-	// 	isDragging = true;
-	// 	limit = Math.min(dispatch.DOMElement.outerHeight(true), height * (dispatch.watchers.length + .75)) - height;
+		// TODO Check target to prevent dragging from a component inside the watcher (i.e. buttons, links, etc.)
+		height = div.outerHeight(true) - 3.25;
+		startY = e.clientY;
+		startOffsetY = div.offset().top;
+		// limit = Math.min(dispatch.DOMElement.outerHeight(true), height * (dispatch.watchers.length + .75)) - height;
+		limit = Math.min($("#dispatch").outerHeight(true), height * (dispatch.watchers.length + .75)) - height;
+		console.log(limit);
 		
-	// 	div.css('cursor', "row-resize");
-	// 	div.css('z-index', "100");
-	// 	div.css('opacity', "0.8");
-	// 	$(".name", div).addClass("no_hover");
-	// });
-	// $(window).on("mouseup", function(e) {
-	// 	if (isDragging) {
-	// 		$("div", colorCode).css('width', '');
-	// 		div.css('cursor', '');
-	// 		div.css('z-index', "auto");
-	// 		div.css('top', '');
-	// 		div.css('opacity', "1");
-	// 		$(".name", div).removeClass("no_hover");
-	// 		dispatch.save();
-	// 		isDragging = false;
-	// 	}
-	// });
-	// $(window).on("mousemove", function(e) {
-	// 	if (isDragging) {
-	// 		var diffY = e.clientY - startY;
-	// 		var newOffset = startOffsetY + diffY;
+		div.css('cursor', "row-resize");
+		div.css('z-index', "100");
+		div.css('opacity', "0.9");
+		$(".name", div).addClass("no_hover");
 
-	// 		if (newOffset < 28) {
-	// 			newOffset = 28;
-	// 		} else if (newOffset > limit) {
-	// 			newOffset = limit;
-	// 		} else {
-	// 			if (diffY > height / 2) {
-	// 				startY += height;
-	// 				startOffsetY += height;
-	// 				dispatch.moveDown(_this);
-	// 			} else if (-diffY > height / 2) {
-	// 				startY -= height;
-	// 				startOffsetY -= height;
-	// 				dispatch.moveUp(_this);
-	// 			}
-	// 		}
-	// 		$(div).offset({ top: newOffset, left: startOffsetX });
-	// 	}
-	// });
+		$(window).on("mousemove", move);
+		$(window).on("mouseup", up);
+	});
+
+	function move(e) {
+		var diffY = e.clientY - startY;
+		var newOffset = startOffsetY + diffY;
+
+		// console.log("diffY", diffY, "startOffsetY", startOffsetY, "newOffset", newOffset);
+
+		// if (newOffset < 28) {
+		// 	newOffset = 28;
+		// } else if (newOffset > limit) {
+		// 	newOffset = limit;
+		// } else {
+		// 	if (diffY > height / 2) {
+		// 		startY += height;
+		// 		startOffsetY += height;
+		// 		dispatch.moveDown(_this);
+		// 	} else if (-diffY > height / 2) {
+		// 		startY -= height;
+		// 		startOffsetY -= height;
+		// 		dispatch.moveUp(_this);
+		// 	}
+		// }
+		div.offset({ top: newOffset });
+		// console.log("Top offset", newOffset);
+	}
+
+	function up(e) {
+		e.preventDefault();
+		$(window).off("mousemove", move);
+		$(window).off("mouseup", up);
+
+		$("div", colorCode).css('width', '');
+		div.css('cursor', '');
+		div.css('z-index', "auto");
+		div.css('top', '');
+		div.css('opacity', "1");
+		$(".name", div).removeClass("no_hover");
+		// dispatch.save();
+	}
 
 	var colorCode = $(".color_code", div);
 	if (watcher.type == 'hit') {
@@ -1515,6 +1610,12 @@ function Watcher(attrs) {
 	this.state.isRunning 	= (typeof state.isRunning !== 'undefined') ? state.isRunning : false;
 	this.state.isOn 		= (typeof state.isOn !== 'undefined') ? state.isOn : true;
 	this.state.isUpdated 	= (typeof state.isUpdated !== 'undefined') ? state.isUpdated : false;
+
+	// TODO Erase these state overwrites once we implement resuming state after a page load
+	// Currently if a watcher is on when dispatch saves the watcher list, it'll still be marked as running even
+	// though it wouldn't be running on page load.
+	this.state.isRunning = false;
+	this.state.isUpdated = false;
 	
 	// Required attributes
 	this.id   = attrs.id;
@@ -1681,7 +1782,7 @@ Watcher.prototype.alert = function () {
 	
 	if (sound.canPlayType('audio/ogg;codecs="vorbis"') && settings.sound) {
 		sound.src = "http://rpg.hamsterrepublic.com/wiki-images/3/3e/Heal8-Bit.ogg";
-		sound.volume = .3;
+		sound.volume = .2;
 		sound.play();
 	}
 }
@@ -1689,26 +1790,52 @@ Watcher.prototype.updateWatcherPanel = function() {
 	this.date = new Date();
 	this.notify(Watcher.UPDATE, null);
 }
-Watcher.prototype.getFormattedTime = function() {
-	var time = this.date;
-	var str = "";
-	var hours = time.getHours();
-	var ampm = "am";
-	
-	if (hours >= 12) {
-		if (hours > 12)
-			hours -= 12;
-		ampm = "pm";
-	} else if (hours == 0) {
-		hours = 12;
+Watcher.prototype.setValues = function(values) {
+	// console.log("Before updating watcher", this);
+
+	console.log("Time entered", values.time);
+
+	var val = values || {};
+	this.name = val.name || this.name;
+	this.option.auto = val.auto;
+	this.option.stopOnCatch = val.stopOnCatch;
+	this.option.alert = val.alert;
+
+	if (typeof val.time !== 'undefined' && this.time != val.time) {
+		this.time = val.time;
+		console.log("this.state.isRunning", this.state.isRunning);
+		if (this.state.isRunning) {
+			this.stop();
+			this.start();
+		}
 	}
+
+	this.notify(Watcher.CHANGE, null);
+}
+Watcher.prototype.getFormattedTime = function() {
+	if (typeof this.date !== 'undefined') {
+		var time = this.date;
+		var str = "";
+		var hours = time.getHours();
+		var ampm = "am";
 		
-	str += hours + ":" 
-		+ ((time.getMinutes() < 10) ? "0" : "") + time.getMinutes() + ":"
-		+ ((time.getSeconds() < 10) ? "0" : "") + time.getSeconds()
-		+ ampm;
-		
+		if (hours >= 12) {
+			if (hours > 12)
+				hours -= 12;
+			ampm = "pm";
+		} else if (hours == 0) {
+			hours = 12;
+		}
+			
+		str += hours + ":" 
+			+ ((time.getMinutes() < 10) ? "0" : "") + time.getMinutes() + ":"
+			+ ((time.getSeconds() < 10) ? "0" : "") + time.getSeconds()
+			+ ampm;
+			
 		return str;
+	} else {
+		return "N/A";
+	}
 }
 Watcher.prototype.setHits = function(hits) {
 	if (typeof hits !== 'undefined') {
