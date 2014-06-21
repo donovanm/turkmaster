@@ -3,7 +3,7 @@
 // @namespace   12345
 // @description Testing out stuff for a notifier for Mturk
 // @include     https://www.mturk.com/mturk/*
-// @version     0.95
+// @version     0.96
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js
 // @grant       none
 // ==/UserScript==
@@ -562,7 +562,7 @@ function Hit(attrs) {
 	this.description 	= attrs.description;
 	this.available 		= attrs.available;
 	this.time 			= attrs.time;
-	this.isQualified	= attrs.isQualified;
+	this.isQualified	= (typeof attrs.isQualified !== 'undefined') ? attrs.isQualified : true;
 	this.canPreview		= (typeof attrs.canPreview !== 'undefined') ? attrs.canPreview : true;
 }
 Hit.prototype.getURL = function(type) {
@@ -1012,7 +1012,6 @@ Dispatch.prototype.moveUp = function(watcher) {
 		var temp = this.watchers[i-1];
 		this.watchers[i-1] = watcher;
 		this.watchers[i] = temp;
-		this.save();
 	}
 }
 Dispatch.prototype.moveDown = function(watcher) {
@@ -1021,7 +1020,6 @@ Dispatch.prototype.moveDown = function(watcher) {
 		var temp = this.watchers[i + 1];
 		this.watchers[i + 1] = watcher;
 		this.watchers[i] = temp;
-		this.save();
 	}
 }
 Dispatch.prototype.getWatcherById = function(id) {
@@ -1399,10 +1397,12 @@ function editWatcher(watcher) {
 		watcher.setValues({
 			name:			$("#watcherName", dialog).val(),
 			time: 			parseInt($("#watcherDuration", dialog).val(), 10) * 1000,
-			auto:			$("#auto", dialog).prop('checked'),
-			stopOnCatch:	$("#autostop", dialog).prop('checked'),
+			stopOnCatch:	$("#stopaccept", dialog).prop('checked'),
 			alert:			$("#alert", dialog).prop('checked')
 		})
+
+		// Uses setAuto so its internal hits will also be marked as auto
+		watcher.setAuto($("#autoaccept", dialog).prop('checked'));
 	});
 
 
@@ -1551,6 +1551,10 @@ WatcherUI.create = function(watcher) {
 		div.css('top', '');
 		div.css('opacity', '');
 		$(".name", div).removeClass("no_hover");
+
+		// TODO Remove references to the dispatch object for better separation
+		// Possibly do the drag re-ordering from DispatchUI where dispatch references are okay.
+		dispatch.save();
 	}
 
 	// Add colors for watcher type
@@ -1661,6 +1665,27 @@ Watcher.prototype.getHTML = function() {
 }
 Watcher.prototype.getURL = function() {
 	return this.url;
+}
+Watcher.prototype.setUrl = function() {
+	switch(this.type) {
+		case 'hit':
+			this.url = "https://www.mturk.com/mturk/preview" + (this.option.auto ? "andaccept" : "") + "?groupId=" + this.id;
+			break;
+		case 'requester':
+			this.url = "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&requesterId=" + this.id;
+			break;
+		case 'url':
+			this.url = this.id;
+			
+			// URL watchers get a random id because of id requirements for CSS
+			this.id = "A" + Math.floor(Math.random() * 100000000);
+			break;
+	}
+}
+Watcher.prototype.setAuto = function(isAuto) {
+	this.option.auto = isAuto;
+	// this.hits[0].isAutoAccept = isAuto;
+	this.setUrl();
 }
 Watcher.prototype.isNewHit = function (hit) {
 	return (this.newHits.indexOf(hit) != -1);
@@ -1907,7 +1932,6 @@ Watcher.prototype.parseListing = function(data) {
 			hit.id = idMatch[2];
 		}
 		
-		hit.isQualified = true;
 		hit.canPreview = false;
 		
 		urlData.each(function() {
@@ -2259,6 +2283,7 @@ NotificationPanel.prototype.createPanel = function() {
 		.notification_panel .autoaccept {\
 			background-color: rgba(148, 236, 255, .3);\
 			background-color: rgba(214, 255, 91, 1);\
+			background-color: rgba(252, 255, 143, 1);\
 		}\
 		.notification.not_qualified { background-color: rgba(245, 244, 229, 1) }\
 		.notification_panel .new { background-color: rgba(220, 255, 228, 1); }");
@@ -2317,6 +2342,9 @@ NotificationGroup.prototype.createDOMElement = function() {
 	for (var i = 0; i < this.hits.length; i++)
 		$(div).append((new NotificationHit(this.hits[i], isSameReq, (typeof this.watcher != 'undefined') ? this.watcher : null)).getDOMElement());
 	
+	if (this.hits[0].isAutoAccept)
+		div.addClass("autoaccept");
+
 	this.DOMElement = div;
 
 	setTimeout(function() { div.css('max-height', div.height()); }, 1000);
@@ -2369,8 +2397,20 @@ NotificationHit.prototype.createDOMElement = function() {
 		if (this.hit.isAutoAccept) {
 			$(".links", notification)
 				.append($('<a>').addClass("hit_link").attr('href', hit.getURL('view')).attr('target', "_blank").html("View"))
-				.append($('<a>').addClass("hit_link").attr('href', hit.getURL('preview')).attr('target', "_blank").html("Preview"))
-				.append($('<a>').addClass("hit_link").attr('href', "javascript:queue(\'" + hit.id + "\')").attr('target', "_blank").html("Queue"));
+				.append(
+					$('<a>').addClass("hit_link").attr('href', "javascript:void(0)").html("Stack")
+						.click(function(e) {
+							e.preventDefault();
+							sendMessage({ header: "stack", content: hit.id, timestamp: true });
+						})
+					)
+				.append(
+					$('<a>').addClass("hit_link").attr('href', "javascript:void(0)").html("Queue")
+						.click(function(e) {
+							e.preventDefault();
+							sendMessage({ header: "queue", content: hit.id, timestamp: true });
+						})
+					);
 		} else {
 			$(".links", notification)
 				.append($('<a>').addClass("hit_link").attr('href', hit.getURL('preview')).attr('target', "_blank").html("Preview"))
@@ -2378,7 +2418,7 @@ NotificationHit.prototype.createDOMElement = function() {
 				.append($('<a>').addClass("hit_link").attr('href', hit.getURL('auto')).attr('target', "_blank").html("+Auto"));
 		}
 	} else {
-		$(notification).addClass("not_qualified")
+		$(notification).addClass("not_qualified");
 		$(".links", notification)
 			.append((hit.canPreview) ?
 				$('<a>').addClass("hit_link").attr('href', hit.getURL('preview')).attr('target', "_blank").html("Preview") : "")
@@ -2410,7 +2450,7 @@ NotificationHit.prototype.createDOMElement = function() {
 	});
 	
 	if (hit.isAutoAccept)
-		$(notification).addClass("autoaccept");
+		notification.addClass("autoaccept");
 
 	if  (typeof this.watcher != 'undefined' && this.watcher != null && this.watcher.isNewHit(hit))
 		$(notification).addClass("new");
@@ -2421,8 +2461,4 @@ NotificationHit.prototype.createDOMElement = function() {
 }
 NotificationHit.prototype.getDOMElement = function() {
 	return this.DOMElement;
-}
-
-function queue(id) {
-	sendMessage({ header: "queue", content: id });
 }
