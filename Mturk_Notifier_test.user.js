@@ -188,9 +188,9 @@ function addForm() {
 	});
 
 	$("input", form).keypress(function(event) {
-		if (event.keyCode == 13 && ($(this).attr('value') != "Cancel"))		// Save
+		if (event.keyCode == 13 && ($(this).attr('value') != "Cancel"))		// Enter = Save
 			$("input[value='Save']", form).click();
-		else if (event.keyCode == 27)										// Cancel
+		else if (event.keyCode == 27)										// Esc = Cancel
 			form.hide();
 	});
 
@@ -209,7 +209,7 @@ function addForm() {
 	}
 	
 	if (name != "")
-	$("#watcherName", form).val(name.replace('+', ' '));
+		$("#watcherName", form).val(name.replace('+', ' '));
 
 	$("body").append(form);
 	return form;
@@ -261,7 +261,7 @@ function addFormStyle() {
 		.watcher_button a { text-decoration: none; margin-left: 3em; font-weight: normal	}\
 		.watcher_button a:hover { text-decoration: underline; }\
 		.error_title .watcher_button { display: block; margin: 15px }\
-		");
+	");
 }
 
 function addEditWatcherStyle() {
@@ -421,64 +421,64 @@ function loadHits() {
 function onMessageReceived(header, message) {
 	if (pageType.DASHBOARD && pageType.MAIN) {
 		switch(header) {
-		case 'notification_viewed' :
+			case 'notification_viewed' :
 				wasViewed = true;
-			break;
-		case 'add_watcher' : 
-			var msg = message;
-			dispatch.add(new Watcher({
-				id: msg.id,
-				time: msg.duration,
-				type: msg.type,
-				name: msg.name,
-				option: {
-				 	auto: msg.auto,
-				 	stopOnCatch: msg.stopOnCatch
+				break;
+			case 'add_watcher' : 
+				var msg = message;
+				dispatch.add(new Watcher({
+					id: msg.id,
+					time: msg.duration,
+					type: msg.type,
+					name: msg.name,
+					option: {
+					 	auto: msg.auto,
+					 	stopOnCatch: msg.stopOnCatch
+					}
+				})).start();
+				break;
+			case 'mute_hit' :
+				var id = message.split(',')[0];
+				if (!dispatch.isMuted(id)) {
+					dispatch.mute(id);
+					console.log("Remote mute (" + id + ")");
+				} 
+				break;
+			case 'unmute_hit' :
+				var id = message.split(',')[0];
+				if (dispatch.isMuted(id)) {
+					dispatch.unmute(id);
+					console.log("Remote unmute (" + id + ")");
 				}
-			})).start();
-			break;
-		case 'mute_hit' :
-			var id = message.split(',')[0];
-			if (!dispatch.isMuted(id)) {
-				dispatch.mute(id);
-				console.log("Remote mute (" + id + ")");
-			} 
-			break;
-		case 'unmute_hit' :
-			var id = message.split(',')[0];
-			if (dispatch.isMuted(id)) {
-				dispatch.unmute(id);
-				console.log("Remote unmute (" + id + ")");
-			}
-			break;
-		case 'request_main' :
-			sendMessage({ header: "request_denied" });
-			break;
-		case 'request_denied' :
-			dispatch.onRequestMainDenied();
-			break;
-		case 'show_main' :
-			alert("Showing the main dashboard. (Close this Mturk page to establish a notifier in a different tab or window)");
-			break;
+				break;
+			case 'request_main' :
+				sendMessage({ header: "request_denied" });
+				break;
+			case 'request_denied' :
+				dispatch.onRequestMainDenied();
+				break;
+			case 'show_main' :
+				alert("Showing the main dashboard. (Close this Mturk page to establish a notifier in a different tab or window)");
+				break;
 		}
 	} else if (!pageType.DASHBOARD || (pageType.DASHBOARD && !pageType.MAIN)) {
 
 		switch(header) {
-		case 'new_hits' :
-			var hits = message.hits;
-			
-			// Re-create the hits so their methods can be used
-			for(var i = hits.length; i--;) hits[i] = new Hit(hits[i]);
+			case 'new_hits' :
+				var hits = message.hits;
+				
+				// Re-create the hits so their methods can be used
+				for(var i = hits.length; i--;) hits[i] = new Hit(hits[i]);
 
-			// Show the hits and let the dashboard know it was seen
-			if (document.hasFocus())
-				sendMessage({ header: "notification_viewed" });
-			notificationPanel.add(new NotificationGroup(message.title, hits));
-			break;
+				// Show the hits and let the dashboard know it was seen
+				if (document.hasFocus())
+					sendMessage({ header: "notification_viewed" });
+				notificationPanel.add(new NotificationGroup(message.title, hits));
+				break;
 
-		case 'captcha' :
-			if (document.hasFocus())
-				alert("Captcha Alert!");
+			case 'captcha' :
+				if (document.hasFocus())
+					alert("Captcha Alert!");
 		}
 	}
 }
@@ -492,7 +492,7 @@ function sendMessage(message) {
 function sendBrowserNotification(hits, watcher) {
 	// Let's check if the browser supports notifications
     if (!("Notification" in window)) {
-		alert("This browser does not support desktop notification");
+		console.log("This browser does not support desktop notification");
     }
 
 	// Let's check if the user is okay to get some notification
@@ -502,7 +502,7 @@ function sendBrowserNotification(hits, watcher) {
 			var bodyText = "";
 			
 			for (i = 0; i < hits.length; i++)
-				bodyText += "\n" + hits[i].title.substring(0, 35) + ((hits[i].title.length > 35) ? "..." : "") + "\n" + hits[i].reward + "\n";
+				bodyText += "\n" + hits[i].title.substring(0, 40) + ((hits[i].title.length > 40) ? "..." : "") + "\n" + hits[i].reward + "\n";
 
 			var notification = new Notification(
 				watcher.name,
@@ -512,11 +512,11 @@ function sendBrowserNotification(hits, watcher) {
 				}
 			);
 			notification.onclick = function() {
-				window.focus();
-				this.close();
-				showDetailsPanel(watcher);
+				window.focus();					// Focus this window (dashboard)
+				this.close();					// Closes the notification
+				showDetailsPanel(watcher);		// Opens the details panel for whatever watcher the notification was for
 			};
-			notification.onshow = function() { setTimeout(function() { notification.close() }, 5000) };
+			notification.onshow = function() { setTimeout(function() { notification.close() }, 5000) }; // Need to set a close time for Chrome
 		}
 	}
 
@@ -540,13 +540,7 @@ function requestWebNotifications() {
 	});
 }
 
-function pauseEvent(e){
-    if(e.stopPropagation) e.stopPropagation();
-    if(e.preventDefault) e.preventDefault();
-    e.cancelBubble=true;
-    e.returnValue=false;
-    return false;
-}
+
 
 // This is the Hit object
 function Hit(attrs) {
@@ -582,6 +576,7 @@ Hit.prototype.getURL = function(type) {
 		return "";
 	}
 }
+// Returns the position of a hit in a hit array by its ID
 Hit.indexOf = function(hitId, hits) {
     for (var i = 0, len = hits.length; i < len; i++) {
         if (hitId == hits[i].id)
@@ -589,6 +584,7 @@ Hit.indexOf = function(hitId, hits) {
     }
     return -1;
 }
+// Returns true if there are multiple hits in the array and all of the hits are from the same requester
 Hit.isSameRequester = function(hits) {
 	if (hits.length > 1) {
 		var compareRequester = hits[0].requester;
@@ -602,7 +598,7 @@ Hit.isSameRequester = function(hits) {
 	}
 }
 
-// Message object
+// Message object (Not used)
 function Message() {
 	/*  Status (changed): Unchanged, Added, Removed, Count
 		We should mark each Hit in the message with what has changed. The count change should be sent with this.
@@ -634,7 +630,7 @@ function showDetailsPanel(watcher) {
 	var panel = $("#details_panel");
 
 	// Only change the panel contents if it's a different watcher or the same one, but updated
-	if (watcher != lastWatcher || (watcher == lastWatcher && watcher.isUpdated)) {
+	if (watcher !== lastWatcher || (watcher === lastWatcher && watcher.isUpdated)) {
 		$("*", panel).remove();
 		if (watcher.lastHits.length > 0) {
 			$(panel).append((new NotificationGroup(null, watcher.lastHits, false, watcher)).getDOMElement());
@@ -866,7 +862,7 @@ DispatchUI.create = function(dispatch) {
 	});
 
 	// Listeners
-	dispatch.addListener(Evt.START, function(e) {
+	dispatch.addListener(Evt.START, function() {
 		$(".on_off", ctrl).addClass("on");
 	});
 
@@ -881,6 +877,68 @@ DispatchUI.create = function(dispatch) {
 	dispatch.addListener(Evt.REMOVE, function(watcher) {
 		// Nothing to do
 	});
+
+
+	// Drag watchers
+	var startY, limit, height, dragDiv; 
+	div.on("mousedown", ".watcher", function(e) {
+		e.preventDefault();
+
+		// Get reference to the selected watcher
+		dragDiv = $(e.currentTarget);
+
+		// TODO Check target to prevent dragging from a component inside the watcher (i.e. buttons, links, etc.)
+		height = dragDiv.outerHeight(true);
+
+		console.log(dragDiv.data("watcher"));
+
+		startY = e.clientY;
+		limit = Math.min($("#watcher_container").outerHeight(true), height * (dispatch.watchers.length + .75)) - height;
+		
+		dragDiv.css('cursor', "row-resize");
+		dragDiv.css('z-index', "100");
+		dragDiv.css('opacity', "0.9");
+		$(".name", dragDiv).addClass("no_hover");
+
+		$(window).on("mousemove", move);
+		$(window).on("mouseup", up);
+	});
+
+	function move(e) {
+		var diffY = e.clientY - startY;
+
+		if (diffY > height / 2) {
+			startY += height;
+			diffY -= height;
+			dragDiv.insertAfter(dragDiv.next());
+			// dispatch.moveDown(watcher);
+		} else if (-diffY > height / 2) {
+			startY -= height;
+			diffY += height;
+			dragDiv.insertBefore(dragDiv.prev());
+			// dispatch.moveUp(watcher);
+		}
+
+		dragDiv.css('top', diffY);
+	}
+
+	function up(e) {
+		e.preventDefault();
+		$(window).off("mousemove", move);
+		$(window).off("mouseup", up);
+
+		// $("div", colorCode).css('width', '');
+		dragDiv.css('cursor', '');
+		dragDiv.css('z-index', '');
+		dragDiv.css('top', '');
+		dragDiv.css('opacity', '');
+		$(".name", dragDiv).removeClass("no_hover");
+
+		// TODO Remove references to the dispatch object for better separation
+		// Possibly do the drag re-ordering from DispatchUI where dispatch references are okay.
+		dispatch.save();
+	}
+
 
 	return div;
 }
@@ -953,7 +1011,7 @@ Dispatch.prototype.saveFake = function () {
 Dispatch.prototype.save = function() {
     if (!loadError) {
         console.log("Saving " + this.watchers.length + " watchers...");
-        localStorage.setItem('notifier_watchers', JSON.stringify(dispatch.watchers,Watcher.replacerArray));
+        // localStorage.setItem('notifier_watchers', JSON.stringify(dispatch.watchers,Watcher.replacerArray));
 		// localStorage.setItem('notifier_watchers_backup', JSON.stringify(dispatch.watchers,Watcher.replacerArray));
     }
 }
@@ -1008,18 +1066,22 @@ Dispatch.prototype.remove = function(watcher) {
 }
 Dispatch.prototype.moveUp = function(watcher) {
 	if (watcher != this.watchers[0]) {
+		// Removes the current watcher and the one before it and reinserts them in a switched order
 		var i = this.getWatcherIndex(watcher);
-		var temp = this.watchers[i-1];
-		this.watchers[i-1] = watcher;
-		this.watchers[i] = temp;
+		this.watchers.splice(i - 1, 2, watcher, this.watchers[i - 1]); 
 	}
 }
 Dispatch.prototype.moveDown = function(watcher) {
 	if (watcher != this.watchers[this.watchers.length-1]) {
+		// Removes the current watcher and the one after it and reinserts them in a switched order
 		var i = this.getWatcherIndex(watcher);
-		var temp = this.watchers[i + 1];
-		this.watchers[i + 1] = watcher;
-		this.watchers[i] = temp;
+		this.watchers.splice(i, 2, this.watchers[i + 1], watcher);
+	}
+}
+Dispatch.prototype.setWatcherPosition = function(watcher, position) {
+	if (position >= 0 && position < this.watchers.length) {
+		this.watchers.slice(this.getWatcherIndex(watcher));
+		this.watchers.splice(position, 0, watcher);
 	}
 }
 Dispatch.prototype.getWatcherById = function(id) {
@@ -1032,13 +1094,7 @@ Dispatch.prototype.getWatcherById = function(id) {
 	return null;
 }
 Dispatch.prototype.getWatcherIndex = function(watcher) {
-	if (this.watchers.length > 0) {
-		for (i = 0; i < this.watchers.length; ++i) {
-			if (this.watchers[i] == watcher)
-				return i;
-		}
-	}
-	return null;
+	return this.watchers.indexOf(watcher);
 }
 Dispatch.prototype.getWatcher = function(index) {
 	return this.watchers[index];
@@ -1409,8 +1465,7 @@ function editWatcher(watcher) {
 	$("input[type='button']", dialog).click(function() { dialog.remove(); dialog.empty(); dialog = null; });
 
 	$(dialog).keypress(function(e) {
-		console.log(e.key, e.keyCode);
-
+		// console.log(e.key, e.keyCode);
 		switch(e.keyCode) {
 			case 13:
 				$("input[value='Save']", dialog).click();
@@ -1503,59 +1558,6 @@ WatcherUI.create = function(watcher) {
 		watcher.toggleOnOff();
 	});
 
-	// Drag watchers
-	var startY, limit, height; 
-	div.on("mousedown", function(e) {
-		e.preventDefault();
-
-		// TODO Check target to prevent dragging from a component inside the watcher (i.e. buttons, links, etc.)
-		height = div.outerHeight(true);
-		startY = e.clientY;
-		limit = Math.min($("#watcher_container").outerHeight(true), height * (dispatch.watchers.length + .75)) - height;
-		
-		div.css('cursor', "row-resize");
-		div.css('z-index', "100");
-		div.css('opacity', "0.9");
-		$(".name", div).addClass("no_hover");
-
-		$(window).on("mousemove", move);
-		$(window).on("mouseup", up);
-	});
-
-	function move(e) {
-		var diffY = e.clientY - startY;
-
-		if (diffY > height / 2) {
-			startY += height;
-			diffY -= height;
-			div.insertAfter(div.next());
-			dispatch.moveDown(watcher);
-		} else if (-diffY > height / 2) {
-			startY -= height;
-			diffY += height;
-			div.insertBefore(div.prev());
-			dispatch.moveUp(watcher);
-		}
-
-		div.css('top', diffY);
-	}
-
-	function up(e) {
-		e.preventDefault();
-		$(window).off("mousemove", move);
-		$(window).off("mouseup", up);
-
-		$("div", colorCode).css('width', '');
-		div.css('cursor', '');
-		div.css('z-index', '');
-		div.css('top', '');
-		div.css('opacity', '');
-		$(".name", div).removeClass("no_hover");
-
-		// TODO Remove references to the dispatch object for better separation
-		// Possibly do the drag re-ordering from DispatchUI where dispatch references are okay.
-		dispatch.save();
-	}
 
 	// Add colors for watcher type
 	var colorCode = $(".color_code", div);
@@ -1575,6 +1577,9 @@ WatcherUI.create = function(watcher) {
 	$(".delete img", div).hover(function() { $(this).attr('src', "http://i.imgur.com/guRzYEL.png")}, function() {$(this).attr('src', "http://i.imgur.com/5snaSxU.png")});
 	$(".edit img", div).hover(function() { $(this).attr('src', "http://i.imgur.com/VTHXHI4.png")}, function() {$(this).attr('src', "http://i.imgur.com/peEhuHZ.png")});
 
+	div.data("watcher", watcher);
+
+	// console.log("div", div);
 	return div;
 }
 
