@@ -774,6 +774,8 @@ DispatchUI.create = function(dispatch) {
 		.append($("<div>").attr('id', "controller"))
 		.append($("<div>").attr('id', "watcher_container"));
 
+	var watchers = [];
+
 	// Move dashboard comments to the right and put the dispatch panel on the left
 	var pageElements = $("body > *");
 	$("body").html("");
@@ -871,7 +873,11 @@ DispatchUI.create = function(dispatch) {
 	});
 
 	dispatch.addListener(Evt.ADD, function(watcher) {
-		$("#watcher_container", div).append(WatcherUI.create(watcher));
+		// This could be done on one line, but then we would lose access to the WatcherUI's internal Watcher object and functionality
+		var watcherEl = WatcherUI.create(watcher);
+		$("#watcher_container", div).append(watcherEl);
+		watchers.push(watcherEl);
+		// watchers.push(WatcherUI.create(watcher).appendTo($("#watcher_container", div)));
 	});
 
 	dispatch.addListener(Evt.REMOVE, function(watcher) {
@@ -880,63 +886,99 @@ DispatchUI.create = function(dispatch) {
 
 
 	// Drag watchers
-	var startY, limit, height, dragDiv; 
+	var startY, currentBaseY, limit, height,
+		dragDiv, nextDiv, prevDiv, startPos, endPos, isDragging,
+		slop = 7;
+
 	div.on("mousedown", ".watcher", function(e) {
-		e.preventDefault();
+		isDragging = false;
+
+		// Get the position of the watcher in the listing
+		startPos = endPos = $("#watcher_container .watcher").index(e.currentTarget);
 
 		// Get reference to the selected watcher
-		dragDiv = $(e.currentTarget);
+		dragDiv = watchers[startPos].addClass("dragging");
+		nextDiv = dragDiv.next();
+		prevDiv = dragDiv.prev();
 
 		// TODO Check target to prevent dragging from a component inside the watcher (i.e. buttons, links, etc.)
 		height = dragDiv.outerHeight(true);
 
-		console.log(dragDiv.data("watcher"));
-
-		startY = e.clientY;
+		currentBaseY = startY = e.clientY;
 		limit = Math.min($("#watcher_container").outerHeight(true), height * (dispatch.watchers.length + .75)) - height;
 		
-		dragDiv.css('cursor', "row-resize");
-		dragDiv.css('z-index', "100");
-		dragDiv.css('opacity', "0.9");
-		$(".name", dragDiv).addClass("no_hover");
-
 		$(window).on("mousemove", move);
 		$(window).on("mouseup", up);
 	});
 
 	function move(e) {
-		var diffY = e.clientY - startY;
+		var offsetY = e.clientY - startY;
+		var diffY = e.clientY - currentBaseY;
 
-		if (diffY > height / 2) {
-			startY += height;
-			diffY -= height;
-			dragDiv.insertAfter(dragDiv.next());
-			// dispatch.moveDown(watcher);
-		} else if (-diffY > height / 2) {
-			startY -= height;
-			diffY += height;
-			dragDiv.insertBefore(dragDiv.prev());
-			// dispatch.moveUp(watcher);
+		if (!isDragging && (Math.abs(offsetY) > slop)) {
+			// Start dragging
+			isDragging = true;
+
+			dragDiv.css('cursor', "row-resize");
+			dragDiv.css('z-index', "100");
+			dragDiv.css('opacity', "0.9");
+			$(".name", dragDiv).addClass("no_hover");
 		}
 
-		dragDiv.css('top', diffY);
+		if (isDragging) {
+			if (diffY > height / 2) {
+				// Move down one spot
+				nextDiv.css('top', parseInt(nextDiv.css('top')) - height);
+				nextDiv = nextDiv.nextAll(":not(.dragging)").first();
+				prevDiv = prevDiv.nextAll(":not(.dragging)").first();
+
+				currentBaseY += height;
+				endPos++;
+			} else if (-diffY > height / 2) {
+				// Move up one spot
+				prevDiv.css('top', parseInt(prevDiv.css('top')) + height);
+				prevDiv = prevDiv.prevAll(":not(.dragging)").first();
+				nextDiv = nextDiv.prevAll(":not(.dragging)").first();
+
+				currentBaseY -= height;
+				endPos--;
+			}
+
+			dragDiv.css('top', offsetY);
+		}
 	}
 
 	function up(e) {
-		e.preventDefault();
 		$(window).off("mousemove", move);
 		$(window).off("mouseup", up);
 
-		// $("div", colorCode).css('width', '');
-		dragDiv.css('cursor', '');
-		dragDiv.css('z-index', '');
-		dragDiv.css('top', '');
-		dragDiv.css('opacity', '');
-		$(".name", dragDiv).removeClass("no_hover");
+		if (isDragging) {
+			e.preventDefault();
+			isDragging = false;
 
-		// TODO Remove references to the dispatch object for better separation
-		// Possibly do the drag re-ordering from DispatchUI where dispatch references are okay.
-		dispatch.save();
+			// $("div", colorCode).css('width', '');
+			dragDiv.css('cursor', '');
+			dragDiv.css('z-index', '');
+			dragDiv.css('opacity', '');
+			$(".name", dragDiv).removeClass("no_hover");
+			dragDiv.removeClass("dragging");
+
+			// Reset all watcher offsets
+			$("#watcher_container .watcher").css('top', '');
+
+			if (startPos != endPos) {
+				if (endPos > startPos)
+					dragDiv.insertAfter($("#watcher_container .watcher")[endPos]);
+				else
+					dragDiv.insertBefore($("#watcher_container .watcher")[endPos]);
+
+				dispatch.moveWatcher(startPos, endPos);
+
+				// Re-arrange our watchers array (splice maybe making WatcherUI lose functionality)
+				watchers.splice(startPos, 1);
+				watchers.splice(endPos, 0, dragDiv);
+			}
+		}
 	}
 
 
@@ -995,7 +1037,7 @@ Dispatch.prototype.add = function(watcher) {
 
 	if (!this.isLoading) {
 		this.save();
-		this.quickWatcher.onWatchersChanged(this.watchers);
+		// this.quickWatcher.onWatchersChanged(this.watchers);
 	}
 
 	this.notify(Evt.ADD, watcher);
@@ -1011,7 +1053,7 @@ Dispatch.prototype.saveFake = function () {
 Dispatch.prototype.save = function() {
     if (!loadError) {
         console.log("Saving " + this.watchers.length + " watchers...");
-        // localStorage.setItem('notifier_watchers', JSON.stringify(dispatch.watchers,Watcher.replacerArray));
+        localStorage.setItem('notifier_watchers', JSON.stringify(dispatch.watchers,Watcher.replacerArray));
 		// localStorage.setItem('notifier_watchers_backup', JSON.stringify(dispatch.watchers,Watcher.replacerArray));
     }
 }
@@ -1019,8 +1061,8 @@ Dispatch.prototype.load = function() {
 	this.isLoading = true;
 	var data = localStorage.getItem('notifier_watchers');
 	var watchers;
-	this.quickWatcher = new QuickWatcher();
-	this.add(this.quickWatcher);
+	// this.quickWatcher = new QuickWatcher();
+	// this.add(this.quickWatcher);
 	// this.add(Catcher.create({name:"History"}, this.quickWatcher));
 	// this.add(Catcher.create({name:"Hits over $1", notify:true}, this.quickWatcher).addFilter(Filter.PRICE, 1));
 	// this.add(Catcher.create({name:"Over 50 remaining"}, this.quickWatcher)
@@ -1047,7 +1089,7 @@ Dispatch.prototype.load = function() {
 
 	this.isLoading = false;
 	
-	this.quickWatcher.onWatchersChanged(this.watchers);
+	// this.quickWatcher.onWatchersChanged(this.watchers);
 }
 Dispatch.prototype.remove = function(watcher) {
 	var newArray = new Array();
@@ -1064,24 +1106,11 @@ Dispatch.prototype.remove = function(watcher) {
 	this.quickWatcher.onWatchersChanged(this.watchers);
 	this.notify(Evt.REMOVE, watcher);
 }
-Dispatch.prototype.moveUp = function(watcher) {
-	if (watcher != this.watchers[0]) {
-		// Removes the current watcher and the one before it and reinserts them in a switched order
-		var i = this.getWatcherIndex(watcher);
-		this.watchers.splice(i - 1, 2, watcher, this.watchers[i - 1]); 
-	}
-}
-Dispatch.prototype.moveDown = function(watcher) {
-	if (watcher != this.watchers[this.watchers.length-1]) {
-		// Removes the current watcher and the one after it and reinserts them in a switched order
-		var i = this.getWatcherIndex(watcher);
-		this.watchers.splice(i, 2, this.watchers[i + 1], watcher);
-	}
-}
-Dispatch.prototype.setWatcherPosition = function(watcher, position) {
-	if (position >= 0 && position < this.watchers.length) {
-		this.watchers.slice(this.getWatcherIndex(watcher));
-		this.watchers.splice(position, 0, watcher);
+Dispatch.prototype.moveWatcher = function(from, to) {
+	if ((to >= 0 && to < this.watchers.length) && (from >= 0 && from < this.watchers.length)) {
+		var watcher = this.watchers.splice(from, 1);
+		this.watchers.splice(to, 0, watcher[0]);
+		this.save();
 	}
 }
 Dispatch.prototype.getWatcherById = function(id) {
@@ -1577,9 +1606,6 @@ WatcherUI.create = function(watcher) {
 	$(".delete img", div).hover(function() { $(this).attr('src', "http://i.imgur.com/guRzYEL.png")}, function() {$(this).attr('src', "http://i.imgur.com/5snaSxU.png")});
 	$(".edit img", div).hover(function() { $(this).attr('src', "http://i.imgur.com/VTHXHI4.png")}, function() {$(this).attr('src', "http://i.imgur.com/peEhuHZ.png")});
 
-	div.data("watcher", watcher);
-
-	// console.log("div", div);
 	return div;
 }
 
