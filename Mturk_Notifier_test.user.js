@@ -26,7 +26,6 @@ var loadError = false;
 var wasViewed = false;
 var dispatch;
 var notificationPanel;
-var loader;
 
 if(!('contains' in String.prototype)) {
        String.prototype.contains = function(str, startIndex) {
@@ -38,7 +37,6 @@ $(document).ready(function(){
 	checkPageType();
 	
 	if (pageType.DASHBOARD) {
-		loader = new Loader();
 		dispatch = new Dispatch();
 		DispatchUI.create(dispatch);
 		createDetailsPanel();
@@ -1938,7 +1936,7 @@ Watcher.prototype.sendHits = function(hits) {
 }
 Watcher.prototype.getData = function() {
 	var _this = this;
-	loader.load(this, this.url, function(data) { _this.onDataReceived($(data)); });
+	Loader.load(this, this.url, function(data) { _this.onDataReceived($(data)); });
 }
 Watcher.prototype.onDataReceived = function(data) {
 	var error = $(".error_title", data);
@@ -2114,86 +2112,74 @@ Watcher.prototype.callFunctionArray = function(functions, data) {
 **/
 
 
-// TODO Need to check for "exceeded the maximum" somewhere. Probably in the Watcher.onDataReceived
-function Loader() {
-	this.queue = [];
-	this.time = 5000;
-	this.count = 0;
-	this.paused = true;
-	var _this = this;
-	// this.interval = setInterval(function(){ _this.count = 0; console.log(new Date().toString()); _this.next() }, this.time);
-}
-Loader.prototype.load = function(watcher, url, callback) {
-	if (!this.isQueued(watcher)) {
-		if (watcher instanceof QuickWatcher && this.queue.length > 0) {
-			// If it's the quickwatcher put it in the second slot instead of at the end
-			// var temp = this.queue.shift;
-			// this.queue.unshift({url: url, callback: callback, watcher: watcher});
-			// this.queue.unshift(temp);
-			this.queue.push({url: url, callback: callback, watcher: watcher});
+// Loader. This is what loads pages in the background. Page requests get added to a queue
+// so we can load pages in moderation to avoid exceeding the maximum request rate.
+// 
+// Public methods:
+// - load(watcher, url, callback) is the only "public" method. The callback received the data from
+//	 the requested page.
+
+var Loader = function() {
+	var queue = [],
+		pauseTime = 2000,	// The amount of time to pause (in milliseconds)
+		intervalTime = 100,	// The amount of time between page loads
+		count = 0,
+		paused = true,
+		maxLoad = 6;	// The max number of pages to load without pausing
+
+	function _load(watcher, url, callback) {
+		if (!_isQueued(watcher)) {
+			queue.push({url: url, callback: callback, watcher: watcher});
+
+			// If queue length is now 1 and was paused, it means we should resume loading
+			if (queue.length == 1 && paused) {
+				paused = false;
+				_next();
+			}
+		}
+	}
+	
+	// Checks to see if the watcher is already queued
+	function _isQueued(watcher) {
+		if (queue.length > 0) {
+			for (var i = 0, len = queue.length; i < len; i++)
+				if (queue[i].watcher == watcher)
+					return true;
+		}
+		return false;
+	}
+
+	// GETs thet next URL in the queue
+	function _next() {
+		if (queue.length > 0) {
+			var info = queue.shift();
+			_getData(info.url, info.callback);
 		} else {
-			this.queue.push({url: url, callback: callback, watcher: watcher});
+			paused = true;
 		}
-
-		// TODO Check if total in queue is 1. If so, we need to start looping by calling this.next()
-		// This means the queue had been emptied and should have been stopped previous to this.
-		if (this.queue.length == 1 && this.paused) {
-			this.paused = false;
-			this.next();
-		}
-
 	}
-}
-Loader.prototype.isQueued = function(watcher) {
-	if (this.queue.length > 0) {
-		for (var i = 0, len = this.queue.length; i < len; i++)
-			if (this.queue[i].watcher == watcher)
-				return true;
+
+	function _getData(url, callback) {
+		$.get(url, function(data) {
+			callback(data);
+
+			if (++count < maxLoad) {
+				setTimeout(_next, intervalTime);
+			} else {
+				paused = true;
+				count = 0;
+				setTimeout(function() {
+					if (paused)
+						_next();
+				}, pauseTime);
+			}
+		})
 	}
-	return false;
-}
-Loader.prototype.next = function() {
-	// console.log("Loader.next() was called - Queue Length = " + this.queue.length);
-	// console.log(JSON.stringify(this.queue,["watcher","name"],4));
-	if (this.queue.length > 0) {
-		var info = this.queue.shift();
-		this.getData(info.url, info.callback);
-	} else {
-		this.paused = true;
+
+	return {
+		load: _load
 	}
-}
-Loader.prototype.getData = function(url, callback) {
-	// console.log("Queue(" + this.queue.length + "): ", JSON.stringify(this.queue,["url", "watcher", "name"],4));
-	// console.log("Queue(" + this.queue.length + ")");
-	// console.log("this.count=" + this.count);
-	// console.log("Loader.count=" + Loader.count);
-	// $.get(url, callback);
-
-	// TODO Instead of $.get(url,callback), we need to replace callback with an anonymous function
-	// that will call both the callback as well as this.next() if necessary. This will hopefully allow
-	// us to load pages as quick as possible without causing errors. My theory is that if we let a
-	// page fully load before loading the next one (like the DB and Pending scripts, etc) there won't
-	// be too many simultaneous connections which is what I think causes the error.
-
-	var _this = this;
-	$.get(url, function(data) {
-		callback(data);
-
-		if (++_this.count < 5) {
-			// console.log("Calling this.next(), Loader.count = " + _this.count);
-			_this.next();
-		} else {
-			_this.paused = true;
-			_this.count = 0;
-			setTimeout(function() {
-				if (_this.paused)
-					_this.next();
-			}, 2000);
-		}
-		// else
-		// 	setTimeout(function(){Loader.count = 0; _this.next()}, 1000);
-	})
-}
+}();
 
 /** The NotificationPanel object. This holds and manipulates incoming notification groups
 
