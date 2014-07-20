@@ -699,20 +699,17 @@ IgnoreList.prototype.remove = function(item) {
 }
 
 
+
 function Evt() { /* Nothing */ };
 Evt.ADD = 1;
 Evt.REMOVE = 2;
 Evt.START = 3;
 Evt.STOP = 4;
 Evt.CHANGE = 5;
-
-// Watcher.START = 1;
-// Watcher.STOP = 2;
-// Watcher.UPDATE = 3;
-// Watcher.CHANGE = 4;
-// Watcher.HITS_CHANGE = 5;
-// Watcher.DELETE = 6;
-// Watcher.VIEW_DETAILS = 7;
+Evt.UPDATE = 6;
+Evt.HITS_CHANGE = 7;
+Evt.DELETE = 8;
+Evt.VIEW_DETAILS = 9;
 
 Evt.prototype.addListener = function(type, callback) {
 	switch(type) {
@@ -730,6 +727,18 @@ Evt.prototype.addListener = function(type, callback) {
 			break;
 		case Evt.CHANGE:
 			this.listener.onchange.push(callback);
+			break;
+		case Evt.UPDATE:
+			this.listener.onupdate.push(callback);
+			break;
+		case Evt.HITS_CHANGE:
+			this.listener.onhitschange.push(callback);
+			break;
+		case Evt.DELETE:
+			this.listener.ondelete.push(callback);
+			break;
+		case Evt.VIEW_DETAILS:
+			this.listener.onviewdetails.push(callback);
 			break;
 		default:
 			console.error("Invalid Event type in addListener()");
@@ -752,6 +761,18 @@ Evt.prototype.notify = function(type, data) {
 			break;
 		case Evt.CHANGE:
 			this.callFunctionArray(this.listener.onchange, data);
+			break;
+		case Evt.UPDATE:
+			this.callFunctionArray(this.listener.onupdate, data);
+			break;
+		case Evt.HITS_CHANGE:
+			this.callFunctionArray(this.listener.onhitschange, data);
+			break;
+		case Evt.DELETE:
+			this.callFunctionArray(this.listener.ondelete, data);
+			break;
+		case Evt.VIEW_DETAILS:
+			this.callFunctionArray(this.listener.onviewdetails, data);
 			break;
 		default:
 			console.error("Unknown event type:", type);
@@ -1001,6 +1022,7 @@ function Dispatch() {
 		onchange:	[]
 	};
 }
+Dispatch.prototype = new Evt();
 Dispatch.prototype.start = function() {
 	if (this.watchers.length > 0) {
 		var count = 0;
@@ -1167,9 +1189,6 @@ Dispatch.prototype.onRequestMainDenied = function() {
 	this.hideWatchers();
 	this.ignoreList.stop();
 }
-Dispatch.prototype.addListener = Evt.prototype.addListener;
-Dispatch.prototype.notify = Evt.prototype.notify;
-Dispatch.prototype.callFunctionArray = Evt.prototype.callFunctionArray;
 
 
 
@@ -1541,21 +1560,21 @@ WatcherUI.create = function(watcher) {
 	if (watcher.state.isOn) $(".on_off", div).addClass("on");
 
 	// Add listeners
-	watcher.addListener(Watcher.START, function() {
+	watcher.addListener(Evt.START, function() {
 		div.addClass("running");
 	});
 
-	watcher.addListener(Watcher.STOP, function() {
+	watcher.addListener(Evt.STOP, function() {
 		div.removeClass("running");
 	});
 
-	watcher.addListener(Watcher.UPDATE, function(e) {
+	watcher.addListener(Evt.UPDATE, function(e) {
 		$(".last_updated", div).text(watcher.getFormattedTime()).attr('title', "Last checked: " + watcher.date.toString());
 		div.addClass("updated");
 		setTimeout(function() { div.removeClass("updated") }, 1000);
 	});
 
-	watcher.addListener(Watcher.CHANGE, function() {
+	watcher.addListener(Evt.CHANGE, function() {
 		$(".name", div).text(watcher.name);
 		$(".time", div).text(watcher.time / 1000 + " seconds");
 
@@ -1565,15 +1584,15 @@ WatcherUI.create = function(watcher) {
 			$(".on_off", div).removeClass("on");
 	});
 
-	watcher.addListener(Watcher.HITS_CHANGE, function() {
+	watcher.addListener(Evt.HITS_CHANGE, function() {
 		$(".details", div).addClass("updated");
 	});
 
-	watcher.addListener(Watcher.DELETE, function() {
+	watcher.addListener(Evt.DELETE, function() {
 		div.remove();
 	});
 
-	watcher.addListener(Watcher.VIEW_DETAILS, function() {
+	watcher.addListener(Evt.VIEW_DETAILS, function() {
 		$(".details", div).removeClass("updated");
 	});
 
@@ -1706,6 +1725,7 @@ function Watcher(attrs) {
 
 	return this;
 }
+Watcher.prototype = new Evt();
 Watcher.prototype.toString = function() {
 	return this.name;
 }
@@ -1742,7 +1762,7 @@ Watcher.prototype.isNewHit = function (hit) {
 }
 Watcher.prototype.onChanged = function() {
 	this.isUpdated = true;
-	this.notify(Watcher.HITS_CHANGE, null);
+	this.notify(Evt.HITS_CHANGE, null);
 	
 	// Sound alert for auto-accept HIT watchers and watchers that have the alert set on
 	if (this.option.auto || this.option.alert)
@@ -1757,7 +1777,7 @@ Watcher.prototype.start = function() {
 	
 	this.state.isRunning = true;
 
-	this.notify(Watcher.START, null);
+	this.notify(Evt.START, null);
 	return this;
 }
 Watcher.prototype.stop = function() {
@@ -1766,10 +1786,10 @@ Watcher.prototype.stop = function() {
 	clearTimeout(this.timer);
 	this.state.isRunning = false;
 
-	this.notify(Watcher.STOP, null);
+	this.notify(Evt.STOP, null);
 }
 Watcher.prototype.delete = function() {
-	this.notify(Watcher.DELETE, this);
+	this.notify(Evt.DELETE, this);
 
 	this.stop();
 	this.listener = null;
@@ -1834,12 +1854,12 @@ Watcher.prototype.toggleOnOff = function() {
 		this.state.isOn = true;
 	}
 
-	this.notify(Watcher.CHANGE, null);
+	this.notify(Evt.CHANGE, null);
 }
 Watcher.prototype.markViewed = function () {
 	if (this.isUpdated) {
 		isUpdated = false;
-		this.notify(Watcher.VIEW_DETAILS, null);
+		this.notify(Evt.VIEW_DETAILS, null);
 	}
 }
 Watcher.prototype.alert = function () {
@@ -1853,7 +1873,7 @@ Watcher.prototype.alert = function () {
 }
 Watcher.prototype.updateWatcherPanel = function() {
 	this.date = new Date();
-	this.notify(Watcher.UPDATE, null);
+	this.notify(Evt.UPDATE, null);
 }
 Watcher.prototype.setValues = function(values) {
 	// console.log("Before updating watcher", this);
@@ -1875,7 +1895,7 @@ Watcher.prototype.setValues = function(values) {
 		}
 	}
 
-	this.notify(Watcher.CHANGE, null);
+	this.notify(Evt.CHANGE, null);
 }
 Watcher.prototype.getFormattedTime = function() {
 	if (typeof this.date !== 'undefined') {
@@ -2032,75 +2052,7 @@ Watcher.prototype.parseHitPage = function(data) {
 }
 Watcher.replacerArray = ["id", "time", "type", "name", "option", "auto", "alert", "stopOnCatch", "state", "isRunning", "isOn", "isUpdated", "url"];
 
-Watcher.START = 1;
-Watcher.STOP = 2;
-Watcher.UPDATE = 3;
-Watcher.CHANGE = 4;
-Watcher.HITS_CHANGE = 5;
-Watcher.DELETE = 6;
-Watcher.VIEW_DETAILS = 7;
 
-Watcher.prototype.addListener = function(type, callback) {
-	switch(type) {
-		case Watcher.START:
-			this.listener.onstart.push(callback);
-			break;
-		case Watcher.STOP:
-			this.listener.onstop.push(callback);
-			break;
-		case Watcher.UPDATE:
-			this.listener.onupdate.push(callback);
-			break;
-		case Watcher.CHANGE:
-			this.listener.onchange.push(callback);
-			break;
-		case Watcher.HITS_CHANGE:
-			this.listener.onhitschange.push(callback);
-			break;
-		case Watcher.DELETE:
-			this.listener.ondelete.push(callback);
-			break;
-		case Watcher.VIEW_DETAILS:
-			this.listener.onviewdetails.push(callback);
-			break;
-		default:
-			console.error("Invalid Event type in Watcher.addListener()");
-	}
-}
-
-Watcher.prototype.notify = function(type, data) {
-	switch(type) {
-		case Watcher.START:
-			this.callFunctionArray(this.listener.onstart, data);
-			break;
-		case Watcher.STOP:
-			this.callFunctionArray(this.listener.onstop, data);
-			break;
-		case Watcher.UPDATE:
-			this.callFunctionArray(this.listener.onupdate, data);
-			break;
-		case Watcher.CHANGE:
-			this.callFunctionArray(this.listener.onchange, data);
-			break;
-		case Watcher.HITS_CHANGE:
-			this.callFunctionArray(this.listener.onhitschange, data);
-			break;
-		case Watcher.DELETE:
-			this.callFunctionArray(this.listener.ondelete, data);
-			break;
-		case Watcher.VIEW_DETAILS:
-			this.callFunctionArray(this.listener.onviewdetails, data);
-			break;
-		default:
-			console.error("Unknown event type:", type);
-	}
-}
-
-Watcher.prototype.callFunctionArray = function(functions, data) {
-	if (functions.length > 0)
-		for (var i = 0, len = functions.length; i < len; i++)
-			functions[i](data);
-}
 
 /** Watcher Stack and Queue
 	Stack - Grab as many as possible right away
