@@ -974,7 +974,7 @@ DispatchUI.create = function(dispatch) {
 
 				dispatch.moveWatcher(startPos, endPos);
 
-				// Re-arrange our watchers array (splice maybe making WatcherUI lose functionality)
+				// Re-arrange our watchers array
 				watchers.splice(startPos, 1);
 				watchers.splice(endPos, 0, dragDiv);
 			}
@@ -1446,7 +1446,7 @@ Filter.create = function(type, value, context) {
 }
 
 
-function editWatcher(watcher) {
+function watcherDialog(watcher, callback) {
 	var dialog = $("<div>").attr('id', 'add_watcher_form').append(
 	$("<h3>").text("Add a watcher"),
 	$("<p>").append(
@@ -1478,36 +1478,47 @@ function editWatcher(watcher) {
 		)
 	);
 
-	$("input[value='Save']", dialog).click(function() {
-		watcher.setValues({
-			name:			$("#watcherName", dialog).val(),
-			time: 			parseInt($("#watcherDuration", dialog).val(), 10) * 1000,
-			stopOnCatch:	$("#stopaccept", dialog).prop('checked'),
-			alert:			$("#alert", dialog).prop('checked')
+	function save() {
+		callback({
+			name		: $("#watcherName", dialog).val(),
+			time		: parseInt($("#watcherDuration", dialog).val(), 10) * 1000,
+			stopOnCatch	: $("#stopaccept", dialog).prop('checked'),
+			alert		: $("#alert", dialog).prop('checked'),
+			auto		: $("#autoaccept", dialog).prop('checked')
 		})
 
-		// Uses setAuto so its internal hits will also be marked as auto
-		watcher.setAuto($("#autoaccept", dialog).prop('checked'));
-	});
+		hide();
+	};
 
+	function hide() {
+		// dialog.hide();
+		dialog.remove();
+		dialog.empty();
+		dialog = null;
+	}
 
-	$("input[type='button']", dialog).click(function() { dialog.remove(); dialog.empty(); dialog = null; });
+	$("input[value='Save']", dialog).click(save);
+
+	$("input[type='button']", dialog).click(hide);
 
 	$(dialog).keypress(function(e) {
 		// console.log(e.key, e.keyCode);
 		switch(e.keyCode) {
 			case 13:
-				$("input[value='Save']", dialog).click();
+				save();
 				break;
 			case 27:
-				$(this).remove();
-				$(this).empty();
-				dialog = null;
+				hide();
+				break;
 		}
 	});
 
 	$("body").append(dialog);
-	$("#watcherDuration", dialog).focus().select();
+
+	if ($("#watcherName", dialog).text() == "")
+		$("#watcherDuration", dialog).focus().select();
+	else
+		$("#watcherName", dialog).focus().select();
 }
 
 function WatcherUI() { /* Nothing */ };
@@ -1571,7 +1582,17 @@ WatcherUI.create = function(watcher) {
 
 	// Set actions
 	$(".edit", div).click(function() {
-		editWatcher(watcher);
+		watcherDialog(watcher, function(values) {
+			watcher.setValues({
+				name:			values.name,
+				time: 			values.time,
+				stopOnCatch:	values.stopOnCatch,
+				alert:			values.alert
+			})
+
+			// Uses setAuto so its internal hits will also be marked as auto
+			watcher.setAuto(values.setAuto);
+		});
 	});
 
 	$(".delete", div).click(function() {
