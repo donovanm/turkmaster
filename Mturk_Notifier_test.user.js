@@ -46,7 +46,6 @@ $(document).ready(function(){
 			dispatch.load();
 		requestMain();
 		preloadImages();
-		// addEditWatcherStyle();
 		addFormStyle();
 	}
 	
@@ -259,24 +258,6 @@ function addFormStyle() {
 		.watcher_button a { text-decoration: none; margin-left: 3em; font-weight: normal	}\
 		.watcher_button a:hover { text-decoration: underline; }\
 		.error_title .watcher_button { display: block; margin: 15px }\
-	");
-}
-
-function addEditWatcherStyle() {
-	addStyle("\
-		#editWatcher {\
-			position: fixed;\
-			width: 600px;\
-			top: 50px;\
-			left: 50%;\
-			margin: 50px -300px;\
-			background-color: #fcfcfe;\
-			border: 1px solid #aaa;\
-			border-radius: 1px;\
-			text-align: center;\
-			padding: 20px;\
-			z-index: 100;\
-		}\
 	");
 }
 
@@ -1608,7 +1589,7 @@ WatcherUI.create = function(watcher) {
 			})
 
 			// Uses setAuto so its internal hits will also be marked as auto
-			watcher.setAuto(values.setAuto);
+			watcher.setAuto(values.auto);
 		});
 	});
 
@@ -1754,7 +1735,6 @@ Watcher.prototype.setUrl = function() {
 }
 Watcher.prototype.setAuto = function(isAuto) {
 	this.option.auto = isAuto;
-	// this.hits[0].isAutoAccept = isAuto;
 	this.setUrl();
 }
 Watcher.prototype.isNewHit = function (hit) {
