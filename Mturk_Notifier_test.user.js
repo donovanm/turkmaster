@@ -101,16 +101,64 @@ function preloadImages() {
 
 function addWatchButton() {
 	var type = (pageType.HIT) ? 'hit' : (pageType.REQUESTER) ? 'requester' : (pageType.SEARCH) ? 'page' : '';
-	var form = addForm();
 	var button = $("<div>").addClass("watcher_button")
 		.append($("<a>")
 			.text("Watch this " + type + "?")
 			.attr('href', "javascript:void(0)")
-			.click(function () {
-				form.show();
-				$("#watcherName", form).focus();
-			})
+			.click(addWatcher)
 		);
+
+	function addWatcher() {
+		// Get current and default values
+		var time = 60,
+			auto = true,
+			stopOnCatch = true,
+			alert = false,
+			name = "";
+
+		// Find the name if available
+		if (pageType.REQUESTER) {
+			if ($(".title_orange_text_bold").length > 0) {
+				name = $(".title_orange_text_bold").text().match(/Created by '(.+)'/);
+				name = (typeof name !== 'undefined') ? name[1] : "";
+			} else if (document.URL.match(/prevRequester=/)) {
+				name = document.URL.match(/prevRequester=([^&]*)/)[1];
+			}
+		} else if (pageType.SEARCH) {
+			name = document.URL.match(/searchWords=([^&]*)/);
+			name = (typeof name !== 'undefined') ? name[1] : "";
+		}
+		
+		// Pull up a Watcher Dialog with default values set
+		watcherDialog(
+			{
+				name: name,
+				time: time * 1000,
+				type: type,
+				option: {
+					auto: auto,
+					stopOnCatch: stopOnCatch,
+					alert: alert
+				}
+			},
+			function(values) {
+				var id = (document.URL.match(/groupId=([A-Z0-9]+)/) || document.URL.match(/requesterId=([A-Z0-9]+)/) || [,document.URL])[1];
+
+				sendMessage({
+					header: 'add_watcher',
+					content: {
+						id: id,
+						duration: values.time,
+						type: type,
+						name: values.name,
+						auto: values.auto,
+						stopOnCatch: values.stopOnCatch
+					},
+					timestamp: true
+				});
+			}
+		);
+	}
 
 	var location;	// Location to add the watch button
 	if (pageType.HIT) {
@@ -130,87 +178,6 @@ function addWatchButton() {
 	addFormStyle();
 }
 
-function addForm() {
-	var id = (document.URL.match(/groupId=([A-Z0-9]+)/) || document.URL.match(/requesterId=([A-Z0-9]+)/) || [,document.URL])[1];
-		
-	var form = $("<div>").attr('id', 'add_watcher_form').append(
-		$("<h3>").text("Add a watcher"),
-		$("<p>").append(
-			$("<label>").text("Name ").append(
-				$("<input>").attr('id', "watcherName").attr('type', "text")),
-			$("<label>").text(" Time ").append(
-				$("<input>").attr('id', "watcherDuration").attr('type', "text"))
-			),
-		(pageType.HIT) ?
-			$("<p>").append(
-				$("<input>").attr('type', "checkbox").attr('id', "autoaccept"),
-				$("<label>").attr('for', "autoaccept").text("Auto-accept")
-				)
-			: "",
-		(pageType.HIT) ?
-			$("<p>").append(
-				$("<input>").attr('type', "checkbox").attr('id', "stopaccept").attr('checked', "checked"),
-				$("<label>").attr('for', "stopaccept").text("Stop on accept")
-				)
-			: "",
-		$("<p>").addClass("form_buttons").append(
-			$("<input>").attr('type', "button").attr('value', "Save"),
-			$("<input>").attr('type', "button").attr('value', "Cancel")
-			)
-		);
-		
-	form.hide();
-	
-	$("input[value='Save']", form).click(function() {
-		var duration = parseInt($("#watcherDuration", form).val(), 10);
-		var type = (pageType.HIT) ? 'hit' : (pageType.REQUESTER) ? 'requester' : (pageType.SEARCH) ? 'url' : '';
-		var auto = (pageType.HIT) ? $("input#autoaccept", form).get(0).checked : false;
-		var stop = (pageType.HIT) ? $("input#stopaccept", form).get(0).checked : false;
-		sendMessage({
-			header: 'add_watcher',
-			content: {
-				id: id,
-				duration: duration * 1000,
-				type: type,
-				name: $("#watcherName", form).val(),
-				auto: auto,
-				stopOnCatch: stop
-			},
-			timestamp: true
-		});
-	});
-	
-	$("input[type='button']", form).click(function() {
-		$(form).hide();
-	});
-
-	$("input", form).keypress(function(event) {
-		if (event.keyCode == 13 && ($(this).attr('value') != "Cancel"))		// Enter = Save
-			$("input[value='Save']", form).click();
-		else if (event.keyCode == 27)										// Esc = Cancel
-			form.hide();
-	});
-
-	// Add name to form if available
-	var name = "";
-	if (pageType.REQUESTER) {
-		if ($(".title_orange_text_bold").length > 0) {
-			name = $(".title_orange_text_bold").text().match(/Created by '(.+)'/);
-			name = (typeof name !== 'undefined') ? name[1] : "";
-		} else if (document.URL.match(/prevRequester=/)) {
-			name = document.URL.match(/prevRequester=([^&]*)/)[1]
-		}
-	} else if (pageType.SEARCH) {
-		name = document.URL.match(/searchWords=([^&]*)/);
-		name = (typeof name !== 'undefined') ? name[1] : "";
-	}
-	
-	if (name != "")
-		$("#watcherName", form).val(name.replace('+', ' '));
-
-	$("body").append(form);
-	return form;
-}
 
 function addFormStyle() {
 	addStyle("\
