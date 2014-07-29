@@ -743,221 +743,238 @@ Evt.prototype.callFunctionArray = function(functions, data) {
 
 
 
-function DispatchUI() { /* Nothing */ }
-DispatchUI.create = function(dispatch) {
-	var div = $("<div>").attr('id', "dispatcher")
-		.append($("<div>").attr('id', "controller"))
-		.append($("<div>").attr('id', "watcher_container"));
+var DispatchUI = {
+	create: function(dispatch) {
+		DispatchUI.dispatch = dispatch;
+		DispatchUI.init();
+		DispatchUI.addStyle();
+		DispatchUI.addActions();
+		DispatchUI.addListeners();
+		DispatchUI.addDragAndDrop();
+		return DispatchUI.div;
+	},
 
-	var watchers = [];
+	init: function() {
+		var div = DispatchUI.div = $("<div>").attr('id', "dispatcher")
+			.append($("<div>").attr('id', "controller"))
+			.append($("<div>").attr('id', "watcher_container"));
 
-	// Move dashboard comments to the right and put the dispatch panel on the left
-	var pageElements = $("body > *");
-	$("body").html("");
-	$("body").append(
-		$("<div>")
-			.attr('id', "content_container")
-			.append($(pageElements))
-	);
+		DispatchUI.watchers = [];
 
-	$("body").css('margin', "0").prepend(div);
-	addStyle("#dispatcher { background-color: #f5f5f5; position: fixed; top: 0px; float: left; height: 100%;  width: 270px; font: 8pt Helvetica;  margin-left: 0px; margin }\
-		#content_container { position: absolute; left: 270px; top: 0; right: 0; border-left: 2px solid #dadada; }\
-		#dispatcher #controller { text-align: center; font: 160% Candara; color: #585858; position: relative; height: 20px; }\
-		#dispatcher #controller .on_off { margin: 7px 5px 0 0 }\
-		#dispatcher #controller .on_off a { font: 80% Helvetica }\
-		#dispatcher #watcher_container { position: absolute; top: 20px; bottom: 0; overflow-y:auto; width: 100%;}\
-		#dispatcher #watcher_container p { margin: 30px 0px }\
-		#dispatcher #watcher_container .error_button a { text-decoration: none; color: #555; background-color: #fff; padding: 3px 10px; margin: 5px; border: 1px solid #aaa; border-radius: 2px }\
-		#dispatcher #watcher_container .error_button a:hover { background-color: #def; border-color: #aaa }\
-		#dispatcher #settings { float: left; margin: 3px 2px }\
-		#dispatcher div { font-size: 7pt }\
-		#dispatcher .watcher {\
-			box-sizing: border-box;\
-			margin: 3px 3px 0;\
-			background-color: #fff;\
-			position: relative;\
-			border-bottom: 1px solid #ddd;\
-			border-right: 1px solid #ddd;\
-			cursor: default;\
-			transition: background-color 0.5s;\
-			-moz-user-select: none;\
-			-webkit-touch-callout: none;\
-			-webkit-user-select: none;\
-			-khtml-user-select: none;\
-		}\
-		#dispatcher .watcher.running .details { background-color: #C3ECFC; background-color: rgba(218, 240, 251, 1); }\
-		#dispatcher .watcher.updated { background-color: #e8f5fc; background-color: rgba(218, 240, 251, 1) }\
-		#dispatcher .watcher .details { width: 25px; text-align: center; float: right; background-color: rgba(234, 234, 234, 1); position: absolute; top: 0; bottom: 0; right: 0; font: 90% Verdana; color: #fff; transition: background-color 0.5s }\
-		#dispatcher .watcher .details.updated { background-color: rgba(218, 240, 251, 1); background-color: #e8f5fc; background-color: rgba(220, 255, 228, 1) }\
-		#dispatcher .watcher .name { font: 130% Helvetica; color: black; text-decoration: none; display: inline-block; margin-top: -3px}\
-		#dispatcher .watcher .name:hover { text-decoration: underline }\
-		#dispatcher .watcher .name.no_hover:hover { text-decoration: none }\
-		#dispatcher .watcher .time { display: block; float: left }\
-		#dispatcher .on_off{ float: right; cursor: pointer }\
-		#dispatcher .on_off a { margin: 1px; font: 70% Helvetica; }\
-		#dispatcher .on_off a:nth-child(2) { background-color: #cef; border-radius: 3px; padding: 3px 6px; }\
-		#dispatcher .on_off.on a:nth-child(1) { background-color: #cef; border-radius: 3px; padding: 3px 6px; }\
-		#dispatcher .on_off.on a:nth-child(2) { background-color: inherit; border-radius: inherit; padding: inherit; }\
-		#dispatcher .watcher div:nth-child(2) {  margin-right: 25px; padding: 5px 5px 5px 10px;}\
-		#dispatcher .watcher .bottom { margin: 0 0 -5px; color: #aaa }\
-		#dispatcher .watcher .bottom a:link { color: black; }\
-		#dispatcher .watcher .bottom a:hover { color: #cef; }\
-		#dispatcher .watcher .details { font-size: 150%; font-weight: bold }\
-		#dispatcher .watcher .last_updated { position: absolute; right: 30px; bottom: 0px }\
-		#dispatcher .watcher .icons { visibility: hidden; margin-left: 10px; bottom: 5px }\
-		#dispatcher .watcher:hover .icons { visibility: visible }\
-		#dispatcher .watcher .icons img { opacity: 0.2; height: 1.2em }\
-		#dispatcher .watcher .icons img:hover { opacity: 1 }\
-		#dispatcher .watcher .color_code { position: absolute; left: 0; top: 0; bottom: 0; width: 9px; cursor: row-resize }\
-		#dispatcher .watcher .color_code div { position: absolute; left: 0; top: 0; bottom: 0; width: 5px; transition: width 0.15s }\
-		#dispatcher .watcher .color_code:hover div { width: 9px }\
-		#dispatcher .watcher .color_code.hit div		{ background-color: rgba(234, 111, 111, .7); }\
-		#dispatcher .watcher .color_code.requester div 	{ background-color: rgba(51, 147, 255, .7); }\
-		#dispatcher .watcher .color_code.url div		{ background-color: rgba(58, 158, 59, .7); }");
+		// Move dashboard contents to the right and put the dispatch panel on the left
+		var pageElements = $("body > *");
+		$("body").html("");
+		$("body").append(
+			$("<div>")
+				.attr('id', "content_container")
+				.append($(pageElements))
+		);
 
-	
-	var ctrl = $("#controller", div);
-	ctrl.append($("<a>")
-			.attr('id', "settings")
-			.attr('href', "javascript:void(0)")
-			.attr('title', "Settings")
-			.html("<img src=\"http://qrcode.littleidiot.be/qr-little/site/images/icon-settings.png\" />")
-			.click(function() { requestWebNotifications(); })
-		)
-		.append("Mturk Notifier")
-		.append('<div class="on_off"><a>ON</a><a>OFF</a></div>');
+		$("body").css('margin', "0").prepend(div);
 
-	if (dispatch.isRunning) $(".on_off", ctrl).addClass("on");
+		var ctrl = $("#controller", div);
+		ctrl.append($("<a>")
+				.attr('id', "settings")
+				.attr('href', "javascript:void(0)")
+				.attr('title', "Settings")
+				.html("<img src=\"http://qrcode.littleidiot.be/qr-little/site/images/icon-settings.png\" />")
+				.click(function() { requestWebNotifications(); })
+			)
+			.append("Mturk Notifier")
+			.append('<div class="on_off"><a>ON</a><a>OFF</a></div>');
 
-	$(".on_off", ctrl).mousedown(function() {
-		if (!dispatch.isRunning) {
-			dispatch.start();
-		} else {
-			dispatch.stop();
-		}
-	});
+		if (DispatchUI.dispatch.isRunning) $(".on_off", ctrl).addClass("on");
 
-	// Listeners
-	dispatch.addListener(Evt.START, function() {
-		$(".on_off", ctrl).addClass("on");
-	});
+	},
 
-	dispatch.addListener(Evt.STOP, function() {
-		$(".on_off", ctrl).removeClass("on");
-	});
-
-	dispatch.addListener(Evt.ADD, function(watcher) {
-		// This could be done on one line, but then we would lose access to the WatcherUI's internal Watcher object and functionality
-		var watcherEl = WatcherUI.create(watcher);
-		$("#watcher_container", div).append(watcherEl);
-		watchers.push(watcherEl);
-		// watchers.push(WatcherUI.create(watcher).appendTo($("#watcher_container", div)));
-	});
-
-	dispatch.addListener(Evt.REMOVE, function(watcher) {
-		// Nothing to do
-	});
-
-
-	// Drag watchers
-	var startY, currentBaseY, limit, height,
-		dragDiv, nextDiv, prevDiv, startPos, endPos, isDragging,
-		slop = 7;
-
-	div.on("mousedown", ".watcher", function(e) {
-		isDragging = false;
-
-		// Get the position of the watcher in the listing
-		startPos = endPos = $("#watcher_container .watcher").index(e.currentTarget);
-
-		// Get reference to the selected watcher
-		dragDiv = watchers[startPos].addClass("dragging");
-		nextDiv = dragDiv.next();
-		prevDiv = dragDiv.prev();
-
-		// TODO Check target to prevent dragging from a component inside the watcher (i.e. buttons, links, etc.)
-		height = dragDiv.outerHeight(true);
-
-		currentBaseY = startY = e.clientY;
-		limit = Math.min($("#watcher_container").outerHeight(true), height * (dispatch.watchers.length + .75)) - height;
-		
-		$(window).on("mousemove", move);
-		$(window).on("mouseup", up);
-	});
-
-	function move(e) {
-		var offsetY = e.clientY - startY;
-		var diffY = e.clientY - currentBaseY;
-
-		if (!isDragging && (Math.abs(offsetY) > slop)) {
-			// Start dragging
-			isDragging = true;
-
-			dragDiv.css('cursor', "row-resize");
-			dragDiv.css('z-index', "100");
-			dragDiv.css('opacity', "0.9");
-			$(".name", dragDiv).addClass("no_hover");
-		}
-
-		if (isDragging) {
-			if (diffY > height / 2) {
-				// Move down one spot
-				nextDiv.css('top', parseInt(nextDiv.css('top')) - height);
-				nextDiv = nextDiv.nextAll(":not(.dragging)").first();
-				prevDiv = prevDiv.nextAll(":not(.dragging)").first();
-
-				currentBaseY += height;
-				endPos++;
-			} else if (-diffY > height / 2) {
-				// Move up one spot
-				prevDiv.css('top', parseInt(prevDiv.css('top')) + height);
-				prevDiv = prevDiv.prevAll(":not(.dragging)").first();
-				nextDiv = nextDiv.prevAll(":not(.dragging)").first();
-
-				currentBaseY -= height;
-				endPos--;
+	addActions: function() {
+		var dispatch = DispatchUI.dispatch;
+		$("#controller .on_off", DispatchUI.div).mousedown(function() {
+			if (!dispatch.isRunning) {
+				dispatch.start();
+			} else {
+				dispatch.stop();
 			}
+		});
+	},
 
-			dragDiv.css('top', offsetY);
-		}
-	}
+	addListeners: function() {
+		var dispatch = DispatchUI.dispatch;
+		dispatch.addListener(Evt.START, function() {
+			$(".on_off", ctrl).addClass("on");
+		});
 
-	function up(e) {
-		$(window).off("mousemove", move);
-		$(window).off("mouseup", up);
+		dispatch.addListener(Evt.STOP, function() {
+			$(".on_off", ctrl).removeClass("on");
+		});
 
-		if (isDragging) {
-			e.preventDefault();
+		dispatch.addListener(Evt.ADD, function(watcher) {
+			// This could be done on one line, but then we would lose access to the WatcherUI's internal Watcher object and functionality
+			var watcherEl = WatcherUI.create(watcher);
+			$("#watcher_container", DispatchUI.div).append(watcherEl);
+			DispatchUI.watchers.push(watcherEl);
+			// watchers.push(WatcherUI.create(watcher).appendTo($("#watcher_container", div)));
+		});
+
+		dispatch.addListener(Evt.REMOVE, function(watcher) {
+			// Nothing to do
+		});
+	},
+
+	addStyle: function() {
+		addStyle("#dispatcher { background-color: #f5f5f5; position: fixed; top: 0px; float: left; height: 100%;  width: 270px; font: 8pt Helvetica;  margin-left: 0px; margin }\
+			#content_container { position: absolute; left: 270px; top: 0; right: 0; border-left: 2px solid #dadada; }\
+			#dispatcher #controller { text-align: center; font: 160% Candara; color: #585858; position: relative; height: 20px; }\
+			#dispatcher #controller .on_off { margin: 7px 5px 0 0 }\
+			#dispatcher #controller .on_off a { font: 80% Helvetica }\
+			#dispatcher #watcher_container { position: absolute; top: 20px; bottom: 0; overflow-y:auto; width: 100%;}\
+			#dispatcher #watcher_container p { margin: 30px 0px }\
+			#dispatcher #watcher_container .error_button a { text-decoration: none; color: #555; background-color: #fff; padding: 3px 10px; margin: 5px; border: 1px solid #aaa; border-radius: 2px }\
+			#dispatcher #watcher_container .error_button a:hover { background-color: #def; border-color: #aaa }\
+			#dispatcher #settings { float: left; margin: 3px 2px }\
+			#dispatcher div { font-size: 7pt }\
+			#dispatcher .watcher {\
+				box-sizing: border-box;\
+				margin: 3px 3px 0;\
+				background-color: #fff;\
+				position: relative;\
+				border-bottom: 1px solid #ddd;\
+				border-right: 1px solid #ddd;\
+				cursor: default;\
+				transition: background-color 0.5s;\
+				-moz-user-select: none;\
+				-webkit-touch-callout: none;\
+				-webkit-user-select: none;\
+				-khtml-user-select: none;\
+			}\
+			#dispatcher .watcher.running .details { background-color: #C3ECFC; background-color: rgba(218, 240, 251, 1); }\
+			#dispatcher .watcher.updated { background-color: #e8f5fc; background-color: rgba(218, 240, 251, 1) }\
+			#dispatcher .watcher .details { width: 25px; text-align: center; float: right; background-color: rgba(234, 234, 234, 1); position: absolute; top: 0; bottom: 0; right: 0; font: 90% Verdana; color: #fff; transition: background-color 0.5s }\
+			#dispatcher .watcher .details.updated { background-color: rgba(218, 240, 251, 1); background-color: #e8f5fc; background-color: rgba(220, 255, 228, 1) }\
+			#dispatcher .watcher .name { font: 130% Helvetica; color: black; text-decoration: none; display: inline-block; margin-top: -3px}\
+			#dispatcher .watcher .name:hover { text-decoration: underline }\
+			#dispatcher .watcher .name.no_hover:hover { text-decoration: none }\
+			#dispatcher .watcher .time { display: block; float: left }\
+			#dispatcher .on_off{ float: right; cursor: pointer }\
+			#dispatcher .on_off a { margin: 1px; font: 70% Helvetica; }\
+			#dispatcher .on_off a:nth-child(2) { background-color: #cef; border-radius: 3px; padding: 3px 6px; }\
+			#dispatcher .on_off.on a:nth-child(1) { background-color: #cef; border-radius: 3px; padding: 3px 6px; }\
+			#dispatcher .on_off.on a:nth-child(2) { background-color: inherit; border-radius: inherit; padding: inherit; }\
+			#dispatcher .watcher div:nth-child(2) { margin-right: 25px; padding: 5px 5px 5px 10px;}\
+			#dispatcher .watcher .bottom { margin: 0 0 -5px; color: #aaa }\
+			#dispatcher .watcher .bottom a:link { color: black; }\
+			#dispatcher .watcher .bottom a:hover { color: #cef; }\
+			#dispatcher .watcher .details { font-size: 150%; font-weight: bold }\
+			#dispatcher .watcher .last_updated { position: absolute; right: 30px; bottom: 0px }\
+			#dispatcher .watcher .icons { visibility: hidden; margin-left: 10px; bottom: 5px }\
+			#dispatcher .watcher:hover .icons { visibility: visible }\
+			#dispatcher .watcher .icons img { opacity: 0.2; height: 1.2em }\
+			#dispatcher .watcher .icons img:hover { opacity: 1 }\
+			#dispatcher .watcher .color_code { position: absolute; left: 0; top: 0; bottom: 0; width: 9px; cursor: row-resize }\
+			#dispatcher .watcher .color_code div { position: absolute; left: 0; top: 0; bottom: 0; width: 5px; transition: width 0.15s }\
+			#dispatcher .watcher .color_code:hover div { width: 9px }\
+			#dispatcher .watcher .color_code.hit div       { background-color: rgba(234, 111, 111, .7); }\
+			#dispatcher .watcher .color_code.requester div { background-color: rgba(51, 147, 255, .7); }\
+			#dispatcher .watcher .color_code.url div       { background-color: rgba(58, 158, 59, .7); }");
+	},
+
+	addDragAndDrop: function() {
+		// Drag watchers
+		var startY, currentBaseY, limit, height,
+			dragDiv, nextDiv, prevDiv, startPos, endPos, isDragging,
+			slop = 7, watchers = DispatchUI.watchers;
+
+		DispatchUI.div.on("mousedown", ".watcher", function(e) {
 			isDragging = false;
 
-			// $("div", colorCode).css('width', '');
-			dragDiv.css('cursor', '');
-			dragDiv.css('z-index', '');
-			dragDiv.css('opacity', '');
-			$(".name", dragDiv).removeClass("no_hover");
-			dragDiv.removeClass("dragging");
+			// Get the position of the watcher in the listing
+			startPos = endPos = $("#watcher_container .watcher").index(e.currentTarget);
 
-			// Reset all watcher offsets
-			$("#watcher_container .watcher").css('top', '');
+			// Get reference to the selected watcher
+			dragDiv = watchers[startPos].addClass("dragging");
+			nextDiv = dragDiv.next();
+			prevDiv = dragDiv.prev();
 
-			if (startPos != endPos) {
-				if (endPos > startPos)
-					dragDiv.insertAfter($("#watcher_container .watcher")[endPos]);
-				else
-					dragDiv.insertBefore($("#watcher_container .watcher")[endPos]);
+			// TODO Check target to prevent dragging from a component inside the watcher (i.e. buttons, links, etc.)
+			height = dragDiv.outerHeight(true);
 
-				dispatch.moveWatcher(startPos, endPos);
+			currentBaseY = startY = e.clientY;
+			limit = Math.min($("#watcher_container").outerHeight(true), height * (DispatchUI.dispatch.watchers.length + .75)) - height;
+			
+			$(window).on("mousemove", move);
+			$(window).on("mouseup", up);
+		});
 
-				// Re-arrange our watchers array
-				watchers.splice(startPos, 1);
-				watchers.splice(endPos, 0, dragDiv);
+		function move(e) {
+			var offsetY = e.clientY - startY;
+			var diffY = e.clientY - currentBaseY;
+
+			if (!isDragging && (Math.abs(offsetY) > slop)) {
+				// Start dragging
+				isDragging = true;
+
+				dragDiv.css('cursor', "row-resize");
+				dragDiv.css('z-index', "100");
+				dragDiv.css('opacity', "0.9");
+				$(".name", dragDiv).addClass("no_hover");
+			}
+
+			if (isDragging) {
+				if (diffY > height / 2) {
+					// Move down one spot
+					nextDiv.css('top', parseInt(nextDiv.css('top')) - height);
+					nextDiv = nextDiv.nextAll(":not(.dragging)").first();
+					prevDiv = prevDiv.nextAll(":not(.dragging)").first();
+
+					currentBaseY += height;
+					endPos++;
+				} else if (-diffY > height / 2) {
+					// Move up one spot
+					prevDiv.css('top', parseInt(prevDiv.css('top')) + height);
+					prevDiv = prevDiv.prevAll(":not(.dragging)").first();
+					nextDiv = nextDiv.prevAll(":not(.dragging)").first();
+
+					currentBaseY -= height;
+					endPos--;
+				}
+
+				dragDiv.css('top', offsetY);
+			}
+		}
+
+		function up(e) {
+			$(window).off("mousemove", move);
+			$(window).off("mouseup", up);
+
+			if (isDragging) {
+				e.preventDefault();
+				isDragging = false;
+
+				// $("div", colorCode).css('width', '');
+				dragDiv.css('cursor', '');
+				dragDiv.css('z-index', '');
+				dragDiv.css('opacity', '');
+				$(".name", dragDiv).removeClass("no_hover");
+				dragDiv.removeClass("dragging");
+
+				// Reset all watcher offsets
+				$("#watcher_container .watcher").css('top', '');
+
+				if (startPos != endPos) {
+					if (endPos > startPos)
+						dragDiv.insertAfter($("#watcher_container .watcher")[endPos]);
+					else
+						dragDiv.insertBefore($("#watcher_container .watcher")[endPos]);
+
+					DispatchUI.dispatch.moveWatcher(startPos, endPos);
+
+					// Re-arrange our watchers array
+					watchers.splice(startPos, 1);
+					watchers.splice(endPos, 0, dragDiv);
+				}
 			}
 		}
 	}
-
-
-	return div;
 }
 
 /** Dispatch object. Controls all of the watchers.
@@ -1057,7 +1074,7 @@ Dispatch.prototype.load = function() {
 			for(var i = 0; i < watchers.length; i++) this.add(new Watcher(watchers[i]));
 		} catch(e) {
 			loadError = true;
-			alert("Error loading saved list");
+			console.log("Error loading saved list", e);
         }
 	} else {
 		loadHits();
