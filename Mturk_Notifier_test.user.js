@@ -9,17 +9,17 @@
 // ==/UserScript==
 
 var settings = {
-	sound: true,
-	animation: true,
-	preloadHits: false
-}
+	sound       : true,
+	animation   : true,
+	preloadHits : false
+};
 
-var pageType ={
-		MAIN:		true,	// This is so remote watcher requests don't add new watchers to multiple pages and cause mturk errors.
-		DASHBOARD: 	false,
-		HIT:		false,
-		REQUESTER:	false,
-		SEARCH:		false
+var pageType = {
+	MAIN      : true,	// This is so remote watcher requests don't add new watchers to multiple pages and cause mturk errors.
+	DASHBOARD : false,
+	HIT       : false,
+	REQUESTER : false,
+	SEARCH    : false
 };
 
 var loadError = false;
@@ -28,10 +28,10 @@ var dispatch;
 var notificationPanel;
 
 if(!('contains' in String.prototype)) {
-       String.prototype.contains = function(str, startIndex) {
-                return -1 !== String.prototype.indexOf.call(this, str, startIndex);
-       };
- }
+	String.prototype.contains = function(str, startIndex) {
+		return -1 !== String.prototype.indexOf.call(this, str, startIndex);
+	};
+}
 
 $(document).ready(function(){
 	checkPageType();
@@ -40,10 +40,12 @@ $(document).ready(function(){
 		dispatch = new Dispatch();
 		DispatchUI.create(dispatch);
 		createDetailsPanel();
+
 		if (settings.preloadHits)
 			loadHits();
 		else
 			dispatch.load();
+
 		requestMain();
 		preloadImages();
 		addFormStyle();
@@ -66,7 +68,7 @@ $(window).unload(function() {
 });
 
 function onStorageEvent(event) {
-	if (event.key.substring(0,13) == 'notifier_msg_')
+	if (event.key.substring(0,13) == "notifier_msg_")
 		onMessageReceived(event.key.substring(13), JSON.parse(event.newValue).content);
 }
 
@@ -74,11 +76,11 @@ function checkPageType() {
 	// Dashboard, hit, requester, search
 	if (document.URL == "https://www.mturk.com/mturk/dashboard")
 		pageType.DASHBOARD = true;
-	else if (document.URL.match(/https:\/\/www.mturk.com\/mturk\/(preview|accept).+groupId=.*/) != null)
+	else if (document.URL.match(/https:\/\/www.mturk.com\/mturk\/(preview|accept).+groupId=.*/) !== null)
 		pageType.HIT = true;
-	else if (document.URL.match(/requesterId=([A-Z0-9]+)/) != null)
+	else if (document.URL.match(/requesterId=([A-Z0-9]+)/) !== null)
 		pageType.REQUESTER = true;
-	else if (document.URL.match(/(searchbar|findhits)/) != null)
+	else if (document.URL.match(/(searchbar|findhits)/) !== null)
 		pageType.SEARCH = true;
 }
 
@@ -110,11 +112,11 @@ function addWatchButton() {
 
 	function addWatcher() {
 		// Get current and default values
-		var time = 60,
-			auto = true,
-			stopOnCatch = true,
-			alert = false,
-			name = "";
+		var time        = 60,
+			auto        = true,
+			alert       = false,
+			name        = "",
+			stopOnCatch = true;
 
 		// Find the name if available
 		if (pageType.REQUESTER) {
@@ -235,7 +237,7 @@ function addFormStyle() {
 }
 
 function addStyle(styleText) {
-	var style = "<style type=\"text/css\">" + styleText + "</style>";
+	var style = '<style type="text/css">' + styleText + '</style>';
 	$("head").append(style);
 }
 
@@ -379,11 +381,11 @@ function onMessageReceived(header, message) {
 			case 'add_watcher' : 
 				var msg = message;
 				dispatch.add(new Watcher({
-					id: msg.id,
-					time: msg.duration,
-					type: msg.type,
-					name: msg.name,
-					option: {
+					id     : msg.id,
+					time   : msg.duration,
+					type   : msg.type,
+					name   : msg.name,
+					option : {
 					 	auto: msg.auto,
 					 	stopOnCatch: msg.stopOnCatch
 					}
@@ -435,8 +437,8 @@ function onMessageReceived(header, message) {
 	}
 }
 function sendMessage(message) {
-	var header = message.header;
-	var content = message.content || new Date().getTime();		// Make the content a timestamp when there's no actual content
+	var header    = message.header;
+	var content   = message.content || new Date().getTime();	// Make the content a timestamp when there's no actual content
 	var timestamp = message.timestamp && new Date().getTime();	// If wanted, adds a timestamp to the content so messages with the same content will still trigger the event consecutively
 	localStorage.setItem('notifier_msg_' + header, JSON.stringify({ content: content, timestamp: timestamp}));
 }
@@ -497,35 +499,35 @@ function requestWebNotifications() {
 // This is the Hit object
 function Hit(attrs) {
 	var attrs = attrs || {};
-	this.id 			= attrs.id;
-	this.uid 			= attrs.uid;
-	this.isAutoAccept 	= attrs.isAutoAccept || false;
-	this.requester 		= attrs.requester;
-    this.requesterID    = attrs.requesterID;
-	this.url 			= attrs.url;
-	this.title 			= attrs.title;
-	this.reward 		= attrs.reward;
-	this.description 	= attrs.description;
-	this.available 		= attrs.available;
-	this.time 			= attrs.time;
-	this.isQualified	= (typeof attrs.isQualified !== 'undefined') ? attrs.isQualified : true;
-	this.canPreview		= (typeof attrs.canPreview !== 'undefined') ? attrs.canPreview : true;
+	this.id           = attrs.id;
+	this.uid          = attrs.uid;
+	this.isAutoAccept = attrs.isAutoAccept || false;
+	this.requester    = attrs.requester;
+	this.requesterID  = attrs.requesterID;
+	this.url          = attrs.url;
+	this.title        = attrs.title;
+	this.reward       = attrs.reward;
+	this.description  = attrs.description;
+	this.available    = attrs.available;
+	this.time         = attrs.time;
+	this.isQualified  = (typeof attrs.isQualified !== 'undefined') ? attrs.isQualified : true;
+	this.canPreview   = (typeof attrs.canPreview !== 'undefined') ? attrs.canPreview : true;
 }
 Hit.prototype.getURL = function(type) {
 	switch(type) {
-	case 'preview':
-		return "https://www.mturk.com/mturk/preview?groupId=" + this.id;
-	case 'accept':
-		return (this.isQualified) ? "https://www.mturk.com/mturk/previewandaccept?groupId=" + this.id : null;
-	case 'auto':
-		return "https://www.mturk.com/mturk/previewandaccept?groupId=" + this.id + "&autoAcceptEnabled=true";
-	case 'view':
-		return "https://www.mturk.com/mturk/continue?hitId=" + this.uid;
-	case 'return':
-		// This will need to be changed. It's the same as 'view' until more testing is done on AMT's return functionality
-		return "https://www.mturk.com/mturk/preview?hitId=" + this.uid;
-	default:
-		return "";
+		case 'preview':
+			return "https://www.mturk.com/mturk/preview?groupId=" + this.id;
+		case 'accept' :
+			return (this.isQualified) ? "https://www.mturk.com/mturk/previewandaccept?groupId=" + this.id : null;
+		case 'auto'   :
+			return "https://www.mturk.com/mturk/previewandaccept?groupId=" + this.id + "&autoAcceptEnabled=true";
+		case 'view'   :
+			return "https://www.mturk.com/mturk/continue?hitId=" + this.uid;
+		case 'return' :
+			// This will need to be changed. It's the same as 'view' until more testing is done on AMT's return functionality
+			return "https://www.mturk.com/mturk/preview?hitId=" + this.uid;
+		default:
+			return "";
 	}
 }
 // Returns the position of a hit in a hit array by its ID
@@ -655,14 +657,14 @@ IgnoreList.prototype.remove = function(item) {
 
 
 function Evt() { /* Nothing */ };
-Evt.ADD = 1;
-Evt.REMOVE = 2;
-Evt.START = 3;
-Evt.STOP = 4;
-Evt.CHANGE = 5;
-Evt.UPDATE = 6;
-Evt.HITS_CHANGE = 7;
-Evt.DELETE = 8;
+Evt.ADD          = 1;
+Evt.REMOVE       = 2;
+Evt.START        = 3;
+Evt.STOP         = 4;
+Evt.CHANGE       = 5;
+Evt.UPDATE       = 6;
+Evt.HITS_CHANGE  = 7;
+Evt.DELETE       = 8;
 Evt.VIEW_DETAILS = 9;
 
 Evt.prototype.addListener = function(type, callback) {
@@ -1335,11 +1337,11 @@ Catcher.prototype.getHTML = function() {
     Watcher.prototype.getHTML.apply(this);
 
     $(".color_code", this.DOMElement).removeClass("color_code");
-    $(".time", this.DOMElement).remove();
-    $("br", this.DOMElement).remove();
-    $(".bottom", this.DOMElement).remove();
-    $(".icons", this.DOMElement).remove();
-	$(".name", this.DOMElement).css('font-size', "110%").removeAttr('href').removeAttr('target'); 
+    $(".time"      , this.DOMElement).remove();
+    $("br"         , this.DOMElement).remove();
+    $(".bottom"    , this.DOMElement).remove();
+    $(".icons"     , this.DOMElement).remove();
+	$(".name"      , this.DOMElement).css('font-size', "110%").removeAttr('href').removeAttr('target'); 
 	$(".name:hover", this.DOMElement).css('text-decoration', ""); 
 
     this.DOMElement.css("margin", "-5px 3px 3px 15px");
@@ -1361,9 +1363,9 @@ Catcher.create = function(attrs, quickWatcher) {
 
 function Filter(value, catcher) { this.value = value; this.catcher = catcher; }
 // Enums
-Filter.PRICE = 1;
+Filter.PRICE     = 1;
 Filter.AVAILABLE = 2;
-Filter.WORD = 3;
+Filter.WORD      = 3;
 Filter.REQUESTER = 4;
 
 // This is meant to be over-ridden. Returns true if the hit passes the requirements of the filter.
@@ -1453,9 +1455,9 @@ function watcherDialog(watcher, callback) {
 		callback({
 			name		: $("#watcherName", dialog).val(),
 			time		: parseInt($("#watcherDuration", dialog).val(), 10) * 1000,
-			stopOnCatch	: $("#stopaccept", dialog).prop('checked'),
 			alert		: $("#alert", dialog).prop('checked'),
-			auto		: $("#autoaccept", dialog).prop('checked')
+			auto		: $("#autoaccept", dialog).prop('checked'),
+			stopOnCatch	: $("#stopaccept", dialog).prop('checked')
 		})
 
 		hide();
@@ -1555,10 +1557,10 @@ WatcherUI.create = function(watcher) {
 	$(".edit", div).click(function() {
 		watcherDialog(watcher, function(values) {
 			watcher.setValues({
-				name:			values.name,
-				time: 			values.time,
-				stopOnCatch:	values.stopOnCatch,
-				alert:			values.alert
+				name        : values.name,
+				time        : values.time,
+				alert       : values.alert,
+				stopOnCatch : values.stopOnCatch
 			})
 
 			// Uses setAuto so its internal hits will also be marked as auto
@@ -1604,29 +1606,30 @@ WatcherUI.create = function(watcher) {
 /**	The Watcher object. This is what controls the pages that are monitored and how often
 
 	Events:
-		onStart	- The watcher has started to check the desired page with a time interval
-		onStop	- The time interval has stopped
-		onUpdate	- The watcher has just checked the page for hits
-		onChange	- Attributes of the watcher changed, like name, interval time, etc.
-		onDelete	- When a watcher has been deleted
-		onHitsChange	- The watcher updated and found a different set of hits from last time
-		onCaptcha?	- The watcher encounters a captcha. Not sure if this should be handled by the Watcher or Loader (maybe both)
+		onStart      - The watcher has started to check the desired page with a time interval
+		onStop       - The time interval has stopped
+		onUpdate     - The watcher has just checked the page for hits
+		onChange     - Attributes of the watcher changed, like name, interval time, etc.
+		onDelete     - When a watcher has been deleted
+		onHitsChange - The watcher updated and found a different set of hits from last time
+		onCaptcha?   - The watcher encounters a captcha. Not sure if this should be handled by the Watcher or Loader (maybe both)
 
 **/
 function Watcher(attrs) {
-	this.interval = null;		// For continuous interval
-	this.timer = null; 			// For initial setTimeout
-	this.lastHits = new Array();
-	this.newHits = new Array();
+	var DEFAULT_TIME = 60000;
+	this.interval    = null;		// For continuous interval
+	this.timer       = null; 			// For initial setTimeout
+	this.lastHits    = new Array();
+	this.newHits     = new Array();
 
 	attrs = attrs || {};
 	
 	// Default states
 	this.state = {};
 	state = attrs.state || {};
-	this.state.isRunning 	= (typeof state.isRunning !== 'undefined') ? state.isRunning : false;
-	this.state.isOn 		= (typeof state.isOn !== 'undefined') ? state.isOn : true;
-	this.state.isUpdated 	= (typeof state.isUpdated !== 'undefined') ? state.isUpdated : false;
+	this.state.isRunning = (typeof state.isRunning !== 'undefined') ? state.isRunning : false;
+	this.state.isOn      = (typeof state.isOn !== 'undefined') ? state.isOn : true;
+	this.state.isUpdated = (typeof state.isUpdated !== 'undefined') ? state.isUpdated : false;
 
 	// TODO Erase these state overwrites once we implement resuming state after a page load
 	// Currently if a watcher is on when dispatch saves the watcher list, it'll still be marked as running even
@@ -1636,16 +1639,16 @@ function Watcher(attrs) {
 	
 	// Required attributes
 	this.id   = attrs.id;
-	this.time = attrs.time || 60000;
+	this.time = attrs.time || DEFAULT_TIME;
 	this.type = attrs.type;
 	this.name = attrs.name || this.id;
 	
 	// Options
 	this.option = {};
 	option 	= attrs.option || {};
-	this.option.auto 			= (typeof option.auto !== 'undefined') ? option.auto : false;
-	this.option.alert 			= (typeof option.alert !== 'undefined') ? option.alert : false;
-	this.option.stopOnCatch 	= (typeof option.stopOnCatch !== 'undefined') ? option.stopOnCatch : true;
+	this.option.auto        = (typeof option.auto !== 'undefined') ? option.auto : false;
+	this.option.alert       = (typeof option.alert !== 'undefined') ? option.alert : false;
+	this.option.stopOnCatch = (typeof option.stopOnCatch !== 'undefined') ? option.stopOnCatch : true;
 	// console.log(JSON.stringify(option,null,4));
 	// Figure out the URL
 	this.url = attrs.url;
@@ -1668,13 +1671,13 @@ function Watcher(attrs) {
 
 	// Listeners
 	this.listener = {
-		onstart:		[],
-		onstop:			[],
-		onupdate:		[],
-		onchange:		[],
-		onhitschange:	[],
-		ondelete:		[],
-		onviewdetails:	[]
+		onstart       : [],
+		onstop        : [],
+		onupdate      : [],
+		onchange      : [],
+		onhitschange  : [],
+		ondelete      : [],
+		onviewdetails : []
 	};
 
 	return this;
@@ -1746,7 +1749,7 @@ Watcher.prototype.delete = function() {
 
 	this.stop();
 	this.listener = null;
-	this.newHits = null;
+	this.newHits  = null;
 	this.lastHits = null;
 }
 Watcher.prototype.filterMessages = function(newHits) {
@@ -1782,7 +1785,7 @@ Watcher.prototype.filterMessages = function(newHits) {
 			this.onChanged(); // Might add a different method for this case, but using onChanged for now
 
 		this.lastHits = newHits;
-		this.newHits = filteredHits;
+		this.newHits  = filteredHits;
 
 		return filteredHits;
 	}
@@ -1930,21 +1933,22 @@ Watcher.prototype.parseListing = function(data) {
 	var hits = new Array();
 
 	for (var i = 0; i < hitCount; ++i) {
+		// TODO Optimize these jQuery searches. They are being done in a very sub-optimal way as far as speed is concerned.
 		base = "table:nth-child(3) > tbody:nth-child(1) > tr:nth-child(" + (i+1) + ") > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > ";
 		qryRequester = base + "tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > a";
-		qryUrl = base + "tr:nth-child(2) > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(3) > span:nth-child(1) > a";
-		qryReward = base + "tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > span:nth-child(1)"
-		qryTitle = base + "tr:nth-child(2) > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(1) > a:nth-child(1)";
+		qryUrl       = base + "tr:nth-child(2) > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(3) > span:nth-child(1) > a";
+		qryReward    = base + "tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > span:nth-child(1)"
+		qryTitle     = base + "tr:nth-child(2) > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(1) > a:nth-child(1)";
 		qryAvailable = base + "tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(3) > table > tbody > tr:nth-child(2) > td:nth-child(2)";
-		qryTime = base + "tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > table > tbody > tr:nth-child(2) > td:nth-child(2)";
+		qryTime      = base + "tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > table > tbody > tr:nth-child(2) > td:nth-child(2)";
 
 		var hit = new Hit();
-		hit.requester = $(qryRequester, data).text();
+		hit.requester   = $(qryRequester, data).text();
 		hit.requesterID = $(qryRequester, data).attr("href").match(/requesterId=([A-Z0-9]+)/)[1];
-		hit.title = $(qryTitle, data).text().trim();
-		hit.reward = $(qryReward, data).text().trim();
-		hit.available = $(qryAvailable, data).text().trim();
-		hit.time = $(qryTime, data).text().trim();
+		hit.title       = $(qryTitle, data).text().trim();
+		hit.reward      = $(qryReward, data).text().trim();
+		hit.available   = $(qryAvailable, data).text().trim();
+		hit.time        = $(qryTime, data).text().trim();
 		
 		var urlData = $(qryUrl, data);
 		hit.url = urlData.attr("href");
@@ -1989,10 +1993,10 @@ Watcher.prototype.parseHitPage = function(data) {
 		var uid = $("input[name='hitId']", data).attr("value");
 		var hit = new Hit({id: this.id, uid: uid, isAutoAccept: this.option.auto});
 		hit.requester = $("form:nth-child(7) > div:nth-child(9) > div:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2)", data).text().trim();
-		hit.title = $(".capsulelink_bold > div:nth-child(1)", data).text().trim();
-		hit.reward = $("td.capsule_field_text:nth-child(5) > span:nth-child(1)", data).text().trim();
+		hit.title     = $(".capsulelink_bold > div:nth-child(1)", data).text().trim();
+		hit.reward    = $("td.capsule_field_text:nth-child(5) > span:nth-child(1)", data).text().trim();
 		hit.available = $("td.capsule_field_text:nth-child(8)", data).text().trim();
-		hit.time = $("td.capsule_field_text:nth-child(11)", data).text().trim();
+		hit.time      = $("td.capsule_field_text:nth-child(11)", data).text().trim();
 		
 		if ((hasCaptcha || (this.option.auto && this.option.stopOnCatch)) && this.state.isRunning)
 			// We should probably toggle off all auto-accept hits when we encounter a captcha. Maybe send a special message to all mturk windows while we're at it.
@@ -2024,13 +2028,13 @@ Watcher.replacerArray = ["id", "time", "type", "name", "option", "auto", "alert"
 // - load(watcher, url, callback) is the only "public" method. The callback received the data from
 //	 the requested page.
 
-var Loader = function() {
-	var queue = [],
-		pauseTime = 2000,	// The amount of time to pause (in milliseconds)
+var Loader           = function() {
+	var queue        = [],
+		pauseTime    = 2000,	// The amount of time to pause (in milliseconds)
 		intervalTime = 100,	// The amount of time between page loads
-		count = 0,
-		paused = true,
-		maxLoad = 6;	// The max number of pages to load without pausing
+		count        = 0,
+		paused       = true,
+		maxLoad      = 6;	// The max number of pages to load without pausing
 
 	function _load(watcher, url, callback) {
 		if (!_isQueued(watcher)) {
