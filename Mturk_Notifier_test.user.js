@@ -1024,13 +1024,10 @@ Dispatch.prototype.stop = function() {
 	this.notify(Evt.STOP, null)
 }
 Dispatch.prototype.add = function(watcher) {
-	if (!(watcher instanceof QuickWatcher || watcher instanceof Catcher)) {
-		this.watchers.push(watcher);
-	}
+	this.watchers.push(watcher);
 
 	if (!this.isLoading) {
 		this.save();
-		// this.quickWatcher.onWatchersChanged(this.watchers);
 	}
 
 	this.notify(Evt.ADD, watcher);
@@ -1054,19 +1051,6 @@ Dispatch.prototype.load = function() {
 	this.isLoading = true;
 	var data = localStorage.getItem('notifier_watchers');
 	var watchers;
-	// this.quickWatcher = new QuickWatcher();
-	// this.add(this.quickWatcher);
-	// this.add(Catcher.create({name:"History"}, this.quickWatcher));
-	// this.add(Catcher.create({name:"Hits over $1", notify:true}, this.quickWatcher).addFilter(Filter.PRICE, 1));
-	// this.add(Catcher.create({name:"Over 50 remaining"}, this.quickWatcher)
-	// 	.addFilter(Filter.AVAILABLE, 50)
-	// 	.addFilter(Filter.REQUESTER, "A2SUM2D7EOAK1T")
-	// );
-	// this.add(Catcher.create({name:"Transcriptions over 40c", notify:true}, this.quickWatcher)
-	// 	.addFilter(Filter.WORD, "transcri")
-	// 	.addFilter(Filter.PRICE, .40)
-	// );
-	// this.add(Catcher.create({name:"Qualification HITs", notify:true}, this.quickWatcher).addFilter(Filter.WORD, "qualif"));
 
 	if (data != null) {
 		watchers = JSON.parse(data);
@@ -1081,8 +1065,6 @@ Dispatch.prototype.load = function() {
 	}
 
 	this.isLoading = false;
-	
-	// this.quickWatcher.onWatchersChanged(this.watchers);
 }
 Dispatch.prototype.remove = function(watcher) {
 	var newArray = new Array();
@@ -1096,7 +1078,6 @@ Dispatch.prototype.remove = function(watcher) {
 	
 	watcher.delete();
 	
-	this.quickWatcher.onWatchersChanged(this.watchers);
 	this.notify(Evt.REMOVE, watcher);
 }
 Dispatch.prototype.moveWatcher = function(from, to) {
@@ -1162,279 +1143,6 @@ Dispatch.prototype.onRequestMainDenied = function() {
 	this.hideWatchers();
 	this.ignoreList.stop();
 }
-
-
-
-
-/** The QuickWatcher simply refreshes the first page for new hits (every 1 second or so) and tries to 
-	match any requester on the list that shows up on the page. Could possibly iterate through each
-	requester initially before doing the quick refresh.
-	
-	Experimental.
-**/
-function QuickWatcher() {
-	var attrs = {
-		id: "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=&minReward=0.00&qualifiedFor=on&x=9&y=14",
-		time: 2500,
-		type: 'url',
-		name: "Quick Watcher"}
-	Watcher.call(this, attrs);
-}
-QuickWatcher.prototype = new Watcher();
-QuickWatcher.prototype.constructor = QuickWatcher;	
-QuickWatcher.filterWatchers = function(watchers) {
-	var filteredWatchers = new Array();
-	
-	for (var i = 0; i < watchers.length; i++) {
-		if (watchers[i].type == 'requester' || watchers[i].type == 'hit')
-			filteredWatchers.push(watchers[i]);
-	}
-	
-	return filteredWatchers;
-}
-QuickWatcher.prototype.sendHits = function(hits) {
-	// console.log(JSON.stringify(hits,null,4));
-	if (typeof hits != 'undefined' && hits.length > 0) {
-		hits = this.filterMessages(hits);
-
-		this.notifyListeners(hits);
-
-		
-		var watchers = this.watchers;
-		var matches = new Array();
-		for (var i = 0; i < hits.length; i++) {
-			var hit = hits[i];
-			
-			for (var j = 0; j < watchers.length; j++) {
-				// console.log("requester.id = " + hit.requesterID + " watcher.id = " + watchers[j].id);
-				if (watchers[j].state.isOn && ((watchers[j].type == 'hit' && hit.id == watchers[j].id)	|| (watchers[j].type == 'requester' && hit.requesterID == watchers[j].id))) {
-					// console.log("Found a match!");
-					// console.log(watchers[j]);
-					matches.push({ watcher: watchers[j], hit: hit });
-				} else {
-					// console.log("No match found");
-				}
-			}
-		}
-		
-		if (matches.length > 0) {
-			console.log("Found matches");
-			console.log(matches);
-			
-			var groups = QuickWatcher.groupMatches(matches);
-			// console.log("groupMatches = ");
-			// console.log(groups);
-			for (var id in groups) {
-				// console.log(id);
-				// console.log("groups=");
-				// console.log(groups);
-				var watcher = dispatch.getWatcherById(id);
-				
-				// Have the watcher load its page to auto-accept if necessary
-				if (watcher.type == 'hit' && watcher.option.auto)
-					watcher.getData();
-				else
-					watcher.setHits(groups[id]);
-			}
-		}
-		
-	}
-}
-/**
-*	Takes an array of hits and groups them in to "sub"-arrays by watcher ID
-**/
-QuickWatcher.groupMatches = function(matches) {
-	// return Groups object { array [ {watcher: watcher, hits: hit[]} ]}
-	// console.log("Matches: ");
-	// console.log(matches);
-	var groups = new Array();
-	// group[0] = { watcher: matches[0].watcher, hits: [matches[0].hit] };
-	for (var i = 0; i < matches.length; i++) {
-		var id = matches[i].watcher.id;
-		
-		if (!(id in groups))
-			groups[id] = [];
-			
-		groups[id].push(matches[i].hit);
-		// console.log("Groups:");
-		// console.log(groups);
-	}
-	return (groups);
-}
-QuickWatcher.prototype.onWatchersChanged = function(watchers) {
-	this.watchers = QuickWatcher.filterWatchers(watchers);	// We only want Requester and Hit watchers
-}
-QuickWatcher.prototype.addListener = function(listener) {
-	if (typeof this.listeners === 'undefined')
-		this.listeners = new Array();
-	this.listeners.push(listener)
-}
-QuickWatcher.prototype.notifyListeners = function(hits) {
-	if (typeof this.listeners !== 'undefined' && this.listeners.length > 0 && hits.length > 0) {
-		for (var i = 0, len = this.listeners.length; i < len; i++) {
-			this.listeners[i].onHitsChanged(hits);
-		}
-	}
-}
-QuickWatcher.prototype.getHTML = function() {
-    Watcher.prototype.getHTML.apply(this);
-	
-	$(".color_code div", this.DOMElement).css('background-color', "#bbb");
-	return this.DOMElement;
-}
-
-function QuickWatcherListener(context) {
-	this.context = context;
-}
-QuickWatcherListener.prototype.onHitsChanged = function(hits) {
-	this.context.setHits(hits);
-}
-
-
-function Catcher(attrs, quickWatcher) {
-	Watcher.call(this, attrs);
-	this.type = 'url';
-	this.listener = new QuickWatcherListener(this);
-	if (typeof quickWatcher !== 'undefined')
-		this.observe(quickWatcher);
-
-    attrs = attrs || {};
-    this.notify = attrs.notify || false;
-}
-Catcher.prototype = new Watcher();
-Catcher.prototype.observe = function(quickWatcher) {
-	quickWatcher.addListener(this.listener);
-}
-Catcher.prototype.setHits = function(hits) {
-    if (typeof hits !== 'undefined') {
-        if (Object.prototype.toString.call(hits) != '[object Array]')
-            hits = new Array(hits);
-        this.sendHits(hits);
-    }
-}
-Catcher.prototype.sendHits = function(hits) {
-	// console.log("Catcher.sendHits() called");
-	// This is where we will filter and store hits with certain attributes. Different subclasses will filter in different ways
-	// or we'll use some kind of filter classes.
-
-	// For now, maybe store every new hit we see?
-	var hasNewHits = false;
-    var filteredHits = new Array();
-	for (var i = 0; i < hits.length; i++) {
-		// if (this.checkConditions(hits[i])) {
-		if (this.checkFilters(hits[i])) {
-			var index = Hit.indexOf(hits[i].id, this.lastHits);
-
-			// Update the hit info if it's already in the list, otherwise add the hit to the top
-            if (index != -1)
-                this.lastHits[index] = hits[i];
-            else
-                this.lastHits.unshift(hits[i]);
-
-            filteredHits.push(hits[i]);
-			hasNewHits = true;
-		}
-	}
-	if (hasNewHits) {
-		this.updateWatcherPanel();
-        this.onChanged();
-		this.newHits = filteredHits;
-		// console.log("New hits = ", this.newHits);
-        if (this.notify) {
-            sendMessage({ header: "new_hits", content: {'title':this.name, 'hits':filteredHits} });
-            notificationPanel.add(new NotificationGroup(this.name, filteredHits));
-        }
-    }
-	// console.log("Stored hits = ", this.lastHits);
-}
-Catcher.prototype.checkFilters = function(hit) {
-	return (typeof this.filter !== 'undefined') ? this.filter.check(hit) : true;
-}
-Catcher.prototype.getHTML = function() {
-    Watcher.prototype.getHTML.apply(this);
-
-    $(".color_code", this.DOMElement).removeClass("color_code");
-    $(".time"      , this.DOMElement).remove();
-    $("br"         , this.DOMElement).remove();
-    $(".bottom"    , this.DOMElement).remove();
-    $(".icons"     , this.DOMElement).remove();
-	$(".name"      , this.DOMElement).css('font-size', "110%").removeAttr('href').removeAttr('target'); 
-	$(".name:hover", this.DOMElement).css('text-decoration', ""); 
-
-    this.DOMElement.css("margin", "-5px 3px 3px 15px");
-    this.DOMElement.css("padding", "0");
-    return this.DOMElement;
-}
-Catcher.prototype.addFilter = function(type, value) {
-	if (typeof this.filter === 'undefined')
-		this.filter = Filter.create(type, value, this);
-	else
-		this.filter.add(type, value);
-	return this;
-}
-Catcher.create = function(attrs, quickWatcher) {
-	var catcher = new Catcher(attrs, quickWatcher);
-	return catcher;
-}
-
-
-function Filter(value, catcher) { this.value = value; this.catcher = catcher; }
-// Enums
-Filter.PRICE     = 1;
-Filter.AVAILABLE = 2;
-Filter.WORD      = 3;
-Filter.REQUESTER = 4;
-
-// This is meant to be over-ridden. Returns true if the hit passes the requirements of the filter.
-Filter.prototype.check = function(hit) { return true }
-
-/**
-*	Adds a filter to the current filter. If this filter already has a filter assigned, tell the assigned filter to
-*	to add the filter. This continues down the chain until we reach the last filter and the new filter to it.
-**/
-Filter.prototype.add = function(type, value) {
-	if (typeof this.filter === 'undefined')
-		this.filter = Filter.create(type, value, this.catcher);
-	else
-		this.filter.add(type, value);
-}
-
-// Returns true if the hit passes the child filter or no child filter exists.
-Filter.prototype.checkFilter = function(hit) { return (typeof this.filter !== 'undefined') ? this.filter.check(hit) : true }
-
-// Filter factory. Creates a filter object based on the type given. Define filter.check() to determine if a hit value passes the filter.
-Filter.create = function(type, value, context) {
-	var filter = new Filter(value, context);
-
-	switch (type) {
-	case Filter.PRICE:
-		filter.check = function(hit) {
-			var reward = parseFloat(hit.reward.substring(1));
-			return reward >= this.value && this.checkFilter(hit);				
-		}
-		break;
-
-	case Filter.AVAILABLE:
-		filter.check = function(hit) {
-			return parseInt(hit.available) >= this.value && this.checkFilter(hit);
-		}
-		break;
-
-	case Filter.WORD:
-		filter.check = function(hit) {
-			return hit.title.toLowerCase().contains(this.value) && this.checkFilter(hit);
-		}
-		break;
-
-	case Filter.REQUESTER:
-		filter.check = function(hit) {
-			return (hit.requesterID != this.value) && this.checkFilter(hit);
-		}
-		break;
-	}
-	return filter;
-}
-
 
 function watcherDialog(watcher, callback) {
 	var dialog = $("<div>").attr('id', 'add_watcher_form').append(
