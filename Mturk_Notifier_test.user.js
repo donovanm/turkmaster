@@ -1931,36 +1931,39 @@ Watcher.prototype.onDataReceived = function(data) {
 Watcher.prototype.parseListing = function(data) {
 	var hitCount = $("table:nth-child(3) > tbody:nth-child(1) > tr", data).length;
 	var hits = new Array();
+	var	qryUrl       = "td:nth-child(3) > span:nth-child(1) > a",
+		qryTitle     = "td:nth-child(1) > a:nth-child(1)",
+		qryRequester = "td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > a",
+		qryReward    = "td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > span:nth-child(1)",
+		qryAvailable = "td:nth-child(3) > table > tbody > tr:nth-child(2) > td:nth-child(2)",
+		qryTime      = "td:nth-child(2) > table > tbody > tr:nth-child(2) > td:nth-child(2)";
 
 	for (var i = 0; i < hitCount; ++i) {
-		// TODO Optimize these jQuery searches. They are being done in a very sub-optimal way as far as speed is concerned.
-		base = "table:nth-child(3) > tbody:nth-child(1) > tr:nth-child(" + (i+1) + ") > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > ";
-		qryRequester = base + "tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > a";
-		qryUrl       = base + "tr:nth-child(2) > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(3) > span:nth-child(1) > a";
-		qryReward    = base + "tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > span:nth-child(1)"
-		qryTitle     = base + "tr:nth-child(2) > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(1) > a:nth-child(1)";
-		qryAvailable = base + "tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(3) > table > tbody > tr:nth-child(2) > td:nth-child(2)";
-		qryTime      = base + "tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > table > tbody > tr:nth-child(2) > td:nth-child(2)";
+		// Get nearby ancestors so jQuery won't have to do a full search for each element (faster)
+		var base    = $("table:nth-child(3) > tbody:nth-child(1) > tr:nth-child(" + (i+1) + ") > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1)", data),
+			topRow  = $("tr:nth-child(2) > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1)", base),
+			content = $("tr:nth-child(3) > td:nth-child(3) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1)", base);
 
 		var hit = new Hit();
-		hit.requester   = $(qryRequester, data).text();
-		hit.requesterID = $(qryRequester, data).attr("href").match(/requesterId=([A-Z0-9]+)/)[1];
-		hit.title       = $(qryTitle, data).text().trim();
-		hit.reward      = $(qryReward, data).text().trim();
-		hit.available   = $(qryAvailable, data).text().trim();
-		hit.time        = $(qryTime, data).text().trim();
+		hit.requester   = $(qryRequester, content).text();
+		hit.requesterID = $(qryRequester, content).attr("href").match(/requesterId=([A-Z0-9]+)/)[1];
+		hit.title       = $(qryTitle, topRow).text().trim();
+		hit.reward      = $(qryReward, content).text().trim();
+		hit.available   = $(qryAvailable, content).text().trim();
+		hit.time        = $(qryTime, content).text().trim();
 		
-		var urlData = $(qryUrl, data);
+		var urlData = $(qryUrl, topRow);
 		hit.url = urlData.attr("href");
 
 		var idMatch = hit.url.match(/(group|notqualified\?hit|requestqualification\?qualification)Id=([A-Z0-9]+)/);
 
-		if (idMatch != null) {
+		if (idMatch !== null) {
 			hit.id = idMatch[2];
 		}
 		
 		hit.canPreview = false;
 		
+		// Check each link to see if user is qualified or can preview the HIT, etc.
 		urlData.each(function() {
 			if (typeof this.href !== 'undefined') {
 				if (this.href.contains("qual"))
@@ -1971,6 +1974,7 @@ Watcher.prototype.parseListing = function(data) {
 		});
 		hits[i] = hit;
 	}
+
 	return hits;
 }
 Watcher.prototype.parseHitPage = function(data) {
