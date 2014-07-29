@@ -131,30 +131,36 @@ function addWatchButton() {
 		
 		// Pull up a Watcher Dialog with default values set
 		watcherDialog(
-			{
+			{	
 				name: name,
 				time: time * 1000,
 				type: type,
 				option: {
-					auto: auto,
-					stopOnCatch: stopOnCatch,
-					alert: alert
+					auto        : auto,
+					alert       : alert,
+					stopOnCatch : stopOnCatch
 				}
 			},
 			function(values) {
-				var id = (document.URL.match(/groupId=([A-Z0-9]+)/) || document.URL.match(/requesterId=([A-Z0-9]+)/) || [,document.URL])[1];
-
-				sendMessage({
-					header: 'add_watcher',
-					content: {
+				var id = (document.URL.match(/groupId=([A-Z0-9]+)/) || document.URL.match(/requesterId=([A-Z0-9]+)/) || [,document.URL])[1],
+					watcher = {
 						id: id,
 						duration: values.time,
-						type: type,
+						type: (type === "page") ? "url" : type,
 						name: values.name,
-						auto: values.auto,
-						stopOnCatch: values.stopOnCatch
-					},
-					timestamp: true
+						option: { 
+							auto        : values.auto,
+							alert       : values.alert,
+							stopOnCatch : values.stopOnCatch
+						}
+					};
+
+				console.log("Watcher", watcher);
+
+				sendMessage({
+					header    : 'add_watcher',
+					content   : watcher,
+					timestamp : true
 				});
 			}
 		);
@@ -1457,7 +1463,7 @@ function watcherDialog(watcher, callback) {
 
 	function hide() {
 		// dialog.hide();
-		dialog.remove();
+		// dialog.remove();
 		dialog.empty();
 		dialog = null;
 	}
