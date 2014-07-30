@@ -255,16 +255,6 @@ function loadHits() {
 		type: 'requester',
 		name: 'Global Media'}));
 	dispatch.add(new Watcher({
-		id: "2593XERSQV669CRFVPUH3WA0RLF19Y",
-		time: 120000,
-		type: 'hit',
-		name: '411 something'}));
-	dispatch.add(new Watcher({
-		id: "249OVHVKCJ016ES446Y9SQWB8AQ57K",
-		time: 120000,
-		type: 'hit',
-		name: 'Brian Muller'}));
-	dispatch.add(new Watcher({
 		id: "A11L036EBWKONR",
 		time: 14000,
 		type: 'requester',
@@ -309,50 +299,16 @@ function loadHits() {
 		type: 'url',
 		name: "Transcription HITs"})); // Transcription HITs
 	dispatch.add(new Watcher({
-		id: "2C4PHMVHVKCJ6T0G85VJB9LU493538",
-		time: 180000,
-		type: 'hit',
-		name: "Crowdsource .20 keywords",
-		option: {alert:true}})); // crowdsource
-	dispatch.add(new Watcher({
-		id: "2KGJ1XERSQV6DMLJAXK3PVWF2PL088",
-		time: 20000,
-		type: 'hit',
-		name: "ACME English",
-		option: {auto:true}}));
-	dispatch.add(new Watcher({
-		id: "2IUC1QP6AUC2D8G00SSXBV0KS4C07H",
-		time: 35000,
-		type: 'hit',
-		name: "ACME Transcription",
-		option: {alert:true}}));
-	dispatch.add(new Watcher({
 		id: "A2S0QCZG8DTNJC",
 		time: 20000,
 		type: 'requester',
 		name: "Procore Development*",
 		option: {alert:true}}));	// Procore Development
 	dispatch.add(new Watcher({
-		id: "A1ZCUBP2G0ZGZM",
-		time: 200000,
-		type: 'requester',
-		name: "Bluejay Labs*",
-		option: {alert:true}})); // Bluejay
-	dispatch.add(new Watcher({
 		id: "AO1GS3CMM2IGY",
 		time: 180000,
 		type: 'requester',
 		name: "Five Star"})); // Five Star
-	dispatch.add(new Watcher({
-		id: "A2PZOEIMR3MMZ",
-		time: 120000,
-		type: 'requester',
-		name: "John Hopkins sentiments"})); // John Hopkins
-	dispatch.add(new Watcher({
-		id: "A3S6NXOO11XCIC",
-		time: 45000,
-		type: 'requester',
-		name: "Mturk Evaluation"})); // Mturk Evaluation
 	dispatch.add(new Watcher({
 		id: "ALZUWU3P4QQSG",
 		time: 45000,
@@ -363,11 +319,6 @@ function loadHits() {
 		time: 45000,
 		type: 'requester',
 		name: "AJ Ghergich (like AndyK)"})); // Find the email
-	dispatch.add(new Watcher({
-		id: "A3LT3IDU51G3EO",
-		time: 45000,
-		type: 'requester',
-		name: "Jeff Strong"})); // Jeff Strong keywords
 	dispatch.isLoading = false;
 	dispatch.save();
 }
@@ -498,7 +449,7 @@ function requestWebNotifications() {
 
 // This is the Hit object
 function Hit(attrs) {
-	var attrs = attrs || {};
+	attrs = attrs || {};
 	this.id           = attrs.id;
 	this.uid          = attrs.uid;
 	this.isAutoAccept = attrs.isAutoAccept || false;
@@ -529,7 +480,7 @@ Hit.prototype.getURL = function(type) {
 		default:
 			return "";
 	}
-}
+};
 // Returns the position of a hit in a hit array by its ID
 Hit.indexOf = function(hitId, hits) {
     for (var i = 0, len = hits.length; i < len; i++) {
@@ -537,7 +488,7 @@ Hit.indexOf = function(hitId, hits) {
             return i;
     }
     return -1;
-}
+};
 // Returns true if there are multiple hits in the array and all of the hits are from the same requester
 Hit.isSameRequester = function(hits) {
 	if (hits.length > 1) {
@@ -550,7 +501,7 @@ Hit.isSameRequester = function(hits) {
 	} else {
 		return false;
 	}
-}
+};
 
 // Message object (Not used)
 function Message() {
@@ -773,18 +724,22 @@ var DispatchUI = {
 		$("body").css('margin', "0").prepend(div);
 
 		var ctrl = $("#controller", div);
-		ctrl.append($("<a>")
+		var settingsBtn = ctrl.append($("<a>")
 				.attr('id', "settings")
 				.attr('href', "javascript:void(0)")
 				.attr('title', "Settings")
-				.html("<img src=\"http://qrcode.littleidiot.be/qr-little/site/images/icon-settings.png\" />")
+				.html('<img id="settings" />')
 				.click(function() { requestWebNotifications(); })
 			)
 			.append("Mturk Notifier")
 			.append('<div class="on_off"><a>ON</a><a>OFF</a></div>');
 
-		if (DispatchUI.dispatch.isRunning) $(".on_off", ctrl).addClass("on");
+		// Adding the data URL inline wouldn't work for some reason, so I'm doing it this way.
+		// Image from http://latierrasenosestrecha.org/wp-content/themes/purity/img/icons/settings.png
+		$("img", settingsBtn)[0].src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA2RpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDpFRUQ3N0Q2NkUyQjJFMDExOTM4OUZBRkY5RUM4NjkxMiIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDpFQjNFQjA2OEIyRTYxMUUwOUZDRUUxRERBNzIzQkY1NyIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDpFQjNFQjA2N0IyRTYxMUUwOUZDRUUxRERBNzIzQkY1NyIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ1M1IFdpbmRvd3MiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDpFRkQ3N0Q2NkUyQjJFMDExOTM4OUZBRkY5RUM4NjkxMiIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDpFRUQ3N0Q2NkUyQjJFMDExOTM4OUZBRkY5RUM4NjkxMiIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PiP+YRgAAALDSURBVHja7FdPZB1BGJ9tawmt8HinrUQpjdBqqFaq5BChJBI5xCvVQ1mPRq89hGqkeusxpLpKDtFTqpEorUZKKdFcWo2WR7REwyOE8niUeP19/Jbxmd3NbjXv0Aw/szO733z/ft/MrNdqtUw72zHT5tZ2A04UEYqiaBTdPFAC9oDb1Wp15TAjMEflhv3cP4kAPC2j6wK24OEv61WgPg2U3El054BtyO2m6fCSqgCLDKBbBjqBHWAQ+A3cAmYcItPAAp/XgDOAGD0GI97nMgDKRel3K8yGuRbP/BSHxMCGkhMjemBEPQ8HetUica79jJT6Djlx5nxeEn4GagnvNiSswCl45UnP8UbC99vAehEOSA4/AmUrvPeBF8A9YJgEFQVvgMdABXhgRUoIeBWGbhUtw07rOWRkvgB3qNywrwKfGIVJJb9fdB+oWJ6Ih8LkRRLR1WT+JfAO+GBxonLgMkTYx9E9cxBpBLgO3OW4xt1vHTJDlIkj8oQGPFdrSBWFkFlKi8CsQ7khicat8YQolwf0qyrso4yWcVTRbFYKAofgPpTsWWRsYrzJiL2yKiNuZZLP1YIsA1ybxXEoKlmLdmB8kd6PcK7f+n7XMtZkra/PgpAHS5eaFwUrZL+0RRgRMtfD6jASwg4k7AeTefaBGda0NMnzTeBrincx0XpYDdc49xCRmi5ShpHkm89D9PRGSn5lfoJkjZU3uU6hfcDnwRK3p0zFBS5at/Iacb5fMb2Rsm8kG4Dwd6B7q8ItBj3iES0p6eNZ0Mfxa773VUWs8XTNdSERlp9NeHeZO6IYepBLT0CZ1Twp+EZCaYI1M5Q1HXJyH9jMlQJev8YoLO0HcAXoBqYS1pri+0v83lg3onru45ghLvFqVcMiDWu+5TDaUxzq/as7YcZl9afaVneg6PRhXstDVYZh0Wu5d/Rv+N8b8EeAAQBg+uBx8hdn9gAAAABJRU5ErkJggg==";
 
+		if (DispatchUI.dispatch.isRunning)
+			$(".on_off", ctrl).addClass("on");
 	},
 
 	addActions: function() {
@@ -827,6 +782,7 @@ var DispatchUI = {
 			#dispatcher #controller { text-align: center; font: 160% Candara; color: #585858; position: relative; height: 20px; }\
 			#dispatcher #controller .on_off { margin: 7px 5px 0 0 }\
 			#dispatcher #controller .on_off a { font: 80% Helvetica }\
+			#dispatcher #controller #settings { top: -3px; position: relative; width: 23px;}\
 			#dispatcher #watcher_container { position: absolute; top: 20px; bottom: 0; overflow-y:auto; width: 100%;}\
 			#dispatcher #watcher_container p { margin: 30px 0px }\
 			#dispatcher #watcher_container .error_button a { text-decoration: none; color: #555; background-color: #fff; padding: 3px 10px; margin: 5px; border: 1px solid #aaa; border-radius: 2px }\
