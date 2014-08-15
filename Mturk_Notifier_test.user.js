@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name        Mturk Notifier test
-// @namespace   12345
+// @namespace   https://greasyfork.org/users/3408
 // @description Testing out stuff for a notifier for Mturk
 // @include     https://www.mturk.com/mturk/*
 // @version     0.96
@@ -128,7 +128,7 @@ function addWatchButton() {
 			}
 		} else if (pageType.SEARCH) {
 			name = document.URL.match(/searchWords=([^&]*)/);
-			name = (typeof name !== 'undefined') ? name[1] : "";
+			name = (name !== null) ? name[1] : "";
 		}
 		
 		// Pull up a Watcher Dialog with default values set
@@ -146,15 +146,13 @@ function addWatchButton() {
 			function(values) {
 				var id = (document.URL.match(/groupId=([A-Z0-9]+)/) || document.URL.match(/requesterId=([A-Z0-9]+)/) || [,document.URL])[1],
 					watcher = {
-						id: id,
-						duration: values.time,
-						type: (type === "page") ? "url" : type,
-						name: values.name,
-						option: { 
-							auto        : values.auto,
-							alert       : values.alert,
-							stopOnCatch : values.stopOnCatch
-						}
+						id          : id,
+						duration    : values.time,
+						type        : (type === "page") ? "url" : type,
+						name        : values.name,
+						auto        : values.auto,
+						alert       : values.alert,
+						stopOnCatch : values.stopOnCatch
 					};
 
 				console.log("Watcher", watcher);
@@ -1109,27 +1107,26 @@ function watcherDialog(watcher, callback) {
 		$("<label>").text(" Time ").append(
 			$("<input>").attr('id', "watcherDuration").attr('type', "text").val(watcher.time / 1000))
 		),
-	(watcher.type == "hit") ?
+		(watcher.type == "hit") ?
+			$("<p>").append(
+				$("<input>").attr('type', "checkbox").attr('id', "autoaccept").prop('checked', watcher.option.auto),
+				$("<label>").attr('for', "autoaccept").text("Auto-accept")
+				)
+			: "",
+		(watcher.type == "hit") ?
+			$("<p>").append(
+				$("<input>").attr('type', "checkbox").attr('id', "stopaccept").prop('checked', watcher.option.stopOnCatch),
+				$("<label>").attr('for', "stopaccept").text("Stop on accept")
+				)
+			: "",
 		$("<p>").append(
-			$("<input>").attr('type', "checkbox").attr('id', "autoaccept").prop('checked', watcher.option.auto),
-			$("<label>").attr('for', "autoaccept").text("Auto-accept")
+			$("<input>").attr('type', "checkbox").attr('id', "alert").prop('checked', watcher.option.alert),
+			$("<label>").attr('for', "alert").text("Alert")
+			),
+		$("<p>").addClass("form_buttons").append(
+			$("<input>").attr('type', "button").attr('value', "Save"),
+			$("<input>").attr('type', "button").attr('value', "Cancel")
 			)
-		: "",
-	(watcher.type == "hit") ?
-		$("<p>").append(
-			$("<input>").attr('type', "checkbox").attr('id', "stopaccept").prop('checked', watcher.option.stopOnCatch),
-			$("<label>").attr('for', "stopaccept").text("Stop on accept")
-			)
-		: "",
-	$("<p>").append(
-		$("<input>").attr('type', "checkbox").attr('id', "alert").prop('checked', watcher.option.alert),
-		$("<label>").attr('for', "alert").text("Alert")
-		)
-	,
-	$("<p>").addClass("form_buttons").append(
-		$("<input>").attr('type', "button").attr('value', "Save"),
-		$("<input>").attr('type', "button").attr('value', "Cancel")
-		)
 	);
 
 	function save() {
@@ -1169,10 +1166,10 @@ function watcherDialog(watcher, callback) {
 
 	$("body").append(dialog);
 
-	if ($("#watcherName", dialog).text() == "")
-		$("#watcherDuration", dialog).focus().select();
-	else
+	if ($("#watcherName", dialog).val() === "")
 		$("#watcherName", dialog).focus().select();
+	else
+		$("#watcherDuration", dialog).focus().select();
 }
 
 function WatcherUI() { /* Nothing */ };
