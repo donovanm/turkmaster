@@ -68,13 +68,13 @@ $(window).unload(function() {
 });
 
 function onStorageEvent(event) {
-	if (event.key.substring(0,13) == "notifier_msg_")
+	if (event.key.substring(0,13) === "notifier_msg_")
 		onMessageReceived(event.key.substring(13), JSON.parse(event.newValue).content);
 }
 
 function checkPageType() {
 	// Dashboard, hit, requester, search
-	if (document.URL == "https://www.mturk.com/mturk/dashboard")
+	if (document.URL === "https://www.mturk.com/mturk/dashboard")
 		pageType.DASHBOARD = true;
 	else if (document.URL.match(/https:\/\/www.mturk.com\/mturk\/(preview|accept).+groupId=.*/) !== null)
 		pageType.HIT = true;
@@ -482,7 +482,7 @@ Hit.prototype.getURL = function(type) {
 // Returns the position of a hit in a hit array by its ID
 Hit.indexOf = function(hitId, hits) {
     for (var i = 0, len = hits.length; i < len; i++) {
-        if (hitId == hits[i].id)
+        if (hitId === hits[i].id)
             return i;
     }
     return -1;
@@ -492,7 +492,7 @@ Hit.isSameRequester = function(hits) {
 	if (hits.length > 1) {
 		var compareRequester = hits[0].requester;
 		for (var i = 1, len = hits.length; i < len; i++) {
-			if (compareRequester != hits[i].requester)
+			if (compareRequester !== hits[i].requester)
 				return false;
 		}
 		return true;
@@ -560,7 +560,7 @@ IgnoreList.prototype.save = function() {
 IgnoreList.prototype.load = function() {
 	var storedItems = localStorage.getItem('notifier_ignore');
 
-	if (storedItems != null) {
+	if (storedItems !== null) {
 		try {
 			this.items = JSON.parse(storedItems);
 			console.log(this.items.length + " ignored items loaded");
@@ -584,7 +584,7 @@ IgnoreList.prototype.stop = function() {
 	clearInterval(this.interval);
 }
 IgnoreList.prototype.contains = function(item) {
-	return (this.items.indexOf(item) != -1);
+	return (this.items.indexOf(item) !== -1);
 }
 IgnoreList.prototype.add = function(item) {
 	if (!this.contains(item))
@@ -596,7 +596,7 @@ IgnoreList.prototype.remove = function(item) {
 		var newList = new Array();
 		
 		for (var i = 0, len = this.items.length; i < len; i++) {
-			if (i != pos)
+			if (i !== pos)
 				newList.push(this.items[i]);
 		}
 		this.items = newList;
@@ -914,7 +914,7 @@ var DispatchUI = {
 				// Reset all watcher offsets
 				$("#watcher_container .watcher").css('top', '');
 
-				if (startPos != endPos) {
+				if (startPos !== endPos) {
 					if (endPos > startPos)
 						dragDiv.insertAfter($("#watcher_container .watcher")[endPos]);
 					else
@@ -1006,7 +1006,7 @@ Dispatch.prototype.load = function() {
 	var data = localStorage.getItem('notifier_watchers');
 	var watchers;
 
-	if (data != null) {
+	if (data !== null) {
 		watchers = JSON.parse(data);
 		try {
 			for(var i = 0; i < watchers.length; i++) this.add(new Watcher(watchers[i]));
@@ -1024,7 +1024,7 @@ Dispatch.prototype.remove = function(watcher) {
 	var newArray = new Array();
 
 	for (var i = 0, len = this.watchers.length; i < len; i++) {
-		if (this.watchers[i] != watcher)
+		if (this.watchers[i] !== watcher)
 			newArray.push(this.watchers[i]);
 	}
 	this.watchers = newArray;
@@ -1044,7 +1044,7 @@ Dispatch.prototype.moveWatcher = function(from, to) {
 Dispatch.prototype.getWatcherById = function(id) {
 	if (this.watchers.length > 0) {
 		for (var i = 0, len = this.watchers.length; i < len; i++) {
-			if (this.watchers[i].id == id)
+			if (this.watchers[i].id === id)
 				return this.watchers[i];
 		}
 	}
@@ -1107,13 +1107,13 @@ function watcherDialog(watcher, callback) {
 		$("<label>").text(" Time ").append(
 			$("<input>").attr('id', "watcherDuration").attr('type', "text").val(watcher.time / 1000))
 		),
-		(watcher.type == "hit") ?
+		(watcher.type === "hit") ?
 			$("<p>").append(
 				$("<input>").attr('type', "checkbox").attr('id', "autoaccept").prop('checked', watcher.option.auto),
 				$("<label>").attr('for', "autoaccept").text("Auto-accept")
 				)
 			: "",
-		(watcher.type == "hit") ?
+		(watcher.type === "hit") ?
 			$("<p>").append(
 				$("<input>").attr('type', "checkbox").attr('id', "stopaccept").prop('checked', watcher.option.stopOnCatch),
 				$("<label>").attr('for', "stopaccept").text("Stop on accept")
@@ -1179,14 +1179,14 @@ WatcherUI.create = function(watcher) {
 		.html('<div class="details"> > </div>\
 		<div>\
 			<div class="on_off"><a>ON</a><a>OFF</a></div>\
-			<a class="name" href="' + watcher.getURL() + '" target="_blank">' + ((typeof watcher.name != 'undefined') ? watcher.name : watcher.id) + '</a>\
+			<a class="name" href="' + watcher.getURL() + '" target="_blank">' + ((typeof watcher.name !== 'undefined') ? watcher.name : watcher.id) + '</a>\
 			<div class="bottom">\
 	            <span class="time">' + (watcher.time / 1000) + ' seconds </span>\
 	            <span class="icons">\
 	                <a class="edit" href="javascript:void(0)"><img src="http://i.imgur.com/peEhuHZ.png" /></a>\
 	                <a class="delete" href="javascript:void(0)"><img src="http://i.imgur.com/5snaSxU.png" /></a>\
 	            </span>\
-				<div class="last_updated" title="Last checked: ' + ((typeof watcher.date != 'undefined') ? watcher.date.toString() : "n/a") + '">' + ((typeof watcher.date !== 'undefined') ? watcher.getFormattedTime() : "n/a") + '</div>\
+				<div class="last_updated" title="Last checked: ' + ((typeof watcher.date !== 'undefined') ? watcher.date.toString() : "n/a") + '">' + ((typeof watcher.date !== 'undefined') ? watcher.getFormattedTime() : "n/a") + '</div>\
 			</div>\
 			<div class="color_code"><div></div></div>\
 		</div>');
@@ -1262,13 +1262,13 @@ WatcherUI.create = function(watcher) {
 
 	// Add colors for watcher type
 	var colorCode = $(".color_code", div);
-	if (watcher.type == 'hit') {
+	if (watcher.type === 'hit') {
 		colorCode.addClass("hit");
 		colorCode.attr('title', "HIT Watcher");
-	} else if (watcher.type == 'requester') {
+	} else if (watcher.type === 'requester') {
 		colorCode.addClass("requester");
 		colorCode.attr('title', "Requester Watcher");
-	} else if (watcher.type == 'url') {
+	} else if (watcher.type === 'url') {
 		colorCode.addClass("url");
 		colorCode.attr('title', "URL Watcher");
 	}
@@ -1392,7 +1392,7 @@ Watcher.prototype.setAuto = function(isAuto) {
 	this.setUrl();
 }
 Watcher.prototype.isNewHit = function (hit) {
-	return (this.newHits.indexOf(hit) != -1);
+	return (this.newHits.indexOf(hit) !== -1);
 }
 Watcher.prototype.onChanged = function() {
 	this.isUpdated = true;
@@ -1443,12 +1443,12 @@ Watcher.prototype.filterMessages = function(newHits) {
 			if (!dispatch.isMuted(newHits[i].id)) {
 				// Compare URLs for now. Should just use IDs in the future
 				for (var j = 0, len2 = this.lastHits.length; j < len2; j++) {
-					if (newHits[i].url == this.lastHits[j].url) {
+					if (newHits[i].url === this.lastHits[j].url) {
 						break;
 					}
 					
 					// If we reach the end with no matches, add it to the changed hits array
-					if (j == len2 - 1 ) {
+					if (j === len2 - 1 ) {
 						filteredHits.push(newHits[i]);
 						this.isChanged = true;
 					}
@@ -1520,7 +1520,7 @@ Watcher.prototype.setValues = function(values) {
 	this.option.stopOnCatch = val.stopOnCatch;
 	this.option.alert = val.alert;
 
-	if (typeof val.time !== 'undefined' && this.time != val.time) {
+	if (typeof val.time !== 'undefined' && this.time !== val.time) {
 		this.time = val.time;
 		console.log("this.state.isRunning", this.state.isRunning);
 		if (this.state.isRunning) {
@@ -1542,7 +1542,7 @@ Watcher.prototype.getFormattedTime = function() {
 			if (hours > 12)
 				hours -= 12;
 			ampm = "pm";
-		} else if (hours == 0) {
+		} else if (hours === 0) {
 			hours = 12;
 		}
 			
@@ -1558,7 +1558,7 @@ Watcher.prototype.getFormattedTime = function() {
 }
 Watcher.prototype.setHits = function(hits) {
 	if (typeof hits !== 'undefined') {
-		if (Object.prototype.toString.call(hits) != '[object Array]')
+		if (Object.prototype.toString.call(hits) !== '[object Array]')
 			hits = new Array(hits);
 		this.sendHits(hits);
 	}
@@ -1567,7 +1567,7 @@ Watcher.prototype.setHits = function(hits) {
 Watcher.prototype.sendHits = function(hits) {
 	// Only send the hits if there is actually something to send
 	// In the near future this will have to be changed to show when HITs go away completely
-	if (typeof hits != 'undefined' && hits.length > 0) {
+	if (typeof hits !== 'undefined' && hits.length > 0) {
 		hits = this.filterMessages(hits);
 		// console.log(JSON.stringify(hits,null,4));
 		if (hits.length > 0) {
@@ -1601,7 +1601,7 @@ Watcher.prototype.onDataReceived = function(data) {
 		}
 	}
 
-	if (this.type == 'hit')
+	if (this.type === 'hit')
 		this.setHits(this.parseHitPage(data));
 	else
 		this.setHits(this.parseListing(data));
@@ -1723,7 +1723,7 @@ var Loader           = function() {
 			queue.push({url: url, callback: callback, watcher: watcher});
 
 			// If queue length is now 1 and was paused, it means we should resume loading
-			if (queue.length == 1 && paused) {
+			if (queue.length === 1 && paused) {
 				paused = false;
 				_next();
 			}
@@ -1734,7 +1734,7 @@ var Loader           = function() {
 	function _isQueued(watcher) {
 		if (queue.length > 0) {
 			for (var i = 0, len = queue.length; i < len; i++)
-				if (queue[i].watcher == watcher)
+				if (queue[i].watcher === watcher)
 					return true;
 		}
 		return false;
@@ -1802,7 +1802,7 @@ NotificationPanel.prototype.remove = function(notification) {
 
 	var newArray = new Array();
 	for (var i = 0, len = this.notifications.length; i < len; i++)
-		if (this.notifications[i] != notification)
+		if (this.notifications[i] !== notification)
 			newArray.push(this.notifications[i]);
 			
 	this.notifications = newArray;
@@ -1832,7 +1832,7 @@ NotificationPanel.prototype.animatePanel = function(currentX, toX) {
 	currentX += ((currentX < toX) ? 40 : -40);
 	this.getDOMElement().css('right', currentX + "px");
 	
-	if (currentX != toX)
+	if (currentX !== toX)
 		this.animationTimeout = setTimeout(function() {  _this.animatePanel(currentX, toX); }, 10);
 }
 NotificationPanel.prototype.createPanel = function() {
@@ -1947,14 +1947,14 @@ NotificationPanel.prototype.onTimeoutListener = function(notification) {
 function NotificationGroup(title, hits, isSticky, watcher) {
 	this.title = title;
 	this.hits = hits;
-	this.isSticky = (typeof isSticky != 'undefined') ? isSticky : this.hasAutoAccept();
+	this.isSticky = (typeof isSticky !== 'undefined') ? isSticky : this.hasAutoAccept();
 	this.timeout = (this.isSticky) ? 15000 : 6000;
 	this.hasTimedOut = false;
-	if (typeof watcher != 'undefined') this.watcher = watcher;
+	if (typeof watcher !== 'undefined') this.watcher = watcher;
 	
 	var _this = this;
 	setTimeout(function() {
-		if (typeof _this.onTimeout != 'undefined' && _this.onTimeout != null) {
+		if (typeof _this.onTimeout !== 'undefined' && _this.onTimeout !== null) {
 			_this.hasTimedOut = true;
 			_this.onTimeout(_this);
 		}
@@ -1964,12 +1964,12 @@ function NotificationGroup(title, hits, isSticky, watcher) {
 }
 NotificationGroup.prototype.createDOMElement = function() {
 	var div = $('<div>').addClass("notification_group")
-		.append((this.title != null) ? $('<h3>').html(this.title) : "")
+		.append((this.title !== null) ? $('<h3>').html(this.title) : "")
 		.append((Hit.isSameRequester(this.hits)) ? $('<h4>').html(this.hits[0].requester) : "");
 	
 	var isSameReq = Hit.isSameRequester(this.hits);
 	for (var i = 0, len = this.hits.length; i < len; i++)
-		$(div).append((new NotificationHit(this.hits[i], isSameReq, (typeof this.watcher != 'undefined') ? this.watcher : null)).getDOMElement());
+		$(div).append((new NotificationHit(this.hits[i], isSameReq, (typeof this.watcher !== 'undefined') ? this.watcher : null)).getDOMElement());
 	
 	if (this.hits[0].isAutoAccept)
 		div.addClass("autoaccept");
@@ -2001,7 +2001,7 @@ NotificationGroup.prototype.fadeOut = function(duration) {
 function NotificationHit(hit, isSameReq, watcher) {
 	this.hit = hit;
 	this.isSameReq = isSameReq;
-	if (typeof watcher != 'undefined') this.watcher = watcher;
+	if (typeof watcher !== 'undefined') this.watcher = watcher;
 	
 	this.createDOMElement();
 }
@@ -2022,7 +2022,7 @@ NotificationHit.prototype.createDOMElement = function() {
 		.append($('<div>').addClass("mute"));
 
 	// Add links
-	if (typeof hit.id != 'undefined' && hit.id != "undefined" && hit.isQualified) {
+	if (typeof hit.id !== 'undefined' && hit.id !== "undefined" && hit.isQualified) {
 		if (this.hit.isAutoAccept) {
 			$(".links", notification)
 				.append($('<a>').addClass("hit_link").attr('href', hit.getURL('view')).attr('target', "_blank").html("View"))
@@ -2061,7 +2061,7 @@ NotificationHit.prototype.createDOMElement = function() {
 	$(muteButton).text((typeof dispatch !== 'undefined' && dispatch.isMuted(id)) ? "muted" : "mute");
 	$(muteButton).click(function () {
 		if (!pageType.DASHBOARD || (pageType.DASHBOARD && !pageType.MAIN)) {
-			if ($(this).text() == "mute")
+			if ($(this).text() === "mute")
 				sendMessage({ header: "mute_hit", content: id, timestamp: true });
 			else
 				sendMessage({ header: "unmute_hit", content: id, timestamp: true });
@@ -2072,7 +2072,7 @@ NotificationHit.prototype.createDOMElement = function() {
 				dispatch.unmute(id);
 		}
 
-		if ($(this).text() == "mute")
+		if ($(this).text() === "mute")
 			$(this).text("muted");
 		else
 			$(this).text("mute");
@@ -2081,7 +2081,7 @@ NotificationHit.prototype.createDOMElement = function() {
 	if (hit.isAutoAccept)
 		notification.addClass("autoaccept");
 
-	if  (typeof this.watcher != 'undefined' && this.watcher != null && this.watcher.isNewHit(hit))
+	if  (typeof this.watcher !== 'undefined' && this.watcher !== null && this.watcher.isNewHit(hit))
 		$(notification).addClass("new");
 
 	$(notification).append(muteButton);
