@@ -591,16 +591,10 @@ IgnoreList.prototype.add = function(item) {
 		this.items.push(item);
 }
 IgnoreList.prototype.remove = function(item) {
-	if (this.contains(item)) {
-		var pos = this.items.indexOf(item);
-		var newList = new Array();
-		
-		for (var i = 0, len = this.items.length; i < len; i++) {
-			if (i !== pos)
-				newList.push(this.items[i]);
-		}
-		this.items = newList;
-	}
+	var index = this.items.indexOf(item);
+
+	if (index !== -1)
+		this.items.splice(index, 1);
 }
 
 
@@ -1021,17 +1015,13 @@ Dispatch.prototype.load = function() {
 	this.isLoading = false;
 }
 Dispatch.prototype.remove = function(watcher) {
-	var newArray = new Array();
+	var index = this.watchers.indexOf(watcher);
 
-	for (var i = 0, len = this.watchers.length; i < len; i++) {
-		if (this.watchers[i] !== watcher)
-			newArray.push(this.watchers[i]);
-	}
-	this.watchers = newArray;
-	this.save();
-	
+	if (index !== -1)
+		this.watchers.splice(index, 1);
+
 	watcher.delete();
-	
+	this.save();
 	this.notify(Evt.REMOVE, watcher);
 }
 Dispatch.prototype.moveWatcher = function(from, to) {
