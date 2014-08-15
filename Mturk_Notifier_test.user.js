@@ -1799,31 +1799,15 @@ NotificationPanel.prototype.remove = function(notification) {
 }
 NotificationPanel.prototype.show = function() {
 	if (this.isHidden) {
-		if (document.hasFocus() && settings.animation) {
-			this.getDOMElement().css('right', "0px");
-		} else {
-			this.getDOMElement().css('right', "0px");
-		}
+		this.getDOMElement().removeClass("hidden");
 	}
 	this.isHidden = false;
 }
 NotificationPanel.prototype.hide = function() {
 	if (!this.isHidden) {
-		if (document.hasFocus() && settings.animation) {
-			this.getDOMElement().css('right', "-400px");
-		} else {
-			this.getDOMElement().css('right', "-400px");
-		}
+		this.getDOMElement().addClass("hidden");
 	}
 	this.isHidden = true;
-}
-NotificationPanel.prototype.animatePanel = function(currentX, toX) {
-	var _this = this;
-	currentX += ((currentX < toX) ? 40 : -40);
-	this.getDOMElement().css('right', currentX + "px");
-	
-	if (currentX !== toX)
-		this.animationTimeout = setTimeout(function() {  _this.animatePanel(currentX, toX); }, 10);
 }
 NotificationPanel.prototype.createPanel = function() {
 	var _this = this;
@@ -1836,28 +1820,37 @@ NotificationPanel.prototype.createPanel = function() {
 
 	addStyle("\
 		#receiver.notification_panel { \
-			position: fixed;\
-			width: 400px;\
-			bottom: 0px;\
+			position      : fixed;\
+			width         : 400px;\
+			bottom        : 0px;\
+			right         : 0px;\
+			background    : rgba(255, 255, 255, 1);\
+			padding       : 5px;\
+			font          : 9pt Verdana;\
+			border        : 1px solid #d5d5d5;\
+			border-size   : 1px 0 0 1px;\
+			overflow      : auto;\
+			border-radius :  5px 0 0 0;\
+			border-right  : 0;\
+			transition    : right 0.2s;\
+		}\
+		#receiver.notification_panel.hidden {\
 			right: -400px;\
-			background: rgba(255, 255, 255, 1);\
-			padding: 5px;\
-			font: 9pt Verdana;\
-			border: 1px solid #d5d5d5;\
-			border-size: 1px 0 0 1px;\
-			overflow: auto;\
-			border-radius:  5px 0 0 0;\
-			border-right: 0;\
-			transition: right 0.2s;\
-			}\
+		}\
 		#receiver .notification_group {\
-			background: #fdfdfd;\
-			border: 1px solid #eaeaea;\
-			padding: 5px;\
-			margin: 10px 0;\
-			opacity: 1;\
-			overflow: hidden;\
-			transition: opacity 0.7s, max-height 0.2s ease-in-out 0.7s, margin 0.2s linear 0.7s, padding 0.2s linear 0.7s;\
+			background : #fdfdfd;\
+			border     : 1px solid #eaeaea;\
+			padding    : 5px;\
+			margin     : 10px 0;\
+			opacity    : 1;\
+			overflow   : hidden;\
+			transition : opacity 0.7s, max-height 0.2s ease-in-out 0.7s, margin 0.2s linear 0.7s, padding 0.2s linear 0.7s;\
+		}\
+		#receiver .notification_group.removed {\
+			opacity    : 0;\
+			max-height : 0;\
+			padding    : 0;\
+			margin     : 0;\
 		}\
 		#receiver div { font-size: 8pt; }\
 		#receiver .notification_group h3 { margin: 3px; font-face: verdana }\
@@ -1865,34 +1858,41 @@ NotificationPanel.prototype.createPanel = function() {
 		.notification_panel h2, #details_panel h2 { font-size: 100%; font-weight: normal; margin: 0px }\
 		.notification { padding: 3px 3px 0 5px; background-color: #fff; border-bottom: 1px solid #e9e9e9; position: relative; font: 10pt Verdana; }\
 		.notification:last-child { border: none; padding-bottom: 3px }\
-		.notification .mute { position: absolute; bottom: 4px; right: 5px; color: #999; cursor: pointer; font-size: 7pt }\
+		.notification .mute {\
+			position  : absolute;\
+			bottom    : 4px;\
+			right     : 5px;\
+			color     : #999;\
+			cursor    : pointer;\
+			font-size : 7pt;\
+		}\
 		.notification p { margin: -13px 0 0; padding: 0 }\
 		.notification_panel a:link, .notification_panel a:visited {\
-			font-size: 130%;\
-			text-decoration: none;\
-			color: #6bf;\
+			font-size       : 130%;\
+			text-decoration : none;\
+			color           : #6bf;\
 			}\
 		.notification_panel a.title:link, .notification_panel a.title:visited {\
-			display:block;\
-			white-space: nowrap;\
-			overflow: hidden;\
-			text-overflow: ellipsis;\
-			margin-bottom: 0px;\
-			font-size: 9pt;\
+			display       : block;\
+			white-space   : nowrap;\
+			overflow      : hidden;\
+			text-overflow : ellipsis;\
+			margin-bottom : 0px;\
+			font-size     : 9pt;\
 			}\
 		.notification_panel .links {\
-			position: absolute;\
-			bottom: 6px;\
-			right: 35px;\
+			position : absolute;\
+			bottom   : 6px;\
+			right    : 35px;\
 			}\
 		.notification_panel a.hit_link {\
-			font-size: 8pt;\
-			color: #fafafa;\
-			background: #6bf;\
-			border-radius: 1px;\
-			display: inline;\
-			margin: 10px 5px 0 0;\
-			padding: 0 6px;\
+			font-size     : 8pt;\
+			color         : #fafafa;\
+			background    : #6bf;\
+			border-radius : 1px;\
+			display       : inline;\
+			margin        : 10px 5px 0 0;\
+			padding       : 0 6px;\
 			}\
 		.notification_panel a.hit_link:visited { background-color: #9df; }\
 		.notification_panel a strong { color:black; }\
@@ -1900,9 +1900,9 @@ NotificationPanel.prototype.createPanel = function() {
 		.notification_panel a.hit_link:hover { background: #8df; }\
 		.notification_panel p {	margin: 1px 0 6px 0; }\
 		.notification_panel .autoaccept {\
-			background-color: rgba(148, 236, 255, .3);\
-			background-color: rgba(214, 255, 91, 1);\
-			background-color: rgba(252, 255, 143, 1);\
+			background-color : rgba(148, 236, 255, .3);\
+			background-color : rgba(214, 255, 91, 1);\
+			background-color : rgba(252, 255, 143, 1);\
 		}\
 		.notification.not_qualified { background-color: rgba(245, 244, 229, 1) }\
 		.notification_panel .new { background-color: rgba(220, 255, 228, 1); }");
@@ -1979,10 +1979,7 @@ NotificationGroup.prototype.hasAutoAccept = function() {
 	return hasAutoAccept;
 }
 NotificationGroup.prototype.fadeOut = function(duration) {
-	$(this.getDOMElement()).css('opacity', "0");
-	$(this.getDOMElement()).css('max-height', "0");
-	$(this.getDOMElement()).css('padding', "0");
-	$(this.getDOMElement()).css('margin', "0");
+	this.getDOMElement().addClass("removed");
 }
 
 /** The Notification object. This holds the notification data for individual hits
