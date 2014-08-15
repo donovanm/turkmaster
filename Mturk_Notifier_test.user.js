@@ -404,7 +404,7 @@ function sendBrowserNotification(hits, watcher) {
 		if (!wasViewed) {
 			var bodyText = "";
 			
-			for (i = 0; i < hits.length; i++)
+			for (var i = 0, len = hits.length; i < len; i++)
 				bodyText += "\n" + hits[i].title.substring(0, 40) + ((hits[i].title.length > 40) ? "..." : "") + "\n" + hits[i].reward + "\n";
 
 			var notification = new Notification(
@@ -491,7 +491,7 @@ Hit.indexOf = function(hitId, hits) {
 Hit.isSameRequester = function(hits) {
 	if (hits.length > 1) {
 		var compareRequester = hits[0].requester;
-		for (var i = 1, len = hits.length; i < len; ++i) {
+		for (var i = 1, len = hits.length; i < len; i++) {
 			if (compareRequester != hits[i].requester)
 				return false;
 		}
@@ -595,7 +595,7 @@ IgnoreList.prototype.remove = function(item) {
 		var pos = this.items.indexOf(item);
 		var newList = new Array();
 		
-		for (var i = 0; i < this.items.length; i++) {
+		for (var i = 0, len = this.items.length; i < len; i++) {
 			if (i != pos)
 				newList.push(this.items[i]);
 		}
@@ -953,7 +953,7 @@ Dispatch.prototype = new Evt();
 Dispatch.prototype.start = function() {
 	if (this.watchers.length > 0) {
 		var count = 0;
-		for (i = 0; i < this.watchers.length; ++i) {
+		for (var i = 0, len = this.watchers.length; i < len; i++) {
 			// Don't start them all at the same time. There is a 2 second delay
 			// between each start. It had to be done in a self-executing function
 			// in order for the setTimeout to work properly.
@@ -970,7 +970,7 @@ Dispatch.prototype.start = function() {
 Dispatch.prototype.stop = function() {
 	// Stop all Watchers
 	if (this.watchers.length > 0) {
-		for (i = 0; i < this.watchers.length; ++i)
+		for (var i = 0, len = this.watchers.length; i < len; i++)
 			this.watchers[i].stop();
 	}
 	this.isRunning = false;
@@ -1023,7 +1023,7 @@ Dispatch.prototype.load = function() {
 Dispatch.prototype.remove = function(watcher) {
 	var newArray = new Array();
 
-	for (i = 0; i < this.watchers.length; ++i) {
+	for (var i = 0, len = this.watchers.length; i < len; i++) {
 		if (this.watchers[i] != watcher)
 			newArray.push(this.watchers[i]);
 	}
@@ -1043,7 +1043,7 @@ Dispatch.prototype.moveWatcher = function(from, to) {
 }
 Dispatch.prototype.getWatcherById = function(id) {
 	if (this.watchers.length > 0) {
-		for (i = 0; i < this.watchers.length; ++i) {
+		for (var i = 0, len = this.watchers.length; i < len; i++) {
 			if (this.watchers[i].id == id)
 				return this.watchers[i];
 		}
@@ -1438,17 +1438,17 @@ Watcher.prototype.filterMessages = function(newHits) {
 	if (typeof this.lastHits !== 'undefined' && this.lastHits.length > 0) {
 		this.isChanged = false;
 		
-		for (i = 0; i < newHits.length; ++i) {
+		for (var i = 0, len = newHits.length; i < len; i++) {
 			// Check if the hit is on the ignore list first before wasting time going through the comparisons
 			if (!dispatch.isMuted(newHits[i].id)) {
 				// Compare URLs for now. Should just use IDs in the future
-				for (j = 0; j < this.lastHits.length; ++j) {
+				for (var j = 0, len2 = this.lastHits.length; j < len2; j++) {
 					if (newHits[i].url == this.lastHits[j].url) {
 						break;
 					}
 					
 					// If we reach the end with no matches, add it to the changed hits array
-					if (j == this.lastHits.length - 1 ) {
+					if (j == len2 - 1 ) {
 						filteredHits.push(newHits[i]);
 						this.isChanged = true;
 					}
@@ -1470,7 +1470,7 @@ Watcher.prototype.filterMessages = function(newHits) {
 	
 	// If "last hits" doesn't exist, then all of the new hits should be considered new
 	// console.log("Returning same hits");
-	for (var i = 0; i < newHits.length; ++i)
+	for (var i = 0, len = newHits.length; i < len; i++)
 		if (!dispatch.isMuted(newHits[i].id))
 			filteredHits.push(newHits[i]);
 	
@@ -1616,7 +1616,7 @@ Watcher.prototype.parseListing = function(data) {
 		qryAvailable = "td:nth-child(3) > table > tbody > tr:nth-child(2) > td:nth-child(2)",
 		qryTime      = "td:nth-child(2) > table > tbody > tr:nth-child(2) > td:nth-child(2)";
 
-	for (var i = 0; i < hitCount; ++i) {
+	for (var i = 0; i < hitCount; i++) {
 		// Get nearby ancestors so jQuery won't have to do a full search for each element (faster)
 		var base    = $("table:nth-child(3) > tbody:nth-child(1) > tr:nth-child(" + (i+1) + ") > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1)", data),
 			topRow  = $("tr:nth-child(2) > td:nth-child(1) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(1)", base),
@@ -1801,7 +1801,7 @@ NotificationPanel.prototype.remove = function(notification) {
 	this.removeFromPanel(notification);
 
 	var newArray = new Array();
-	for (var i = 0; i < this.notifications.length; i++)
+	for (var i = 0, len = this.notifications.length; i < len; i++)
 		if (this.notifications[i] != notification)
 			newArray.push(this.notifications[i]);
 			
@@ -1968,7 +1968,7 @@ NotificationGroup.prototype.createDOMElement = function() {
 		.append((Hit.isSameRequester(this.hits)) ? $('<h4>').html(this.hits[0].requester) : "");
 	
 	var isSameReq = Hit.isSameRequester(this.hits);
-	for (var i = 0; i < this.hits.length; i++)
+	for (var i = 0, len = this.hits.length; i < len; i++)
 		$(div).append((new NotificationHit(this.hits[i], isSameReq, (typeof this.watcher != 'undefined') ? this.watcher : null)).getDOMElement());
 	
 	if (this.hits[0].isAutoAccept)
@@ -1984,7 +1984,7 @@ NotificationGroup.prototype.getDOMElement = function() {
 }
 NotificationGroup.prototype.hasAutoAccept = function() {
 	var hasAutoAccept = false;
-	for (var i = 0; i < this.hits.length; i++)
+	for (var i = 0, len = this.hits.length; i < len; i++)
 		if (this.hits[i].isAutoAccept) hasAutoAccept = true;
 	return hasAutoAccept;
 }
