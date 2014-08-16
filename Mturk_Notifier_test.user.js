@@ -1698,10 +1698,10 @@ Watcher.replacerArray = ["id", "time", "type", "name", "option", "auto", "alert"
 // so we can load pages in moderation to avoid exceeding the maximum request rate.
 // 
 // Public methods:
-// - load(watcher, url, callback) is the only "public" method. The callback received the data from
+// - load(watcher, url, callback) is the only "public" method. The callback receives the data from
 //	 the requested page.
 
-var Loader           = function() {
+var Loader = function() {
 	var queue        = [],
 		pauseTime    = 2000,	// The amount of time to pause (in milliseconds)
 		intervalTime = 100,	// The amount of time between page loads
@@ -1790,14 +1790,19 @@ NotificationPanel.prototype.add = function(notification) {
 	}
 }
 NotificationPanel.prototype.remove = function(notification) {
-	this.removeFromPanel(notification);
+	// Don't remove the notification if the user has their mouse hovering over it.
+	// The notification will trigger onTimeout later on mouseout which will call
+	// this method again for removal.
+	if (!notification.isHovered) {
+		this.removeFromPanel(notification);
 
-	var newArray = new Array();
-	for (var i = 0, len = this.notifications.length; i < len; i++)
-		if (this.notifications[i] !== notification)
-			newArray.push(this.notifications[i]);
-			
-	this.notifications = newArray;
+		var newArray = new Array();
+		for (var i = 0, len = this.notifications.length; i < len; i++)
+			if (this.notifications[i] !== notification)
+				newArray.push(this.notifications[i]);
+				
+		this.notifications = newArray;
+	}
 }
 NotificationPanel.prototype.show = function() {
 	if (this.isHidden) {
@@ -1954,22 +1959,36 @@ function NotificationGroup(title, hits, isSticky, watcher) {
 	this.isSticky = (typeof isSticky !== 'undefined') ? isSticky : this.hasAutoAccept();
 	this.timeout = (this.isSticky) ? 15000 : 6000;
 	this.hasTimedOut = false;
+	this.isHovered = false;
+
 	if (typeof watcher !== 'undefined') this.watcher = watcher;
 	
 	var _this = this;
 	setTimeout(function() {
 		if (typeof _this.onTimeout !== 'undefined' && _this.onTimeout !== null) {
 			_this.hasTimedOut = true;
-			_this.onTimeout(_this);
+
+			 if (!_this.isHovered)
+				_this.onTimeout(_this);
 		}
-	}, this.timeout);	
+	}, this.timeout);
 
 	this.createDOMElement();
 }
 NotificationGroup.prototype.createDOMElement = function() {
+	var _this = this;
 	var div = $('<div>').addClass("notification_group")
 		.append((this.title !== null) ? $('<h3>').html(this.title) : "")
-		.append((Hit.isSameRequester(this.hits)) ? $('<h4>').html(this.hits[0].requester) : "");
+		.append((Hit.isSameRequester(this.hits)) ? $('<h4>').html(this.hits[0].requester) : "")
+		.hover(
+			function() { _this.isHovered = true },
+			function() {
+				_this.isHovered = false;
+
+				if (_this.hasTimedOut && typeof _this.onTimeout === 'function')
+					_this.onTimeout(_this);
+			}
+		);
 	
 	var isSameReq = Hit.isSameRequester(this.hits);
 	for (var i = 0, len = this.hits.length; i < len; i++)
