@@ -1321,22 +1321,7 @@ function Watcher(attrs) {
 	// console.log(JSON.stringify(option,null,4));
 	// Figure out the URL
 	this.url = attrs.url;
-	if (typeof this.url === 'undefined') {
-		switch(this.type) {
-			case 'hit':
-				this.url = "https://www.mturk.com/mturk/preview" + (this.option.auto ? "andaccept" : "") + "?groupId=" + this.id;
-				break;
-			case 'requester':
-				this.url = "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&requesterId=" + this.id;
-				break;
-			case 'url':
-				this.url = this.id;
-				
-				// URL watchers get a random id because of id requirements for CSS
-				this.id = "A" + Math.floor(Math.random() * 100000000);
-				break;
-		}
-	}
+	this.setUrl();
 
 	// Listeners
 	this.listener = {
@@ -1363,19 +1348,21 @@ Watcher.prototype.getURL = function() {
 	return this.url;
 }
 Watcher.prototype.setUrl = function() {
-	switch(this.type) {
-		case 'hit':
-			this.url = "https://www.mturk.com/mturk/preview" + (this.option.auto ? "andaccept" : "") + "?groupId=" + this.id;
-			break;
-		case 'requester':
-			this.url = "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&requesterId=" + this.id;
-			break;
-		case 'url':
-			this.url = this.id;
-			
-			// URL watchers get a random id because of id requirements for CSS
-			this.id = "A" + Math.floor(Math.random() * 100000000);
-			break;
+	if (typeof this.url === 'undefined') {
+		switch(this.type) {
+			case 'hit':
+				this.url = "https://www.mturk.com/mturk/preview" + (this.option.auto ? "andaccept" : "") + "?groupId=" + this.id;
+				break;
+			case 'requester':
+				this.url = "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&requesterId=" + this.id;
+				break;
+			case 'url':
+				this.url = this.id;
+				
+				// URL watchers get a random id because of id requirements for CSS
+				this.id = "A" + Math.floor(Math.random() * 100000000);
+				break;
+		}
 	}
 }
 Watcher.prototype.setAuto = function(isAuto) {
