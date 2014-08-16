@@ -1143,8 +1143,7 @@ function watcherDialog(watcher, callback) {
 
 	$("input[type='button']", dialog).click(hide);
 
-	$(dialog).keypress(function(e) {
-		// console.log(e.key, e.keyCode);
+	$(dialog).keydown(function(e) {
 		switch(e.keyCode) {
 			case 13:
 				save();
