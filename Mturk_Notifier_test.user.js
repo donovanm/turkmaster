@@ -336,7 +336,8 @@ function onMessageReceived(header, message) {
 					name   : msg.name,
 					option : {
 					 	auto: msg.auto,
-					 	stopOnCatch: msg.stopOnCatch
+					 	stopOnCatch: msg.stopOnCatch,
+					 	alert: msg.alert
 					}
 				})).start();
 				break;
