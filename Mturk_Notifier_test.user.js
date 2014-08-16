@@ -1758,6 +1758,7 @@ function NotificationPanel() {
 	this.notifications = new Array();
 	this.createPanel();
 	this.isHovered = false;
+	this.timeout = null;
 }
 NotificationPanel.prototype.add = function(notification) {
 	var _this = this;
@@ -1765,8 +1766,12 @@ NotificationPanel.prototype.add = function(notification) {
 	// Get rid of the leftover notification if there's one there
 	if (this.notifications.length > 0 && this.notifications[0].hasTimedOut) {
 		var oldNotification = this.notifications[0];
-		setTimeout(function() { _this.remove(oldNotification);}, 0000);
+		setTimeout(function() { _this.remove(oldNotification);}, 1000);
 	}
+
+	// Cancel delayed timeout from mouseout (so panel won't close right after a new
+	// notification comes in)
+	clearTimeout(this.timeout);
 
 	notification.onTimeout = function() { _this.onTimeoutListener(notification) };
 	this.notifications.push(notification);
@@ -1811,12 +1816,13 @@ NotificationPanel.prototype.createPanel = function() {
 			.attr('id', "receiver")
 			.hover(
 				function() {
+					clearTimeout(this.timeout);
 					_this.isHovered = true;
 					_this.show()
 				},
 				function(){ 
 					_this.isHovered = false;
-					_this.hide()
+					this.timeout = setTimeout(function() { _this.hide() }, 1500); // Delay hiding the panel
 				}
 			)
 
