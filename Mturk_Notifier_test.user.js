@@ -1769,6 +1769,7 @@ function NotificationPanel() {
 	this.isHidden = true;
 	this.notifications = new Array();
 	this.createPanel();
+	this.isHovered = false;
 }
 NotificationPanel.prototype.add = function(notification) {
 	var _this = this;
@@ -1800,19 +1801,31 @@ NotificationPanel.prototype.remove = function(notification) {
 NotificationPanel.prototype.show = function() {
 	if (this.isHidden) {
 		this.getDOMElement().removeClass("hidden");
+		this.isHidden = false;
 	}
-	this.isHidden = false;
 }
 NotificationPanel.prototype.hide = function() {
-	if (!this.isHidden) {
+	if (!this.isHidden && !this.isHovered) {
 		this.getDOMElement().addClass("hidden");
+		this.isHidden = true;
 	}
-	this.isHidden = true;
 }
 NotificationPanel.prototype.createPanel = function() {
 	var _this = this;
-	var panel =	$("<div>").addClass("notification_panel").attr('id', "receiver")
-			.hover(function(){_this.show()}, function(){_this.hide()})
+	var panel =	$("<div>")
+			.addClass("notification_panel")
+			.addClass("hidden")
+			.attr('id', "receiver")
+			.hover(
+				function() {
+					_this.isHovered = true;
+					_this.show()
+				},
+				function(){ 
+					_this.isHovered = false;
+					_this.hide()
+				}
+			)
 
 	$("body").append(panel);
 	
@@ -1835,7 +1848,7 @@ NotificationPanel.prototype.createPanel = function() {
 			transition    : right 0.2s;\
 		}\
 		#receiver.notification_panel.hidden {\
-			right: -400px;\
+			right: -395px;\
 		}\
 		#receiver .notification_group {\
 			background : #fdfdfd;\
