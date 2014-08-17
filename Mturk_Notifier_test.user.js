@@ -805,7 +805,7 @@ var DispatchUI = {
 				-khtml-user-select: none;\
 			}\
 			#dispatcher .watcher:first-child { margin-top: 0px }\
-			#dispatcher .watcher div { font: 10pt 'Oxygen' }\
+			#dispatcher .watcher div { font: 10pt 'Oxygen', sans-serif }\
 			#dispatcher .watcher.running .details { background-color: #C3ECFC; background-color: rgba(218, 240, 251, 1); }\
 			#dispatcher .watcher.updated { background-color: #e8f5fc; background-color: rgba(218, 240, 251, 1) }\
 			#dispatcher .watcher .details { width: 25px; text-align: center; float: right; background-color: rgba(234, 234, 234, 1); position: absolute; top: 0; bottom: 0; right: 0; font-size: 90%; color: #fff; transition: background-color 0.5s }\
@@ -1875,7 +1875,7 @@ NotificationPanel.prototype.createPanel = function() {
 			padding    : 0;\
 			margin     : 0;\
 		}\
-		#receiver .notification_group h3 { margin: 3px; }\
+		#receiver .notification_group h3 { margin: 3px; font-weight: normal }\
 		#receiver .notification_group h4 { margin: 2px 0 0 4px; color: #222; }\
 		.notification_panel h2, #details_panel h2 { font-size: 100%; font-weight: normal; margin: 0px }\
 		.notification {\
