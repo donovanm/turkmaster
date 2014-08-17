@@ -5,6 +5,7 @@
 // @include     https://www.mturk.com/mturk/*
 // @version     0.96
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js
+// @require 	https://ajax.googleapis.com/ajax/libs/webfont/1/webfont.js
 // @grant       none
 // ==/UserScript==
 
@@ -35,6 +36,7 @@ if(!('contains' in String.prototype)) {
 
 $(document).ready(function(){
 	checkPageType();
+	loadFonts();
 	
 	if (pageType.DASHBOARD) {
 		dispatch = new Dispatch();
@@ -66,6 +68,12 @@ $(window).unload(function() {
 		// dispatch.save();
 	}
 });
+
+function loadFonts() {
+	WebFont.load({
+		google: { families: [ 'Oxygen:400,700:latin' ] }
+	});
+}
 
 function onStorageEvent(event) {
 	if (event.key.substring(0,13) === "notifier_msg_")
@@ -770,13 +778,13 @@ var DispatchUI = {
 	},
 
 	addStyle: function() {
-		addStyle("#dispatcher { background-color: #f5f5f5; position: fixed; top: 0px; float: left; height: 100%;  width: 270px; font: 8pt Helvetica;  margin-left: 0px; margin }\
+		addStyle("#dispatcher { background-color: #f5f5f5; position: fixed; top: 0px; float: left; height: 100%;  width: 270px; font-size: 8pt;  margin-left: 0px; margin }\
 			#content_container { position: absolute; left: 270px; top: 0; right: 0; border-left: 2px solid #dadada; }\
-			#dispatcher #controller { text-align: center; font: 160% Candara; color: #585858; position: relative; height: 20px; }\
-			#dispatcher #controller .on_off { margin: 7px 5px 0 0 }\
-			#dispatcher #controller .on_off a { font: 80% Helvetica }\
+			#dispatcher #controller { text-align: center; font: 160% Candara; color: #585858; position: relative; }\
+			#dispatcher #controller .on_off { margin: 6px 5px 0 0 }\
+			#dispatcher #controller .on_off a { font-size: 80% }\
 			#dispatcher #controller #settings { top: -3px; position: relative; width: 23px;}\
-			#dispatcher #watcher_container { position: absolute; top: 20px; bottom: 0; overflow-y:auto; width: 100%;}\
+			#dispatcher #watcher_container { position: absolute; top: 27px; bottom: 0; overflow-y:auto; width: 100%;}\
 			#dispatcher #watcher_container p { margin: 30px 0px }\
 			#dispatcher #watcher_container .error_button a { text-decoration: none; color: #555; background-color: #fff; padding: 3px 10px; margin: 5px; border: 1px solid #aaa; border-radius: 2px }\
 			#dispatcher #watcher_container .error_button a:hover { background-color: #def; border-color: #aaa }\
@@ -796,35 +804,37 @@ var DispatchUI = {
 				-webkit-user-select: none;\
 				-khtml-user-select: none;\
 			}\
+			#dispatcher .watcher:first-child { margin-top: 0px }\
+			#dispatcher .watcher div { font: 10pt 'Oxygen' }\
 			#dispatcher .watcher.running .details { background-color: #C3ECFC; background-color: rgba(218, 240, 251, 1); }\
 			#dispatcher .watcher.updated { background-color: #e8f5fc; background-color: rgba(218, 240, 251, 1) }\
-			#dispatcher .watcher .details { width: 25px; text-align: center; float: right; background-color: rgba(234, 234, 234, 1); position: absolute; top: 0; bottom: 0; right: 0; font: 90% Verdana; color: #fff; transition: background-color 0.5s }\
+			#dispatcher .watcher .details { width: 25px; text-align: center; float: right; background-color: rgba(234, 234, 234, 1); position: absolute; top: 0; bottom: 0; right: 0; font-size: 90%; color: #fff; transition: background-color 0.5s }\
 			#dispatcher .watcher .details.updated { background-color: rgba(218, 240, 251, 1); background-color: #e8f5fc; background-color: rgba(220, 255, 228, 1) }\
-			#dispatcher .watcher .name { font: 130% Helvetica; color: black; text-decoration: none; display: inline-block; margin-top: -3px}\
+			#dispatcher .watcher .name { font-size 130%; color: black; text-decoration: none; display: inline-block; margin-top: -3px}\
 			#dispatcher .watcher .name:hover { text-decoration: underline }\
 			#dispatcher .watcher .name.no_hover:hover { text-decoration: none }\
-			#dispatcher .watcher .time { display: block; float: left }\
-			#dispatcher .on_off{ float: right; cursor: pointer }\
-			#dispatcher .on_off a { margin: 1px; font: 70% Helvetica; }\
-			#dispatcher .on_off a:nth-child(2) { background-color: #cef; border-radius: 3px; padding: 3px 6px; }\
-			#dispatcher .on_off.on a:nth-child(1) { background-color: #cef; border-radius: 3px; padding: 3px 6px; }\
-			#dispatcher .on_off.on a:nth-child(2) { background-color: inherit; border-radius: inherit; padding: inherit; }\
+			#dispatcher .watcher .time { display: block; float: left; font-size: 80% }\
+			#dispatcher .on_off { float: right; cursor: pointer }\
+			#dispatcher .on_off a { color: #333; margin: 1px; font-size: 56%; font-weight: bold }\
+			#dispatcher .on_off a:nth-child(2) { background-color: #aeaeae; color: #fff; border-radius: 12px; padding: 3px 6px; }\
+			#dispatcher .on_off.on a:nth-child(1) { background-color: #55b8ea; color: #fff; border-radius: 12px; padding: 3px 6px; }\
+			#dispatcher .on_off.on a:nth-child(2) { background-color: inherit; color: #333; border-radius: inherit; padding: inherit; }\
 			#dispatcher .watcher div:nth-child(2) { margin-right: 25px; padding: 5px 5px 5px 10px;}\
 			#dispatcher .watcher .bottom { margin: 0 0 -5px; color: #aaa }\
 			#dispatcher .watcher .bottom a:link { color: black; }\
 			#dispatcher .watcher .bottom a:hover { color: #cef; }\
 			#dispatcher .watcher .details { font-size: 150%; font-weight: bold }\
-			#dispatcher .watcher .last_updated { position: absolute; right: 30px; bottom: 0px }\
+			#dispatcher .watcher .last_updated { position: absolute; right: 30px; bottom: 4px; font-size: 80% }\
 			#dispatcher .watcher .icons { visibility: hidden; margin-left: 10px; bottom: 5px }\
 			#dispatcher .watcher:hover .icons { visibility: visible }\
-			#dispatcher .watcher .icons img { opacity: 0.2; height: 1.2em }\
+			#dispatcher .watcher .icons img { opacity: 0.2; height: 0.9em }\
 			#dispatcher .watcher .icons img:hover { opacity: 1 }\
 			#dispatcher .watcher .color_code { position: absolute; left: 0; top: 0; bottom: 0; width: 9px; cursor: row-resize }\
 			#dispatcher .watcher .color_code div { position: absolute; left: 0; top: 0; bottom: 0; width: 5px; transition: width 0.15s }\
 			#dispatcher .watcher .color_code:hover div { width: 9px }\
 			#dispatcher .watcher .color_code.hit div       { background-color: rgba(234, 111, 111, .7); }\
 			#dispatcher .watcher .color_code.requester div { background-color: rgba(51, 147, 255, .7); }\
-			#dispatcher .watcher .color_code.url div       { background-color: rgba(58, 158, 59, .7); }");
+			#dispatcher .watcher .color_code.url div       { background-color: rgba(57, 221, 122, .7); }");
 	},
 
 	addDragAndDrop: function() {
@@ -1753,11 +1763,11 @@ var Loader = function() {
 
 **/
 function NotificationPanel() {
-	this.isHidden = true;
+	this.isHidden      = true;
 	this.notifications = new Array();
 	this.createPanel();
-	this.isHovered = false;
-	this.timeout = null;
+	this.isHovered     = false;
+	this.timeout       = null;
 }
 NotificationPanel.prototype.add = function(notification) {
 	var _this = this;
@@ -1830,6 +1840,7 @@ NotificationPanel.prototype.createPanel = function() {
 	this.DOMElement = panel;
 
 	addStyle("\
+		.notification_panel div, .notification_panel p { font: 10pt 'Oxygen', sans-serif; }\
 		#receiver.notification_panel { \
 			position      : fixed;\
 			width         : 400px;\
@@ -1837,7 +1848,6 @@ NotificationPanel.prototype.createPanel = function() {
 			right         : 0px;\
 			background    : rgba(255, 255, 255, 1);\
 			padding       : 5px;\
-			font          : 9pt Verdana;\
 			border        : 1px solid #d5d5d5;\
 			border-size   : 1px 0 0 1px;\
 			overflow      : auto;\
@@ -1856,6 +1866,8 @@ NotificationPanel.prototype.createPanel = function() {
 			opacity    : 1;\
 			overflow   : hidden;\
 			transition : opacity 0.7s, max-height 0.2s ease-in-out 0.7s, margin 0.2s linear 0.7s, padding 0.2s linear 0.7s;\
+			border-right-color  : #dedede;\
+			border-bottom-color : #dedede;\
 		}\
 		#receiver .notification_group.removed {\
 			opacity    : 0;\
@@ -1863,11 +1875,16 @@ NotificationPanel.prototype.createPanel = function() {
 			padding    : 0;\
 			margin     : 0;\
 		}\
-		#receiver div { font-size: 8pt; }\
-		#receiver .notification_group h3 { margin: 3px; font-face: verdana }\
+		#receiver .notification_group h3 { margin: 3px; }\
 		#receiver .notification_group h4 { margin: 2px 0 0 4px; color: #222; }\
 		.notification_panel h2, #details_panel h2 { font-size: 100%; font-weight: normal; margin: 0px }\
-		.notification { padding: 3px 3px 0 5px; background-color: #fff; border-bottom: 1px solid #e9e9e9; position: relative; font: 10pt Verdana; }\
+		.notification {\
+			padding          : 5px 3px 0 5px;\
+			background-color : #fff;\
+			border-bottom    : 1px solid #e9e9e9;\
+			position         : relative;\
+			margin-left      : 5px;\
+		}\
 		.notification:last-child { border: none; padding-bottom: 3px }\
 		.notification .mute {\
 			position  : absolute;\
@@ -1875,41 +1892,52 @@ NotificationPanel.prototype.createPanel = function() {
 			right     : 5px;\
 			color     : #999;\
 			cursor    : pointer;\
-			font-size : 7pt;\
+			font-size : 76%;\
 		}\
-		.notification p { margin: -13px 0 0; padding: 0 }\
+		.notification a.requester:link, .notification a.requester:visited {\
+			display     : block;\
+			margin-top  : 2px;\
+			color       : black;\
+			font-size   : 80%;\
+			font-weight : bold;\
+		}\
+		.notification .extra_info {\
+			font-style : italic;\
+			font-size  : 80%;\
+			color      : #505050;\
+			cursor     : default;\
+		}\
 		.notification_panel a:link, .notification_panel a:visited {\
 			font-size       : 130%;\
 			text-decoration : none;\
 			color           : #6bf;\
-			}\
+		}\
 		.notification_panel a.title:link, .notification_panel a.title:visited {\
 			display       : block;\
 			white-space   : nowrap;\
 			overflow      : hidden;\
 			text-overflow : ellipsis;\
-			margin-bottom : 0px;\
-			font-size     : 9pt;\
-			}\
+			font-size     : 102%;\
+		}\
 		.notification_panel .links {\
 			position : absolute;\
 			bottom   : 6px;\
 			right    : 35px;\
-			}\
+		}\
 		.notification_panel a.hit_link {\
-			font-size     : 8pt;\
-			color         : #fafafa;\
-			background    : #6bf;\
-			border-radius : 1px;\
+			font-size     : 70%;\
+			color         : #fff;\
+			background    : none repeat scroll 0% 0% #55B8EA;\
+			border-radius : 12px;\
 			display       : inline;\
-			margin        : 10px 5px 0 0;\
-			padding       : 0 6px;\
-			}\
+			margin        : 10px 5px 0px 0px;\
+			padding       : 3px 9px;\
+			font-weight   : bold;\
+			transition    : background-color 0.25s;\
+		}\
 		.notification_panel a.hit_link:visited { background-color: #9df; }\
-		.notification_panel a strong { color:black; }\
-		.notification_panel strong { font-size: 70%; }\
 		.notification_panel a.hit_link:hover { background: #8df; }\
-		.notification_panel p {	margin: 1px 0 6px 0; }\
+		.notification_panel p {	margin: 3px 0 6px 0; font-size: 80%; cursor: default }\
 		.notification_panel .autoaccept {\
 			background-color : rgba(148, 236, 255, .3);\
 			background-color : rgba(214, 255, 91, 1);\
@@ -1946,12 +1974,12 @@ NotificationPanel.prototype.onTimeoutListener = function(notification) {
 	directly with the NotificationPanel
 **/
 function NotificationGroup(title, hits, isSticky, watcher) {
-	this.title = title;
-	this.hits = hits;
-	this.isSticky = (typeof isSticky !== 'undefined') ? isSticky : this.hasAutoAccept();
-	this.timeout = (this.isSticky) ? 15000 : 6000;
+	this.title       = title;
+	this.hits        = hits;
+	this.isSticky    = (typeof isSticky !== 'undefined') ? isSticky : this.hasAutoAccept();
+	this.timeout     = (this.isSticky) ? 15000 : 6000;
 	this.hasTimedOut = false;
-	this.isHovered = false;
+	this.isHovered   = false;
 
 	if (typeof watcher !== 'undefined') this.watcher = watcher;
 	
@@ -2018,6 +2046,8 @@ function NotificationHit(hit, isSameReq, watcher) {
 	this.createDOMElement();
 }
 NotificationHit.prototype.createDOMElement = function() {
+	var URL_PREFIX = "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&requesterId=";
+
 	// Create notification
 	var hit = this.hit;
 	var notification = $('<div>').addClass("notification")
@@ -2026,12 +2056,12 @@ NotificationHit.prototype.createDOMElement = function() {
 			.attr('href', hit.getURL('preview'))
 			.attr('title', hit.title)
 			.text(hit.title))
-		.append((!this.isSameReq) ? $('<a>').attr('href', "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&requesterId=" + hit.requesterID).attr('target', "_blank").
-			append($('<strong>').html(hit.requester)) : "")
+		.append(
+			(!this.isSameReq) ? $('<a class="requester">').attr('href', URL_PREFIX + hit.requesterID).attr('target', "_blank").html(hit.requester) : "")
 		.append($('<p>')
 			.html(hit.reward + " - " + hit.available + " remaining"))
 		.append($('<div>').addClass("links"))
-		.append($('<div>').addClass("mute"));
+		.append($('<div><a class="mute"></a></div>'));
 
 	// Add links
 	if (typeof hit.id !== 'undefined' && hit.id !== "undefined" && hit.isQualified) {
@@ -2039,14 +2069,14 @@ NotificationHit.prototype.createDOMElement = function() {
 			$(".links", notification)
 				.append($('<a>').addClass("hit_link").attr('href', hit.getURL('view')).attr('target', "_blank").html("View"))
 				.append(
-					$('<a>').addClass("hit_link").attr('href', "javascript:void(0)").html("Stack")
+					$('<a>').addClass("hit_link").attr('href', "javascript:void(0)").html("STACK")
 						.click(function(e) {
 							e.preventDefault();
 							sendMessage({ header: "stack", content: hit.id, timestamp: true });
 						})
 					)
 				.append(
-					$('<a>').addClass("hit_link").attr('href', "javascript:void(0)").html("Queue")
+					$('<a>').addClass("hit_link").attr('href', "javascript:void(0)").html("QUEUE")
 						.click(function(e) {
 							e.preventDefault();
 							sendMessage({ header: "queue", content: hit.id, timestamp: true });
@@ -2054,21 +2084,21 @@ NotificationHit.prototype.createDOMElement = function() {
 					);
 		} else {
 			$(".links", notification)
-				.append($('<a>').addClass("hit_link").attr('href', hit.getURL('preview')).attr('target', "_blank").html("Preview"))
-				.append($('<a>').addClass("hit_link").attr('href', hit.getURL('accept')).attr('target', "_blank").html("Accept"))
-				.append($('<a>').addClass("hit_link").attr('href', hit.getURL('auto')).attr('target', "_blank").html("+Auto"));
+				.append($('<a>').addClass("hit_link").attr('href', hit.getURL('preview')).attr('target', "_blank").html("PREVIEW"))
+				.append($('<a>').addClass("hit_link").attr('href', hit.getURL('accept')).attr('target', "_blank").html("ACCEPT"))
+				.append($('<a>').addClass("hit_link").attr('href', hit.getURL('auto')).attr('target', "_blank").html("+AUTO"));
 		}
 	} else {
 		$(notification).addClass("not_qualified");
 		$(".links", notification)
 			.append((hit.canPreview) ?
-				$('<a>').addClass("hit_link").attr('href', hit.getURL('preview')).attr('target', "_blank").html("Preview") : "")
-			.append($('<em>').html("Not Qualified&nbsp;&nbsp;"));
+				$('<a>').addClass("hit_link").attr('href', hit.getURL('preview')).attr('target', "_blank").html("PREVIEW") : "")
+			.append($('<span class="extra_info">').html("Not Qualified&nbsp;&nbsp;"));
 	}
 	
 	
 	var id = hit.id;
-	var muteButton = $('<div>').addClass("mute");
+	var muteButton = $('a.mute', notification);
 	
 	$(muteButton).text((typeof dispatch !== 'undefined' && dispatch.isMuted(id)) ? "muted" : "mute");
 	$(muteButton).click(function () {
