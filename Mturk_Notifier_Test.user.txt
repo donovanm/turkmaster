@@ -2067,7 +2067,7 @@ NotificationHit.prototype.createDOMElement = function() {
 	if (typeof hit.id !== 'undefined' && hit.id !== "undefined" && hit.isQualified) {
 		if (this.hit.isAutoAccept) {
 			$(".links", notification)
-				.append($('<a>').addClass("hit_link").attr('href', hit.getURL('view')).attr('target', "_blank").html("VIEW"))
+				.append($('<a>').addClass("hit_link").attr('href', hit.getURL('view')).attr('target', "_blank").html("View"))
 				.append(
 					$('<a>').addClass("hit_link").attr('href', "javascript:void(0)").html("STACK")
 						.click(function(e) {
