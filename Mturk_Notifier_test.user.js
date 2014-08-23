@@ -1882,7 +1882,8 @@ NotificationPanel.prototype.createPanel = function() {
 			margin     : 0;\
 		}\
 		#receiver .notification_group h3 { margin: 3px; font-weight: normal }\
-		#receiver .notification_group h4 { margin: 2px 0 0 4px; color: #222; }\
+		#receiver .notification_group h4 a:link,\
+		#receiver .notification_group h4 a:visited { margin: 2px 0 0 4px; color: #222; }\
 		.notification_panel h2, #details_panel h2 { font-size: 100%; font-weight: normal; margin: 0px }\
 		.notification {\
 			padding          : 5px 3px 0 5px;\
@@ -2002,10 +2003,13 @@ function NotificationGroup(title, hits, isSticky, watcher) {
 	this.createDOMElement();
 }
 NotificationGroup.prototype.createDOMElement = function() {
-	var _this = this;
+	var _this = this,
+		REQUESTER_PREFIX = "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&requesterId=",
+		hit = this.hits[0];
+
 	var div = $('<div>').addClass("notification_group")
 		.append((this.title !== null) ? $('<h3>').html(this.title) : "")
-		.append((Hit.isSameRequester(this.hits)) ? $('<h4>').html(this.hits[0].requester) : "")
+		.append((Hit.isSameRequester(this.hits)) ? $('<h4><a href="' + REQUESTER_PREFIX + hit.requesterID + '" target="_blank" class="requester">' + hit.requester + '</a></h4>') : "")
 		.hover(
 			function() { _this.isHovered = true },
 			function() {
@@ -2050,8 +2054,6 @@ function NotificationHit(hit, isSameReq, watcher) {
 	if (typeof watcher !== 'undefined') this.watcher = watcher;
 	
 	this.createDOMElement();
-
-	console.dir(hit);
 }
 NotificationHit.prototype.createDOMElement = function() {
 	var URL_PREFIX = "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&requesterId=";
