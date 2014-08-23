@@ -98,10 +98,10 @@ function requestMain() {
 
 function preloadImages() {
 	var images = [
-		'http://i.imgur.com/guRzYEL.png',
-		'http://i.imgur.com/5snaSxU.png',
-		'http://i.imgur.com/VTHXHI4.png',
-		'http://i.imgur.com/peEhuHZ.png'
+		'https://i.imgur.com/guRzYEL.png',
+		'https://i.imgur.com/5snaSxU.png',
+		'https://i.imgur.com/VTHXHI4.png',
+		'https://i.imgur.com/peEhuHZ.png'
 	];
 
 	$(images).each(function(){
@@ -1183,8 +1183,8 @@ WatcherUI.create = function(watcher) {
 			<div class="bottom">\
 	            <span class="time">' + (watcher.time / 1000) + ' seconds </span>\
 	            <span class="icons">\
-	                <a class="edit" href="javascript:void(0)"><img src="http://i.imgur.com/peEhuHZ.png" /></a>\
-	                <a class="delete" href="javascript:void(0)"><img src="http://i.imgur.com/5snaSxU.png" /></a>\
+	                <a class="edit" href="javascript:void(0)"><img src="https://i.imgur.com/peEhuHZ.png" /></a>\
+	                <a class="delete" href="javascript:void(0)"><img src="https://i.imgur.com/5snaSxU.png" /></a>\
 	            </span>\
 				<div class="last_updated" title="Last checked: ' + ((typeof watcher.date !== 'undefined') ? watcher.date.toString() : "n/a") + '">' + ((typeof watcher.date !== 'undefined') ? watcher.getFormattedTime() : "n/a") + '</div>\
 			</div>\
@@ -1275,8 +1275,8 @@ WatcherUI.create = function(watcher) {
 	colorCode.attr('title', colorCode.attr('title') + "\nClick and drag to re-order");
 
 
-	$(".delete img", div).hover(function() { $(this).attr('src', "http://i.imgur.com/guRzYEL.png")}, function() {$(this).attr('src', "http://i.imgur.com/5snaSxU.png")});
-	$(".edit img", div).hover(function() { $(this).attr('src', "http://i.imgur.com/VTHXHI4.png")}, function() {$(this).attr('src', "http://i.imgur.com/peEhuHZ.png")});
+	$(".delete img", div).hover(function() { $(this).attr('src', "https://i.imgur.com/guRzYEL.png")}, function() {$(this).attr('src', "https://i.imgur.com/5snaSxU.png")});
+	$(".edit img", div).hover(function() { $(this).attr('src', "https://i.imgur.com/VTHXHI4.png")}, function() {$(this).attr('src', "https://i.imgur.com/peEhuHZ.png")});
 
 	return div;
 }
