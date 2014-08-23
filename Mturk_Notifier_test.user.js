@@ -2051,8 +2051,7 @@ NotificationHit.prototype.createDOMElement = function() {
 	// Create notification
 	var hit = this.hit;
 	var notification = $('<div>').addClass("notification")
-		.append($('<a>')
-			.addClass("title")
+		.append($('<a class="title" target="_blank"></a>')
 			.attr('href', hit.getURL('preview'))
 			.attr('title', hit.title)
 			.text(hit.title))
