@@ -136,7 +136,13 @@ function addWatchButton() {
 			}
 		} else if (pageType.SEARCH) {
 			name = document.URL.match(/searchWords=([^&]*)/);
-			name = (name !== null) ? name[1] : "";
+			
+			if (name !== null) {
+				name = name[1].replace('+', ' ');
+				name = name.charAt(0).toUpperCase() + name.slice(1);	// Capitalize first letter
+			} else {
+				name = "";
+			}
 		}
 		
 		// Pull up a Watcher Dialog with default values set
