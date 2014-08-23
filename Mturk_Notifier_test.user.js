@@ -2050,6 +2050,8 @@ function NotificationHit(hit, isSameReq, watcher) {
 	if (typeof watcher !== 'undefined') this.watcher = watcher;
 	
 	this.createDOMElement();
+
+	console.dir(hit);
 }
 NotificationHit.prototype.createDOMElement = function() {
 	var URL_PREFIX = "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&requesterId=";
@@ -2063,9 +2065,8 @@ NotificationHit.prototype.createDOMElement = function() {
 			.text(hit.title))
 		.append(
 			(!this.isSameReq) ? $('<a class="requester">').attr('href', URL_PREFIX + hit.requesterID).attr('target', "_blank").html(hit.requester) : "")
-		.append($('<p>')
-			.html(hit.reward + " - " + hit.available + " remaining"))
-		.append($('<div>').addClass("links"))
+		.append($('<p>' + hit.reward + " - " + hit.available + " rem. - " + hit.time.replace("minutes", "mins") + '</p>'))
+		.append($('<div class="links"></div>'))
 		.append($('<div><a class="mute"></a></div>'));
 
 	// Add links
