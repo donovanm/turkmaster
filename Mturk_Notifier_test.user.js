@@ -1775,7 +1775,7 @@ NotificationPanel.prototype.add = function(notification) {
 	// Get rid of the leftover notification if there's one there
 	if (this.notifications.length > 0 && this.notifications[0].hasTimedOut) {
 		var oldNotification = this.notifications[0];
-		setTimeout(function() { _this.remove(oldNotification);}, 1000);
+		setTimeout(function() { _this.onTimeoutListener(oldNotification);}, 1500);
 	}
 
 	// Cancel delayed timeout from mouseout (so panel won't close right after a new
@@ -1888,7 +1888,7 @@ NotificationPanel.prototype.createPanel = function() {
 		.notification:last-child { border: none; padding-bottom: 3px }\
 		.notification .mute {\
 			position  : absolute;\
-			bottom    : 4px;\
+			bottom    : 6px;\
 			right     : 5px;\
 			color     : #999;\
 			cursor    : pointer;\
