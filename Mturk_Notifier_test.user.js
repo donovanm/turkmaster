@@ -10,9 +10,30 @@
 // ==/UserScript==
 
 var settings = {
-	sound       : true,
-	animation   : true,
-	preloadHits : false
+	sound         : true,
+	animation     : true,
+	preloadHits   : false,
+	volume        : 30,
+	notifications : true,
+	alertOnly     : false,
+	fontSize      : 11,
+	typeface      : "Oxygen",
+	desktopNotifications : false,
+	setfontSize   : function(val) {
+		$("#dispatcher div").css("font-size", val + "pt");
+		$(".notification_panel p").css("font-size", val + "pt");
+		$("#settingsDialog div").css("font-size", val + "pt");
+	},
+	setDesktopNotifications : function(val, callback) {
+		if (val) {
+			requestWebNotifications(function(isPermitted) {
+				callback(isPermitted);
+				settings.desktopNotifications = isPermitted;
+			});
+		} else {
+			settings.desktopNotifications = false;
+		}
+	}
 };
 
 var pageType = {
@@ -108,6 +129,202 @@ function preloadImages() {
 		$('<img>')[0].src = this;
 	});
 }
+
+var SettingsDialog = function() {
+	var DOMElement,
+	    TOGGLE = '<button class="on_off"><span>ON</span><span>OFF</span></button>';
+
+	function _show() {
+		if (!DOMElement)
+			_createDOMElement()
+
+		_getSettings();
+		DOMElement.show();
+		$(window).on('click', _handleWindowClick);
+	}
+
+	function _isVisible() {
+		if (DOMElement)
+			return DOMElement.is(":visible");
+		else
+			return false;
+	}
+
+	function _getSettings() {
+		if (settings.sound) DOMElement.find("#soundSettings > .on_off").addClass("on");
+		DOMElement.find("#volume input").val(settings.volume);
+		if (settings.notifications) DOMElement.find("#notificationSettings > .on_off").addClass("on");
+		if (settings.desktopNotifications) DOMElement.find("#desktopNotifications .on_off").addClass("on");
+		if (settings.alertOnly) DOMElement.find("#alertOnly .on_off").addClass("on");
+		DOMElement.find("#fontSize input").val(settings.fontSize);
+		DOMElement.find("#typeface input").val(settings.typeface);
+	}
+
+	function _save() {
+
+	}
+
+	function _cancel() {
+		DOMElement.hide();
+		console.log("Cancelled");
+	}
+
+	function _createDOMElement() {
+		console.log("Creating DOM Element");
+		_addStyle();
+		DOMElement = $('<div id="settingsDialog"><h2>Settings</h2></div>').append(
+			$('<div id="soundSettings">' + TOGGLE + '<h3>Sound</h3>\
+					<ul><li id="volume">Volume (0 - 100)<input type="text" /></li></ul>\
+			   </div>'),
+			$('<div id="notificationSettings">' + TOGGLE + '<h3>Notifications</h3>\
+					<ul>\
+						<li id="desktopNotifications">' + TOGGLE + 'Desktop Notifications</li>\
+						<!--li id="alertOnly">' + TOGGLE + 'Alert/Auto only</li-->\
+					</ul>\
+			   </div>'),
+			$('<div id="fontSettings"><h3>Font</h3>\
+					<ul>\
+						<li id="fontSize"><input type="text" />Size (pt)</li>\
+						<!--li id="typeface"><input type="text" />Typeface</li-->\
+					</ul>\
+			   </div>')
+		)
+
+		_addHandlers();
+
+		$("body").append(DOMElement);
+	}
+
+	function _addHandlers() {
+		DOMElement.on('click', function(e) {
+			if (e.target.tagName === "BUTTON")
+				_handleButtonToggle(e);
+		});
+
+		DOMElement.on('change', _handleInputChange);
+	}
+
+	function _handleWindowClick(e) {
+		console.log(e.target);
+		console.log($("#settings").get(0));
+		if (!DOMElement.is(e.target) && DOMElement.has(e.target).length === 0 && $("#settings img").get(0) !== e.target) {
+			_cancel();
+			// $(window).off(_handleWindowClick);
+		}
+	}
+
+	function _handleInputChange(e) {
+		console.log("Handling input change");
+		var target = $(e.target),
+			value = target.val(),
+			id = target.parent().attr('id');
+
+		if (id === "volume")
+			settings.volume = value;
+		else if (id === "fontSize")
+			settings.setfontSize(value);
+		else if (id === "typeface")
+			settings.typeface = value;
+
+		console.dir(settings);
+	}
+
+	function _handleButtonToggle(e) {
+		e.preventDefault();
+		var target = $(e.target),
+			value = target.hasClass("on"),
+			id = target.parent().attr('id');
+
+		if (id !== "desktopNotifications") {
+			if (target.hasClass("on")) {
+				target.removeClass("on");
+				value = false;
+			} else {
+				target.addClass("on");
+				value = true;
+			}
+		}
+
+		if (id === "soundSettings") {
+			settings.sound = value;
+		} else if (id === "notificationSettings") {
+			settings.notifications = value;
+		} else if (id === "desktopNotifications") {
+			if (value)
+				target.removeClass("on");
+
+			// Desktop notification requests require user action so we need a callback
+			// for when the user responds.
+			settings.setDesktopNotifications(!value, function(isPermitted) {
+				console.log("Ispermitted", isPermitted);
+				if (isPermitted) {
+					target.addClass("on");
+				} else {
+					target.removeClass("on");
+					console.log("Desktop notifications are blocked.");
+				}
+			});
+		} else if (id === "alertOnly") {
+			settings.alertOnly = value;
+		}
+	}
+
+	function _addStyle() {
+		addStyle("\
+			#settingsDialog {\
+				position: absolute;\
+				top: 9px;\
+				left: 26px;\
+				background-color: #fafafa;\
+				padding: 10px;\
+				width: 300px;\
+				font: 10pt 'Oxygen',verdana, sans-serif;\
+				border-bottom: 1px solid #DDD;\
+				border-right: 1px solid #DDD;\
+				border-radius: 0.3em;\
+			}\
+			#settingsDialog div, #settingsDialog li, #settingsDialog input, #settingsDialog button {\
+				font: 10pt 'Oxygen',verdana, sans-serif;\
+			}\
+			#settingsDialog > div {\
+				margin: 0px 0px 0.5em;\
+				border: 1px solid #eee;\
+				padding: 0.75em;\
+				background-color: #fff;\
+			}\
+			#settingsDialog h2, #settingsDialog h3 {\
+				font-weight: 400;\
+				margin: 0 0 0.5em;\
+			}\
+			#settingsDialog h2 {\
+				text-align: center;\
+				font-size: 140%;\
+				color: #333;\
+			}\
+			#settingsDialog button.on_off {\
+				background: none;\
+				border: none;\
+				padding: 0;\
+			}\
+			#settingsDialog .on_off span { color: #333; margin: 1px; font-size: 56%; font-weight: bold; border-radius: 1.6em;  }\
+			#settingsDialog .on_off span:nth-child(2) { background-color: #aeaeae; color: #fff; padding: 0.4em 0.8em; }\
+			#settingsDialog .on_off.on span:nth-child(1) { background-color: #55b8ea; color: #fff; padding: 0.4em 0.8em; }\
+			#settingsDialog .on_off.on span:nth-child(2) { background-color: inherit; color: #333; padding: 0 0.8em 0 0; }\
+			#settingsDialog .on_off { margin-top: 6px; }\
+			#settingsDialog ul { margin: 0 0 0.2em; padding: 0 0 0 1.9em }\
+			#settingsDialog ul li { list-style: none; margin-bottom: 0.5em; }\
+			#settingsDialog li input { float: right; width: 3em; font-size: 80%; margin-right: 0.8em; text-align: right; padding-right: 0.5em }\
+			#settingsDialog li#typeface input { width: 8em }\
+		");
+	}
+
+	return {
+		show: _show,
+		hide: _cancel,
+		isVisible: _isVisible
+	}
+}();
+
 
 function addWatchButton() {
 	var type = (pageType.HIT) ? 'hit' : (pageType.REQUESTER) ? 'requester' : (pageType.SEARCH) ? 'page' : '';
@@ -414,7 +631,7 @@ function sendBrowserNotification(hits, watcher) {
     }
 
 	// Let's check if the user is okay to get some notification
-	else if (Notification.permission === "granted") {
+	else if (Notification.permission === "granted" && settings.desktopNotifications) {
 		// If the user isn't on a mturk page to receive a rich notification, then send a web notification
 		if (!wasViewed) {
 			var bodyText = "";
@@ -437,24 +654,21 @@ function sendBrowserNotification(hits, watcher) {
 			notification.onshow = function() { setTimeout(function() { notification.close() }, 5000) }; // Need to set a close time for Chrome
 		}
 	}
-
-	// Otherwise, we need to ask the user for permission
-	// Note, Chrome does not implement the permission static property
-	// So we have to check for NOT 'denied' instead of 'default'
-	else if (Notification.permission !== 'denied') {
-		requestWebNotifications();
-	}
 }
 
-function requestWebNotifications() {
+function requestWebNotifications(callback) {
 	window.Notification.requestPermission(function (permission) {
 		// Whatever the user answers, we make sure Chrome stores the information
 		if(!('permission' in Notification))
 			window.Notification.permission = permission;
 
 		// If the user is okay, let's create a notification
-		if (permission === "granted")
+		if (permission === "granted") {
 			new window.Notification("Notifications enabled.");
+			callback(true);
+		} else {
+			callback(false);
+		}
 	});
 }
 
@@ -735,8 +949,13 @@ var DispatchUI = {
 				.attr('id', "settings")
 				.attr('href', "javascript:void(0)")
 				.attr('title', "Settings")
-				.html('<img id="settings" />')
-				.click(function() { requestWebNotifications(); })
+				.html('<img />')
+				.click(function() {
+					if (!SettingsDialog.isVisible())
+						SettingsDialog.show();
+					else
+						SettingsDialog.hide();
+				})
 			)
 			.append("Mturk Notifier")
 			.append('<div class="on_off"><a>ON</a><a>OFF</a></div>');
@@ -789,12 +1008,12 @@ var DispatchUI = {
 			#dispatcher #controller { text-align: center; font: 160% Candara; color: #585858; position: relative; }\
 			#dispatcher #controller .on_off { margin: 6px 5px 0 0 }\
 			#dispatcher #controller .on_off a { font-size: 80% }\
-			#dispatcher #controller #settings { top: -3px; position: relative; width: 23px;}\
+			#dispatcher #controller #settings { top: -3px; position: relative; float: left; margin: 3px 2px}\
+			#dispatcher #controller #settings img { width: 1.5em }\
 			#dispatcher #watcher_container { position: absolute; top: 27px; bottom: 0; overflow-y:auto; width: 100%;}\
 			#dispatcher #watcher_container p { margin: 30px 0px }\
 			#dispatcher #watcher_container .error_button a { text-decoration: none; color: #555; background-color: #fff; padding: 3px 10px; margin: 5px; border: 1px solid #aaa; border-radius: 2px }\
 			#dispatcher #watcher_container .error_button a:hover { background-color: #def; border-color: #aaa }\
-			#dispatcher #settings { float: left; margin: 3px 2px }\
 			#dispatcher div { font-size: 7pt }\
 			#dispatcher .watcher {\
 				box-sizing: border-box;\
@@ -820,11 +1039,11 @@ var DispatchUI = {
 			#dispatcher .watcher .name:hover { text-decoration: underline }\
 			#dispatcher .watcher .name.no_hover:hover { text-decoration: none }\
 			#dispatcher .watcher .time { display: block; float: left; font-size: 80% }\
-			#dispatcher .on_off { float: right; cursor: pointer }\
-			#dispatcher .on_off a { color: #333; margin: 1px; font-size: 56%; font-weight: bold }\
-			#dispatcher .on_off a:nth-child(2) { background-color: #aeaeae; color: #fff; border-radius: 12px; padding: 3px 6px; }\
-			#dispatcher .on_off.on a:nth-child(1) { background-color: #55b8ea; color: #fff; border-radius: 12px; padding: 3px 6px; }\
-			#dispatcher .on_off.on a:nth-child(2) { background-color: inherit; color: #333; border-radius: inherit; padding: inherit; }\
+			.on_off { float: right; cursor: pointer }\
+			.on_off a { color: #333; margin: 1px; font-size: 56%; font-weight: bold }\
+			.on_off a:nth-child(2) { background-color: #aeaeae; color: #fff; border-radius: 12px; padding: 3px 6px; }\
+			.on_off.on a:nth-child(1) { background-color: #55b8ea; color: #fff; border-radius: 12px; padding: 3px 6px; }\
+			.on_off.on a:nth-child(2) { background-color: inherit; color: #333; border-radius: inherit; padding: inherit; }\
 			#dispatcher .watcher div:nth-child(2) { margin-right: 25px; padding: 5px 5px 5px 10px;}\
 			#dispatcher .watcher .bottom { margin: 0 0 -5px; color: #aaa }\
 			#dispatcher .watcher .bottom a:link { color: black; }\
@@ -1494,7 +1713,7 @@ Watcher.prototype.alert = function () {
 	
 	if (sound.canPlayType('audio/ogg;codecs="vorbis"') && settings.sound) {
 		sound.src = "http://rpg.hamsterrepublic.com/wiki-images/3/3e/Heal8-Bit.ogg";
-		sound.volume = .2;
+		sound.volume = settings.volume / 100;
 		sound.play();
 	}
 }
