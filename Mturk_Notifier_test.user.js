@@ -774,17 +774,28 @@ function createDetailsPanel() {
 var lastWatcher = "";
 function showDetailsPanel(watcher) {
 	var panel = $("#details_panel");
+	var group;
 
 	// Only change the panel contents if it's a different watcher or the same one, but updated
 	if (watcher !== lastWatcher || (watcher === lastWatcher && watcher.isUpdated)) {
 		$("*", panel).remove();
 		if (watcher.lastHits.length > 0) {
-			$(panel).append((new NotificationGroup(null, watcher.lastHits, false, watcher)).getDOMElement());
+			group = new NotificationGroup(null, watcher.lastHits, false, watcher);
+			$(panel).append((group).getDOMElement());
+
+			// This shouldn't need to use callback once caching is enabled. Anything TO info in the
+			// details panel will have been already retrieved from the server.
+			TO.get(Hit.getUniqueReqeusters(watcher.lastHits), _handleTOReceived);
 		} else {
 			$(panel).append($('<div>').append('<h2>').css('text-align', 'center').html("<br />There are no HITs avaialable.<br /><br />"));
 		}
 	}
 	$(panel).show();
+
+	function _handleTOReceived(data) {
+		group.addTO(data);
+	}
+
 	lastWatcher = watcher;
 }
 
@@ -1908,6 +1919,7 @@ Watcher.replacerArray = ["id", "time", "type", "name", "option", "auto", "alert"
 var Messenger = function() {
 	var SEND_HITS = "new_hits";
 	var SEND_TO = "turkopticon";
+	var notificationGroup;
 
 	function _sendHits(watcher, hits) {
 		// Pass through ignore filters
@@ -1924,7 +1936,7 @@ var Messenger = function() {
 		sendMessage({ header: SEND_TO, content: toData });
 
 		// Show notification on dashboard, too
-		notificationPanel.add(new NotificationGroup(watcher.name, hits));
+		notificationGroup = notificationPanel.add(new NotificationGroup(watcher.name, hits));
 
 		// Attempt to send a browser notification after a brief period of time. If another mturk
 		// page was visible when it received the hits, this will cancel out.
@@ -1937,6 +1949,9 @@ var Messenger = function() {
 	function _handleTOReceived(data) {
 		// console.log("TurkOpticon data", JSON.stringify(JSON.parse(data), null, 4));
 		sendMessage({ header: SEND_TO, content: data });
+
+		if (data) 
+			notificationGroup.addTO(data);
 	}
 
 	return {
@@ -2084,7 +2099,10 @@ NotificationPanel.prototype.add = function(notification) {
 	if (this.isHidden) {
 		this.show();
 	}
+
+	return notification;
 }
+
 NotificationPanel.prototype.remove = function(notification) {
 	// Don't remove the notification if the user has their mouse hovering over it.
 	// The notification will trigger onTimeout later on mouseout which will call
@@ -2240,7 +2258,33 @@ NotificationPanel.prototype.createPanel = function() {
 			background-color : rgba(252, 255, 143, 1);\
 		}\
 		.notification.not_qualified { background-color: rgba(245, 244, 229, 1) }\
-		.notification_panel .new { background-color: rgba(220, 255, 228, 1); }");
+		.notification_panel .new { background-color: rgba(220, 255, 228, 1); }\
+		.notification_panel .ratings-button {\
+			float: left;\
+			margin-right: 0.3em;\
+			height: 0.7em;\
+			width: 0.7em;\
+			background-color: #def;\
+			border-radius: 3px;\
+			font-size: 80%;\
+			position: relative;\
+			top: 0.5em;\
+		}\
+		.notification_panel .ratings-button > .ratings-chart {\
+			position: absolute;\
+			bottom: 0;\
+			left: 0.4em;\
+			background-color: rgb(255, 255, 255);\
+			visibility: hidden;\
+			padding: 0.3em;\
+			border: 1px solid #f0f0f0;\
+		}\
+		.notification_panel .ratings-button:hover > .ratings-chart {\
+			visibility: visible;\
+		}\
+		.notification_panel .ratings-chart table { border-collapse: collapse; }\
+		.notification_panel .ratings-chart td {	font-size: 70%;	padding: 0 2em 0 0; }\
+		");
 }
 NotificationPanel.prototype.getDOMElement = function() {
 	return this.DOMElement;
@@ -2290,6 +2334,51 @@ function NotificationGroup(title, hits, isSticky, watcher) {
 	}, this.timeout);
 
 	this.createDOMElement();
+}
+NotificationGroup.prototype.addTO = function(data) {
+	var ratings = JSON.parse(data);
+	var group = this.getDOMElement();
+
+	console.log(".addTO ratings", ratings);
+
+	var notifications = group.find(".notification");
+
+	for (id in ratings) {
+		// console.log(id);
+		
+		currentNotification = notifications.filter(function() { return $(this).data("requesterID") === id });
+		// console.log(currentNotification);
+
+		// console.log({ id: id, ratings: ratings[id] });
+		this.appendRatings({ notification: currentNotification, id: id, ratings: ratings[id] });
+	}
+}
+NotificationGroup.prototype.appendRatings = function(obj) {
+	var notification = obj.notification,
+		requesterID  = obj.id,
+		ratings      = obj.ratings;
+
+	console.log("ratings", obj);
+
+	// Would be nice to have a chart-looking icon
+	var element = $('<div class="ratings"><div class="ratings-button" style="float: left"><div class="ratings-chart"></div></div></div>');
+
+	if (ratings) {
+		element.find(".ratings-chart").append('\
+				<table><tbody>\
+					<tr><td>Communicativity</td><td>' + ratings.attrs.comm + '</td></tr>\
+					<tr><td>Pay</td>            <td>' + ratings.attrs.pay  + '</td></tr>\
+					<tr><td>Fairness</td>       <td>' + ratings.attrs.fair + '</td></tr>\
+					<tr><td>Quickness</td>      <td>' + ratings.attrs.fast + '</td></tr>\
+				</tbody></table>\
+			');
+	} else {
+		element.find(".ratings-chart").append('No ratings available for this requester.');
+	}
+	
+	notification.find(".requester").before(element);
+
+
 }
 NotificationGroup.prototype.createDOMElement = function() {
 	var _this = this,
@@ -2358,7 +2447,8 @@ NotificationHit.prototype.createDOMElement = function() {
 			(!this.isSameReq) ? $('<a class="requester">').attr('href', URL_PREFIX + hit.requesterID).attr('target', "_blank").html(hit.requester) : "")
 		.append($('<p>' + hit.reward + " - " + hit.available + " rem. - " + hit.time.replace("minutes", "mins") + '</p>'))
 		.append($('<div class="links"></div>'))
-		.append($('<div><a class="mute"></a></div>'));
+		.append($('<div><a class="mute"></a></div>'))
+		.data("requesterID", hit.requesterID);
 
 	// Add links
 	if (typeof hit.id !== 'undefined' && hit.id !== "undefined" && hit.isQualified) {
