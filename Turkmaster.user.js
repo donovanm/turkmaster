@@ -460,8 +460,17 @@ function addFormStyle() {
 			margin: 5px;\
 		}\
 		.watcher_button { display: inline; }\
-		.watcher_button a { text-decoration: none; margin-left: 3em; font-weight: normal	}\
-		.watcher_button a:hover { text-decoration: underline; }\
+		.watcher_button a {\
+			text-decoration: none;\
+			font-weight: normal;\
+			background-color: #CECECE;\
+			color: white;\
+			padding: 3px 10px;\
+			border-radius: 10px;\
+			font-family: 'Oxygen';\
+			transition: background-color 0.4s;\
+		}\
+		.watcher_button a:hover { background-color: #55B8EA }\
 		.error_title .watcher_button { display: block; margin: 15px }\
 	");
 }
