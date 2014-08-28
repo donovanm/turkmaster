@@ -16,10 +16,11 @@ var settings = {
 	volume        : 30,
 	notifications : true,
 	alertOnly     : false,
-	fontSize      : 11,
+	fontSize      : 10,
 	typeface      : "Oxygen",
 	desktopNotifications : false,
 	setfontSize   : function(val) {
+		settings.fontSize = val;
 		$("#dispatcher div").css("font-size", val + "pt");
 		$(".notification_panel p").css("font-size", val + "pt");
 		$("#settingsDialog div").css("font-size", val + "pt");
@@ -729,6 +730,19 @@ Hit.isSameRequester = function(hits) {
 		return false;
 	}
 };
+// Returns a list of unique requester IDs from an array of hits
+Hit.getUniqueReqeusters = function(hits) {
+	var ids = [];
+
+	for (var i = 0, len = hits.length; i < len; ++i) {
+		var id = hits[i].requesterID;
+
+		if (ids.indexOf(id) === -1)
+			ids.push(id)
+	}
+
+	return ids;
+}
 
 // Message object (Not used)
 function Message() {
@@ -1724,7 +1738,7 @@ Watcher.prototype.updateWatcherPanel = function() {
 Watcher.prototype.setValues = function(values) {
 	// console.log("Before updating watcher", this);
 
-	console.log("Time entered", values.time);
+	// console.log("Time entered", values.time);
 
 	var val = values || {};
 	this.name = val.name || this.name;
@@ -1734,7 +1748,7 @@ Watcher.prototype.setValues = function(values) {
 
 	if (typeof val.time !== 'undefined' && this.time !== val.time) {
 		this.time = val.time;
-		console.log("this.state.isRunning", this.state.isRunning);
+		// console.log("this.state.isRunning", this.state.isRunning);
 		if (this.state.isRunning) {
 			this.stop();
 			this.start();
@@ -1781,22 +1795,10 @@ Watcher.prototype.sendHits = function(hits) {
 	// In the near future this will have to be changed to show when HITs go away completely
 	if (typeof hits !== 'undefined' && hits.length > 0) {
 		hits = this.filterMessages(hits);
+
 		// console.log(JSON.stringify(hits,null,4));
 		if (hits.length > 0) {
-			wasViewed = false;
-
-			// Send hits
-			sendMessage({ header: "new_hits", content: {'title':this.name, 'hits':hits} });
-			
-			// Show notification on dashboard, too
-			notificationPanel.add(new NotificationGroup(this.name, hits));
-
-			// Attempt to send a browser notification after a brief period of time. If another mturk
-			// page was visible when it received the hits, this will cancel out.
-			if (!document.hasFocus()) {
-				var _this = this;
-				setTimeout(function() { sendBrowserNotification(hits, _this); }, 200);
-			}
+			Messenger.sendHits(this, hits);
 		}
 	}
 }
@@ -1903,6 +1905,45 @@ Watcher.prototype.parseHitPage = function(data) {
 }
 Watcher.replacerArray = ["id", "time", "type", "name", "option", "auto", "alert", "stopOnCatch", "state", "isRunning", "isOn", "isUpdated", "url"];
 
+var Messenger = function() {
+	var SEND_HITS = "new_hits";
+	var SEND_TO = "turkopticon";
+
+	function _sendHits(watcher, hits) {
+		// Pass through ignore filters
+
+		// Set wasViewed to false to check if any receiving windows were focused when this
+		// was sent.
+		wasViewed = false;
+
+		// Send Hits
+		sendMessage({ header: SEND_HITS, content: {'title':watcher.name, 'hits':hits} });
+
+		// Get TO and send it
+		var toData = TO.get(Hit.getUniqueReqeusters(hits), _handleTOReceived);
+		sendMessage({ header: SEND_TO, content: toData });
+
+		// Show notification on dashboard, too
+		notificationPanel.add(new NotificationGroup(watcher.name, hits));
+
+		// Attempt to send a browser notification after a brief period of time. If another mturk
+		// page was visible when it received the hits, this will cancel out.
+		if (!document.hasFocus()) {
+			// var _this = this;
+			setTimeout(function() { sendBrowserNotification(hits, watcher); }, 200);
+		}
+	}
+
+	function _handleTOReceived(data) {
+		// console.log("TurkOpticon data", JSON.stringify(JSON.parse(data), null, 4));
+		sendMessage({ header: SEND_TO, content: data });
+	}
+
+	return {
+		sendHits: _sendHits
+	}
+
+}();
 
 
 /** Watcher Stack and Queue
@@ -1981,6 +2022,35 @@ var Loader = function() {
 
 	return {
 		load: _load
+	}
+}();
+
+var TO = function() {
+	var URL_PREFIX = "https://api.turkopticon.istrack.in/multi-attrs.php?ids=";
+
+	function _get(ids, callback) {
+		var data = _getFromStorage(ids);
+
+		// If not all requesters found in storage, fetch from server
+		// if (data.length < ids.length)
+			_fetchFromServer(URL_PREFIX + ids.join(','), callback);
+
+		return data;
+	}
+
+	function _getFromStorage(ids) {
+		// Fake it for now
+		return '{"A2S0QCZG8DTNJC":{"name":"Procore Development","attrs":{"comm":"5.00","pay":"4.87","fair":"5.00","fast":"5.00"},"reviews":15,"tos_flags":0},"A6YG5FKV2TAVC":{"name":"Agent Agent","attrs":{"comm":"4.33","pay":"4.78","fair":"4.80","fast":"4.57"},"reviews":84,"tos_flags":0}}';
+	}
+
+	function _fetchFromServer(url, callback) {
+		$.get(url, function(data) {
+			callback(data);
+		})
+	}
+
+	return {
+		get: _get
 	}
 }();
 
