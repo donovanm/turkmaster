@@ -615,6 +615,14 @@ function onMessageReceived(header, message) {
 			case 'captcha' :
 				if (document.hasFocus())
 					alert("Captcha Alert!");
+				break;
+
+			case 'turkopticon' :
+				// This needs a more elegant solution. If the servers start lagging we might be
+				// using addTO() for the wrong group. It won't show the TO for the wrong requester,
+				// though, so it's safe to use for now. It's just that some ratings could be missing.
+				notificationPanel.notifications[notificationPanel.notifications.length - 1].addTO(message);
+				break;
 		}
 	}
 }
