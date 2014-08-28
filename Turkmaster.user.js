@@ -198,7 +198,7 @@ var SettingsDialog = function() {
 
 	function _addHandlers() {
 		DOMElement.on('click', function(e) {
-			if (e.target.tagName === "BUTTON")
+			if (e.target.tagName === "BUTTON" || e.target.parent.tagName === "BUTTON")
 				_handleButtonToggle(e);
 		});
 
@@ -206,9 +206,9 @@ var SettingsDialog = function() {
 	}
 
 	function _handleWindowClick(e) {
-		console.log(e.target);
-		console.log($("#settings").get(0));
-		if (!DOMElement.is(e.target) && DOMElement.has(e.target).length === 0 && $("#settings img").get(0) !== e.target) {
+		var target = e.target;
+
+		if (!DOMElement.is(target) && DOMElement.has(target).length === 0 && $("#settings img").get(0) !== target) {
 			_cancel();
 			// $(window).off(_handleWindowClick);
 		}
@@ -235,6 +235,10 @@ var SettingsDialog = function() {
 		var target = $(e.target),
 			value = target.hasClass("on"),
 			id = target.parent().attr('id');
+
+		// Chrome returns the span while FF returns the button
+		if (target.tagname === "SPAN")
+			target = target.parent;
 
 		if (id !== "desktopNotifications") {
 			if (target.hasClass("on")) {
