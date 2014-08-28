@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name        Mturk Notifier test
+// @name        Turkmaster
 // @namespace   https://greasyfork.org/users/3408
-// @description Testing out stuff for a notifier for Mturk
+// @description A web app to make turking a little easier
 // @include     https://www.mturk.com/mturk/*
 // @version     0.96
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js
