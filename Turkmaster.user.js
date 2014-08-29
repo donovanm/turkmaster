@@ -365,6 +365,8 @@ function addWatchButton() {
 			} else {
 				name = "";
 			}
+		} else if (pageType.HIT) {
+			name = $(".capsulelink_bold > div:nth-child(1)").text().trim();
 		}
 		
 		// Pull up a Watcher Dialog with default values set
