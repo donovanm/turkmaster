@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        Turkmaster
 // @namespace   https://greasyfork.org/users/3408
-// @description A web app to make turking a little easier
+// @description A page-monitoring web app to make turking a little easier
 // @include     https://www.mturk.com/mturk/*
 // @version     0.96
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js
@@ -972,7 +972,7 @@ var DispatchUI = {
 						SettingsDialog.hide();
 				})
 			)
-			.append("Mturk Notifier")
+			.append("Turkmaster Notifier")
 			.append('<div class="on_off"><a>ON</a><a>OFF</a></div>');
 
 		// Adding the data URL inline wouldn't work for some reason, so I'm doing it this way.
@@ -1918,7 +1918,8 @@ var Messenger = function() {
 
 		// Get TO and send it
 		var toData = TO.get(Hit.getUniqueReqeusters(hits), _handleTOReceived);
-		sendMessage({ header: SEND_TO, content: toData });
+		if (toData)
+			sendMessage({ header: SEND_TO, content: toData });
 
 		// Show notification on dashboard, too
 		notificationGroup = notificationPanel.add(new NotificationGroup(watcher.name, hits));
@@ -2040,7 +2041,8 @@ var TO = function() {
 
 	function _getFromStorage(ids) {
 		// Fake it for now
-		return '{"A2S0QCZG8DTNJC":{"name":"Procore Development","attrs":{"comm":"5.00","pay":"4.87","fair":"5.00","fast":"5.00"},"reviews":15,"tos_flags":0},"A6YG5FKV2TAVC":{"name":"Agent Agent","attrs":{"comm":"4.33","pay":"4.78","fair":"4.80","fast":"4.57"},"reviews":84,"tos_flags":0}}';
+		// return '{"A2S0QCZG8DTNJC":{"name":"Procore Development","attrs":{"comm":"5.00","pay":"4.87","fair":"5.00","fast":"5.00"},"reviews":15,"tos_flags":0},"A6YG5FKV2TAVC":{"name":"Agent Agent","attrs":{"comm":"4.33","pay":"4.78","fair":"4.80","fast":"4.57"},"reviews":84,"tos_flags":0}}';
+		return null;
 	}
 
 	function _fetchFromServer(url, callback) {
@@ -2249,7 +2251,7 @@ NotificationPanel.prototype.createPanel = function() {
 			margin-right: 0.3em;\
 			height: 0.7em;\
 			width: 0.7em;\
-			background-color: #def;\
+			background-color: #93C9FF;\
 			border-radius: 3px;\
 			font-size: 80%;\
 			position: relative;\
@@ -2321,29 +2323,27 @@ function NotificationGroup(title, hits, isSticky, watcher) {
 	this.createDOMElement();
 }
 NotificationGroup.prototype.addTO = function(data) {
-	var ratings = JSON.parse(data);
-	var group = this.getDOMElement();
+	if (data) {
+		var ratings = JSON.parse(data);
+		var group = this.getDOMElement();
 
-	console.log(".addTO ratings", ratings);
+		var notifications = group.find(".notification");
 
-	var notifications = group.find(".notification");
+		for (id in ratings) {
+			// console.log(id);
+			
+			currentNotification = notifications.filter(function() { return $(this).data("requesterID") === id });
+			// console.log(currentNotification);
 
-	for (id in ratings) {
-		// console.log(id);
-		
-		currentNotification = notifications.filter(function() { return $(this).data("requesterID") === id });
-		// console.log(currentNotification);
-
-		// console.log({ id: id, ratings: ratings[id] });
-		this.appendRatings({ notification: currentNotification, id: id, ratings: ratings[id] });
+			// console.log({ id: id, ratings: ratings[id] });
+			this.appendRatings({ notification: currentNotification, id: id, ratings: ratings[id] });
+		}
 	}
 }
 NotificationGroup.prototype.appendRatings = function(obj) {
 	var notification = obj.notification,
 		requesterID  = obj.id,
 		ratings      = obj.ratings;
-
-	console.log("ratings", obj);
 
 	// Would be nice to have a chart-looking icon
 	var element = $('<div class="ratings"><div class="ratings-button" style="float: left"><div class="ratings-chart"></div></div></div>');
