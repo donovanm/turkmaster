@@ -504,7 +504,7 @@ function loadHits() {
 		id: "A11L036EBWKONR",
 		time: 120000,
 		type: 'requester',
-		name: "Project Endor*",
+		name: "Project Endor",
 		option: {alert:true}}));	// Endor
 	dispatch.add(new Watcher({
 		id: "A6YG5FKV2TAVC",
@@ -961,7 +961,7 @@ var DispatchUI = {
 
 		$("body").css('margin', "0").prepend(div);
 
-		var ctrl = $("#controller", div);
+		var ctrl = DispatchUI.ctrl = $("#controller", div);
 		var settingsBtn = ctrl.append($("<a>")
 				.attr('id', "settings")
 				.attr('href', "javascript:void(0)")
@@ -999,11 +999,12 @@ var DispatchUI = {
 	addListeners: function() {
 		var dispatch = DispatchUI.dispatch;
 		dispatch.addListener(Evt.START, function() {
-			$(".on_off", ctrl).addClass("on");
+			console.log("Dispatch Start event called");
+			$(".on_off", DispatchUI.ctrl).addClass("on");
 		});
 
 		dispatch.addListener(Evt.STOP, function() {
-			$(".on_off", ctrl).removeClass("on");
+			$(".on_off", DispatchUI.ctrl).removeClass("on");
 		});
 
 		dispatch.addListener(Evt.ADD, function(watcher) {
