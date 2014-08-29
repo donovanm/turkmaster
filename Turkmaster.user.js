@@ -488,80 +488,47 @@ function loadHits() {
 	// Add a few watchers. Won't be done like this in the future
 	dispatch.isLoading = true;
 	dispatch.add(new Watcher({
+		id: "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=survey&minReward=0.25&qualifiedFor=on&x=13&y=10",
+		time: 60000,
+		type: 'url',
+		name: "Surveys $0.25 and up"})); //$.25 surveys
+	dispatch.add(new Watcher({
+		id: "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=survey&minReward=0.75&qualifiedFor=on&x=13&y=10",
+		time: 60000,
+		type: 'url',
+		name: "Surveys $0.75 and up"})); //$.75 surveys
+	dispatch.add(new Watcher({
+		id: "A11L036EBWKONR",
+		time: 120000,
+		type: 'requester',
+		name: "Project Endor*",
+		option: {alert:true}}));	// Endor
+	dispatch.add(new Watcher({
+		id: "A6YG5FKV2TAVC",
+		time: 300000,
+		type: 'requester',
+		name: "Agent Agent",
+		option: {alert:true}}));	// Agent Agent
+	dispatch.add(new Watcher({
 		id: "A2SUM2D7EOAK1T",
 		time: 120000,
 		type: 'requester',
 		name: 'Crowdsource'}));
 	dispatch.add(new Watcher({
-		id: "AX7NXUM5E66CV",
+		id: "AKEBQYX32KM19",
 		time: 120000,
 		type: 'requester',
-		name: 'Global Media'}));
+		name: 'Crowdsurf Support'}));
 	dispatch.add(new Watcher({
-		id: "A11L036EBWKONR",
-		time: 14000,
-		type: 'requester',
-		name: "Project Endor*",
-		option: {alert:true}}));	// Endor
-	dispatch.add(new Watcher({
-		id: "A2ELUBUNBP6BLE",
-		time: 60000,
-		type: 'requester',
-		name: "UW Social Media Lab*",
-		option: {alert:true}}));	// UW Social Media Lab
-	dispatch.add(new Watcher({
-		id: "A35GBZ8TKR3UKC",
-		time: 20000,
-		type: 'requester',
-		name: "Andy K*",
-		option: {alert:true}}));	// Andy K
-	dispatch.add(new Watcher({
-		id: "A2BAP2QO7MMQI9",
-		time: 60000,
-		type: 'requester',
-		name: "Product RnR*",
-		option: {alert:true}}));	// RnR
-	dispatch.add(new Watcher({
-		id: "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=survey&minReward=0.75&qualifiedFor=on&x=13&y=10",
-		time: 25000,
-		type: 'url',
-		name: "Surveys $0.75 and up"})); //$.75 surveys
-	dispatch.add(new Watcher({
-		id: "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=survey&minReward=0.25&qualifiedFor=on&x=13&y=10",
-		time: 30000,
-		type: 'url',
-		name: "Surveys $0.25 and up"})); //$.25 surveys
-	dispatch.add(new Watcher({
-		id: "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=qualification&minReward=0.00&x=0&y=0",
+		id: "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=qualif&minReward=0.00&x=0&y=0",
 		time: 300000,
 		type: 'url',
 		name: "Qualification HITs"})); // Qualification HITs
 	dispatch.add(new Watcher({
-		id: "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=transcribe&minReward=0.60&qualifiedFor=on&x=0&y=0",
+		id: "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=transcri&minReward=0.00&qualifiedFor=on&x=0&y=0",
 		time: 60000,
 		type: 'url',
 		name: "Transcription HITs"})); // Transcription HITs
-	dispatch.add(new Watcher({
-		id: "A2S0QCZG8DTNJC",
-		time: 20000,
-		type: 'requester',
-		name: "Procore Development*",
-		option: {alert:true}}));	// Procore Development
-	dispatch.add(new Watcher({
-		id: "AO1GS3CMM2IGY",
-		time: 180000,
-		type: 'requester',
-		name: "Five Star"})); // Five Star
-	dispatch.add(new Watcher({
-		id: "ALZUWU3P4QQSG",
-		time: 45000,
-		type: 'requester',
-		name: "Nate Ricklin"})); // Nate!
-	dispatch.add(new Watcher({
-		id: "A1HTPXGAZGXM4J",
-		time: 45000,
-		type: 'requester',
-		name: "AJ Ghergich (like AndyK)"})); // Find the email
 	dispatch.isLoading = false;
 	dispatch.save();
 }
@@ -1263,12 +1230,7 @@ Dispatch.prototype.add = function(watcher) {
 	this.notify(Evt.ADD, watcher);
 
 	// TODO Add a listener to save the watcher list after a watcher has been changed
-	// var _this = this;
-	// watcher.addListener(Watcher.CHANGE, _this.saveFake());
 	return watcher;
-}
-Dispatch.prototype.saveFake = function () {
-	console.log("Saving watcher list after a watcher has been changed.");
 }
 Dispatch.prototype.save = function() {
     if (!loadError) {
@@ -2002,7 +1964,7 @@ var Messenger = function() {
 var Loader = function() {
 	var queue        = [],
 		pauseTime    = 2000,	// The amount of time to pause (in milliseconds)
-		intervalTime = 100,	// The amount of time between page loads
+		intervalTime = 200,	// The amount of time between page loads
 		count        = 0,
 		paused       = true,
 		maxLoad      = 6;	// The max number of pages to load without pausing
