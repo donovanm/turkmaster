@@ -2070,7 +2070,7 @@ NotificationPanel.prototype.add = function(notification) {
 	var _this = this;
 	
 	// Get rid of the leftover notification if there's one there
-	if (this.notifications.length > 0 && this.notifications[0].hasTimedOut) {
+	if (this.notifications.length > 0 && this.notifications[0].hasTimedOut && !this.notifications[0].isHovered) {
 		var oldNotification = this.notifications[0];
 		setTimeout(function() { _this.onTimeoutListener(oldNotification);}, 1500);
 	}
