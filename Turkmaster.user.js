@@ -198,7 +198,7 @@ var SettingsDialog = function() {
 
 	function _addHandlers() {
 		DOMElement.on('click', function(e) {
-			if (e.target.tagName === "BUTTON" || e.target.parent.tagName === "BUTTON")
+			if (e.target.tagName === "BUTTON" || e.target.parentNode.tagName === "BUTTON")
 				_handleButtonToggle(e);
 		});
 
@@ -232,13 +232,11 @@ var SettingsDialog = function() {
 
 	function _handleButtonToggle(e) {
 		e.preventDefault();
-		var target = $(e.target),
+
+		// Chrome returns the span as the target while FF returns the button
+		var target = (e.target.tagName === "BUTTON") ? $(e.target) : $(e.target).parent(),
 			value = target.hasClass("on"),
 			id = target.parent().attr('id');
-
-		// Chrome returns the span while FF returns the button
-		if (target.tagname === "SPAN")
-			target = target.parent;
 
 		if (id !== "desktopNotifications") {
 			if (target.hasClass("on")) {
@@ -310,6 +308,9 @@ var SettingsDialog = function() {
 				background: none;\
 				border: none;\
 				padding: 0;\
+				outline: none;\
+				height: 1.3em;\
+				margin-top: 0em;\
 			}\
 			#settingsDialog .on_off span { color: #333; margin: 1px; font-size: 56%; font-weight: bold; border-radius: 1.6em;  }\
 			#settingsDialog .on_off span:nth-child(2) { background-color: #aeaeae; color: #fff; padding: 0.4em 0.8em; }\
@@ -655,7 +656,8 @@ function requestWebNotifications(callback) {
 
 		// If the user is okay, let's create a notification
 		if (permission === "granted") {
-			new window.Notification("Notifications enabled.");
+			var notification = new window.Notification("Notifications enabled.");
+			notification.onshow = function() { setTimeout(function() { notification.close() }, 5000) };
 			callback(true);
 		} else {
 			callback(false);
