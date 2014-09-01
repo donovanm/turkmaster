@@ -296,7 +296,6 @@ var SettingsDialog = function() {
 			// Desktop notification requests require user action so we need a callback
 			// for when the user responds.
 			settings.setDesktopNotifications(!value, function(isPermitted) {
-				console.log("Ispermitted", isPermitted);
 				if (isPermitted) {
 					target.addClass("on");
 				} else {
@@ -652,13 +651,8 @@ function sendMessage(message) {
 }
 
 function sendDesktopNotification(hits, watcher) {
-	// Let's check if the browser supports notifications
-    if (!("Notification" in window)) {
-		console.log("This browser does not support desktop notification");
-    }
-
 	// Let's check if the user is okay to get some notification
-	else if (Notification.permission === "granted" && settings.desktopNotifications) {
+	if (Notification.permission === "granted" && settings.desktopNotifications) {
 		// If the user isn't on a mturk page to receive a rich notification, then send a web notification
 		if (!wasViewed) {
 			var bodyText = "";
@@ -684,25 +678,29 @@ function sendDesktopNotification(hits, watcher) {
 }
 
 function requestDesktopNotifications(callback) {
-	window.Notification.requestPermission(function (permission) {
-		// Whatever the user answers, we make sure Chrome stores the information
-		if(!('permission' in Notification))
-			window.Notification.permission = permission;
+	// Let's check if the browser supports notifications
+    if (!("Notification" in window)) {
+		alert("This browser does not support desktop notification");
+    } else {
+		window.Notification.requestPermission(function (permission) {
+			// Whatever the user answers, we make sure Chrome stores the information
+			if(!('permission' in Notification))
+				window.Notification.permission = permission;
 
-		// If the user is okay, let's create a notification
-		if (permission === "granted") {
-			var notification = new window.Notification("Notifications enabled.");
-			notification.onshow = function() { setTimeout(function() { notification.close() }, 5000) };
-			callback(true);
-		} else {
-			callback(false);
-		}
-	});
+			// If the user is okay, let's create a notification
+			if (permission === "granted") {
+				var notification = new window.Notification("Notifications enabled.");
+				notification.onshow = function() { setTimeout(function() { notification.close() }, 5000) };
+				callback(true);
+			} else {
+				callback(false);
+			}
+		});
+	}
 }
 
 
 
-// This is the Hit object
 function Hit(attrs) {
 	attrs = attrs || {};
 	this.id           = attrs.id;
