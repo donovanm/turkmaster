@@ -1478,7 +1478,7 @@ WatcherUI.create = function(watcher) {
 	});
 
 	watcher.addListener(Evt.CHANGE, function() {
-		$(".name", div).text(watcher.name);
+		$(".name", div).text(watcher.name).attr('href', watcher.url);
 		$(".time", div).text(watcher.time / 1000 + " seconds");
 
 		if (watcher.state.isOn)
@@ -1507,11 +1507,9 @@ WatcherUI.create = function(watcher) {
 				name        : values.name,
 				time        : values.time,
 				alert       : values.alert,
+				auto        : values.auto,
 				stopOnCatch : values.stopOnCatch
 			})
-
-			// Uses setAuto so its internal hits will also be marked as auto
-			watcher.setAuto(values.auto);
 		});
 	});
 
@@ -1599,7 +1597,9 @@ function Watcher(attrs) {
 	// console.log(JSON.stringify(option,null,4));
 	// Figure out the URL
 	this.url = attrs.url;
-	this.setUrl();
+
+	if (typeof this.url === 'undefined')
+		this.setUrl();
 
 	// Listeners
 	this.listener = {
@@ -1626,21 +1626,19 @@ Watcher.prototype.getURL = function() {
 	return this.url;
 }
 Watcher.prototype.setUrl = function() {
-	if (typeof this.url === 'undefined') {
-		switch(this.type) {
-			case 'hit':
-				this.url = "https://www.mturk.com/mturk/preview" + (this.option.auto ? "andaccept" : "") + "?groupId=" + this.id;
-				break;
-			case 'requester':
-				this.url = "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&requesterId=" + this.id;
-				break;
-			case 'url':
-				this.url = this.id;
-				
-				// URL watchers get a random id because of id requirements for CSS
-				this.id = "A" + Math.floor(Math.random() * 100000000);
-				break;
-		}
+	switch(this.type) {
+		case 'hit':
+			this.url = "https://www.mturk.com/mturk/preview" + (this.option.auto ? "andaccept" : "") + "?groupId=" + this.id;
+			break;
+		case 'requester':
+			this.url = "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&requesterId=" + this.id;
+			break;
+		case 'url':
+			this.url = this.id;
+			
+			// URL watchers get a random id because of id requirements for CSS
+			this.id = "A" + Math.floor(Math.random() * 100000000);
+			break;
 	}
 }
 Watcher.prototype.setAuto = function(isAuto) {
@@ -1760,13 +1758,9 @@ Watcher.prototype.updateWatcherPanel = function() {
 	this.notify(Evt.UPDATE, null);
 }
 Watcher.prototype.setValues = function(values) {
-	// console.log("Before updating watcher", this);
-
-	// console.log("Time entered", values.time);
-
 	var val = values || {};
 	this.name = val.name || this.name;
-	this.option.auto = val.auto;
+	this.setAuto(val.auto);
 	this.option.stopOnCatch = val.stopOnCatch;
 	this.option.alert = val.alert;
 
