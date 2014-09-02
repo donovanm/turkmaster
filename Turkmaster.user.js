@@ -317,13 +317,13 @@ var SettingsDialog = function() {
 				background-color: #fafafa;\
 				padding: 10px;\
 				width: 300px;\
-				font: " + settings.fontSize + "pt 'Oxygen',verdana, sans-serif;\
+				font: " + settings.fontSize + "pt 'Oxygen', verdana, sans-serif;\
 				border-bottom: 1px solid #DDD;\
 				border-right: 1px solid #DDD;\
 				border-radius: 0.3em;\
 			}\
 			#settingsDialog div, #settingsDialog li, #settingsDialog input, #settingsDialog button {\
-				font: " + settings.fontSize + "pt 'Oxygen',verdana, sans-serif;\
+				font: " + settings.fontSize + "pt 'Oxygen', verdana, sans-serif;\
 			}\
 			#settingsDialog > div {\
 				margin: 0px 0px 0.5em;\
@@ -508,7 +508,7 @@ function addFormStyle() {
 			color: white;\
 			padding: 3px 10px;\
 			border-radius: 10px;\
-			font-family: 'Oxygen';\
+			font-family: 'Oxygen', verdana, sans-serif;\
 			transition: background-color 0.4s;\
 		}\
 		.watcher_button a:hover { background-color: #55B8EA }\
@@ -1080,7 +1080,7 @@ var DispatchUI = {
 				-khtml-user-select: none;\
 			}\
 			#dispatcher .watcher:first-child { margin-top: 0px }\
-			#dispatcher .watcher div { font: " + settings.fontSize + "pt 'Oxygen', sans-serif }\
+			#dispatcher .watcher div { font: " + settings.fontSize + "pt 'Oxygen', verdana, sans-serif }\
 			#dispatcher .watcher.running .details { background-color: #C3ECFC; background-color: rgba(218, 240, 251, 1); }\
 			#dispatcher .watcher.updated { background-color: #e8f5fc; background-color: rgba(218, 240, 251, 1) }\
 			#dispatcher .watcher .details { width: 25px; text-align: center; float: right; background-color: rgba(234, 234, 234, 1); position: absolute; top: 0; bottom: 0; right: 0; font-size: 90%; color: #fff; transition: background-color 0.5s }\
@@ -1413,10 +1413,9 @@ function watcherDialog(watcher, callback) {
 	};
 
 	function hide() {
-		// dialog.hide();
-		// dialog.remove();
+		dialog.hide();
+		dialog.remove();
 		dialog.empty();
-		dialog = null;
 	}
 
 	$("input[value='Save']", dialog).click(save);
@@ -2169,7 +2168,7 @@ NotificationPanel.prototype.createPanel = function() {
 	this.DOMElement = panel;
 
 	addStyle("\
-		.notification_panel div, .notification_panel p { font: " + settings.fontSize + "pt 'Oxygen', sans-serif; }\
+		.notification_panel div, .notification_panel p { font: " + settings.fontSize + "pt 'Oxygen', verdana, sans-serif; }\
 		#receiver.notification_panel { \
 			position      : fixed;\
 			width         : 400px;\
@@ -2288,7 +2287,7 @@ NotificationPanel.prototype.createPanel = function() {
 		}\
 		.notification_panel .ratings-button > .ratings-chart {\
 			position: absolute;\
-			bottom: 0;\
+			bottom: -2em;\
 			left: 0.4em;\
 			background-color: rgb(255, 255, 255);\
 			visibility: hidden;\
