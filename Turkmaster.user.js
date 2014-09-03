@@ -4,7 +4,7 @@
 // @author		DonovanM
 // @description A page-monitoring web app to make turking a little easier
 // @include     https://www.mturk.com/mturk/*
-// @version     0.96
+// @version     0.97
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js
 // @require 	https://ajax.googleapis.com/ajax/libs/webfont/1/webfont.js
 // @grant       none
@@ -1258,6 +1258,12 @@ Dispatch.prototype.stop = function() {
 	this.notify(Evt.STOP, null)
 }
 Dispatch.prototype.add = function(watcher) {
+	var self = this;
+
+	watcher.addListener(Evt.CHANGE, function() {
+		self.save();
+	})
+
 	this.watchers.push(watcher);
 
 	if (!this.isLoading) {
@@ -1634,7 +1640,8 @@ Watcher.prototype.setUrl = function() {
 			this.url = "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&requesterId=" + this.id;
 			break;
 		case 'url':
-			this.url = this.id;
+			if (typeof this.url === 'undefined')
+				this.url = this.id;
 			
 			// URL watchers get a random id because of id requirements for CSS
 			this.id = "A" + Math.floor(Math.random() * 100000000);
