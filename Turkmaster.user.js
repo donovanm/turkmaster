@@ -129,7 +129,7 @@ $(document).ready(function(){
 $(window).unload(function() {
 	if (pageType.DASHBOARD && pageType.MAIN) {
 		dispatch.ignoreList.save();
-		// dispatch.save();
+		dispatch.save();
 	}
 });
 
@@ -312,8 +312,8 @@ var SettingsDialog = function() {
 		addStyle("\
 			#settingsDialog {\
 				position: absolute;\
-				top: 9px;\
-				left: 26px;\
+				top: 16px;\
+				left: 249px;\
 				background-color: #fafafa;\
 				padding: 10px;\
 				width: 300px;\
@@ -594,14 +594,12 @@ function onMessageReceived(header, message) {
 				var id = message.split(',')[0];
 				if (!dispatch.isMuted(id)) {
 					dispatch.mute(id);
-					console.log("Remote mute (" + id + ")");
 				} 
 				break;
 			case 'unmute_hit' :
 				var id = message.split(',')[0];
 				if (dispatch.isMuted(id)) {
 					dispatch.unmute(id);
-					console.log("Remote unmute (" + id + ")");
 				}
 				break;
 			case 'request_main' :
@@ -781,9 +779,11 @@ function createDetailsPanel() {
 	var div = $('<div>').attr('id', 'details_panel').addClass('notification_panel');
 	addStyle("#details_panel {\
 		background-color: #fff;\
-		position: absolute; top: 0px;\
+		position: absolute;\
+		top: 0px;\
 		margin-left: 1px;\
-		width: 500;\
+		left: 270px;\
+		width: 500px;\
 		border: 1px solid #e3e3e3;\
 		border-radius: 0 0 3px 0;\
 		border-width: 0 1px 1px 0;\
@@ -791,7 +791,6 @@ function createDetailsPanel() {
 	#details_panel h4 { display: none }");
 	
 	$(div).mouseleave(function() { $(this).hide() });
-	$(div).css('left', $("#dispatcher").css('width'));
 		
 	$("body").append(div);
 }
@@ -994,7 +993,7 @@ var DispatchUI = {
 		$("body").css('margin', "0").prepend(div);
 
 		var ctrl = DispatchUI.ctrl = $("#controller", div);
-		var settingsBtn = ctrl.append($("<a>")
+		var settingsBtn = $("<a>")
 				.attr('id', "settings")
 				.attr('href', "javascript:void(0)")
 				.attr('title', "Settings")
@@ -1004,41 +1003,39 @@ var DispatchUI = {
 						SettingsDialog.show();
 					else
 						SettingsDialog.hide();
-				})
-			)
-			.append("Turkmaster Notifier")
-			.append('<div class="on_off"><a>ON</a><a>OFF</a></div>');
+				});
+
+		ctrl.append(
+			settingsBtn,
+			'<div class="play_container">\
+				<div class="play_all" title="Start All"></div>\
+				<div class="play selected" title="Start Selected"></div>\
+				<div class="pause" title="Pause All"></div>\
+			</div>',
+			"Turkmaster"
+		);
 
 		// Adding the data URL inline wouldn't work for some reason, so I'm doing it this way.
 		// Image from http://latierrasenosestrecha.org/wp-content/themes/purity/img/icons/settings.png
 		$("img", settingsBtn)[0].src = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA2RpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMC1jMDYwIDYxLjEzNDc3NywgMjAxMC8wMi8xMi0xNzozMjowMCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDpFRUQ3N0Q2NkUyQjJFMDExOTM4OUZBRkY5RUM4NjkxMiIgeG1wTU06RG9jdW1lbnRJRD0ieG1wLmRpZDpFQjNFQjA2OEIyRTYxMUUwOUZDRUUxRERBNzIzQkY1NyIgeG1wTU06SW5zdGFuY2VJRD0ieG1wLmlpZDpFQjNFQjA2N0IyRTYxMUUwOUZDRUUxRERBNzIzQkY1NyIgeG1wOkNyZWF0b3JUb29sPSJBZG9iZSBQaG90b3Nob3AgQ1M1IFdpbmRvd3MiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDpFRkQ3N0Q2NkUyQjJFMDExOTM4OUZBRkY5RUM4NjkxMiIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDpFRUQ3N0Q2NkUyQjJFMDExOTM4OUZBRkY5RUM4NjkxMiIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PiP+YRgAAALDSURBVHja7FdPZB1BGJ9tawmt8HinrUQpjdBqqFaq5BChJBI5xCvVQ1mPRq89hGqkeusxpLpKDtFTqpEorUZKKdFcWo2WR7REwyOE8niUeP19/Jbxmd3NbjXv0Aw/szO733z/ft/MrNdqtUw72zHT5tZ2A04UEYqiaBTdPFAC9oDb1Wp15TAjMEflhv3cP4kAPC2j6wK24OEv61WgPg2U3El054BtyO2m6fCSqgCLDKBbBjqBHWAQ+A3cAmYcItPAAp/XgDOAGD0GI97nMgDKRel3K8yGuRbP/BSHxMCGkhMjemBEPQ8HetUica79jJT6Djlx5nxeEn4GagnvNiSswCl45UnP8UbC99vAehEOSA4/AmUrvPeBF8A9YJgEFQVvgMdABXhgRUoIeBWGbhUtw07rOWRkvgB3qNywrwKfGIVJJb9fdB+oWJ6Ih8LkRRLR1WT+JfAO+GBxonLgMkTYx9E9cxBpBLgO3OW4xt1vHTJDlIkj8oQGPFdrSBWFkFlKi8CsQ7khicat8YQolwf0qyrso4yWcVTRbFYKAofgPpTsWWRsYrzJiL2yKiNuZZLP1YIsA1ybxXEoKlmLdmB8kd6PcK7f+n7XMtZkra/PgpAHS5eaFwUrZL+0RRgRMtfD6jASwg4k7AeTefaBGda0NMnzTeBrincx0XpYDdc49xCRmi5ShpHkm89D9PRGSn5lfoJkjZU3uU6hfcDnwRK3p0zFBS5at/Iacb5fMb2Rsm8kG4Dwd6B7q8ItBj3iES0p6eNZ0Mfxa773VUWs8XTNdSERlp9NeHeZO6IYepBLT0CZ1Twp+EZCaYI1M5Q1HXJyH9jMlQJev8YoLO0HcAXoBqYS1pri+0v83lg3onru45ghLvFqVcMiDWu+5TDaUxzq/as7YcZl9afaVneg6PRhXstDVYZh0Wu5d/Rv+N8b8EeAAQBg+uBx8hdn9gAAAABJRU5ErkJggg==";
-
-		if (DispatchUI.dispatch.isRunning)
-			$(".on_off", ctrl).addClass("on");
 	},
 
 	addActions: function() {
-		var dispatch = DispatchUI.dispatch;
-		$("#controller .on_off", DispatchUI.div).mousedown(function() {
-			if (!dispatch.isRunning) {
-				dispatch.start();
-			} else {
-				dispatch.stop();
-			}
+		var dispatch = DispatchUI.dispatch,
+			ctrl = DispatchUI.div.find("#controller");
+		$("div.play_all", ctrl).mousedown(function() {
+			dispatch.start(true);
+		});
+		$("div.play", ctrl).mousedown(function() {
+			dispatch.start();
+		});
+		$("div.pause", ctrl).mousedown(function() {
+			dispatch.stop();
 		});
 	},
 
 	addListeners: function() {
 		var dispatch = DispatchUI.dispatch;
-		dispatch.addListener(Evt.START, function() {
-			console.log("Dispatch Start event called");
-			$(".on_off", DispatchUI.ctrl).addClass("on");
-		});
-
-		dispatch.addListener(Evt.STOP, function() {
-			$(".on_off", DispatchUI.ctrl).removeClass("on");
-		});
-
 		dispatch.addListener(Evt.ADD, function(watcher) {
 			// This could be done on one line, but then we would lose access to the WatcherUI's internal Watcher object and functionality
 			var watcherEl = WatcherUI.create(watcher);
@@ -1055,12 +1052,13 @@ var DispatchUI = {
 	addStyle: function() {
 		addStyle("#dispatcher { background-color: #f5f5f5; position: fixed; top: 0px; float: left; height: 100%;  width: 270px; font-size: 8pt;  margin-left: 0px; margin }\
 			#content_container { position: absolute; left: 270px; top: 0; right: 0; border-left: 2px solid #dadada; }\
-			#dispatcher #controller { text-align: center; font: 160% Candara, sans-serif; color: #585858; position: relative; }\
+			#dispatcher #controller { text-align: center; font: 160% Candara, sans-serif; color: #585858; position: relative; padding: 3px 5px; }\
 			#dispatcher #controller .on_off { margin: 6px 5px 0 0 }\
 			#dispatcher #controller .on_off a { font-size: 80% }\
-			#dispatcher #controller #settings { top: -3px; position: relative; float: left; margin: 3px 2px}\
+			#dispatcher #controller #settings { top: 2px; position: absolute; right: 5px; }\
 			#dispatcher #controller #settings img { width: 1.5em }\
-			#dispatcher #watcher_container { position: absolute; top: 27px; bottom: 0; overflow-y:auto; width: 100%;}\
+			#dispatcher #controller .play_container { position: absolute; left: 5px }\
+			#dispatcher #watcher_container { position: absolute; top: 30px; bottom: 0; overflow-y:auto; width: 100%;}\
 			#dispatcher #watcher_container p { margin: 30px 0px }\
 			#dispatcher #watcher_container .error_button a { text-decoration: none; color: #555; background-color: #fff; padding: 3px 10px; margin: 5px; border: 1px solid #aaa; border-radius: 2px }\
 			#dispatcher #watcher_container .error_button a:hover { background-color: #def; border-color: #aaa }\
@@ -1094,7 +1092,8 @@ var DispatchUI = {
 			.on_off a:nth-child(2) { background-color: #aeaeae; color: #fff; border-radius: 12px; padding: 3px 6px; }\
 			.on_off.on a:nth-child(1) { background-color: #55b8ea; color: #fff; border-radius: 12px; padding: 3px 6px; }\
 			.on_off.on a:nth-child(2) { background-color: inherit; color: #333; border-radius: inherit; padding: inherit; }\
-			#dispatcher .watcher div:nth-child(2) { margin-right: 25px; padding: 5px 5px 5px 10px;}\
+			.watcher .on_off {  }\
+			#dispatcher .watcher > .content { margin-right: 25px; padding: 5px 5px 5px 33px;}\
 			#dispatcher .watcher .bottom { margin: 0 0 -5px; color: #aaa }\
 			#dispatcher .watcher .bottom a:link { color: black; }\
 			#dispatcher .watcher .bottom a:hover { color: #cef; }\
@@ -1109,7 +1108,74 @@ var DispatchUI = {
 			#dispatcher .watcher .color_code:hover div { width: 9px }\
 			#dispatcher .watcher .color_code.hit div       { background-color: rgba(234, 111, 111, .7); }\
 			#dispatcher .watcher .color_code.requester div { background-color: rgba(51, 147, 255, .7); }\
-			#dispatcher .watcher .color_code.url div       { background-color: rgba(57, 221, 122, .7); }");
+			#dispatcher .watcher .color_code.url div       { background-color: rgba(57, 221, 122, .7); }\
+			.watcher .play_container {\
+				padding: 0px 0px 0px 12px;\
+				float: left;\
+			}\
+			.play, .pause, .play_all {\
+				width:20px;\
+				height: 20px;\
+				position: relative;\
+				display: block;\
+			}\
+			#controller .play, #controller .pause, #controller .play_all { float: left; }\
+			.play:before, .play_all:before {\
+				width: 0;\
+				height: 0;\
+				border-width: 8px 11px;\
+				border-style: solid;\
+				border-color: transparent transparent transparent #747474;\
+				position: absolute;\
+				content: '';\
+				top: 3px;\
+				left: 0px;\
+			}\
+			.play.selected:after {\
+				width: 6px;\
+				height: 6px;\
+				border-radius: 1px;\
+				position: absolute;\
+				content: '';\
+				background-color: #999;\
+				top: 13px;\
+				right: 9px;\
+			}\
+			.play_all:after {\
+				width: 0;\
+				height: 0;\
+				border-width: 8px 11px;\
+				border-style: solid;\
+				border-color: transparent transparent transparent #999;\
+				position: absolute;\
+				content: '';\
+				top: 3px;\
+				left: 5px;\
+			}\
+			.watcher.running .play:before, .watcher.running .play:after, .pause:before, .pause:after {\
+				width: 4px;\
+				height: 15px;\
+				background: #747474;\
+				position: absolute;\
+				content: '';\
+				top: 3px;\
+			}\
+			.watcher.running .play:before, .pause:before {\
+				left: 0px;\
+				border: none;\
+			}\
+			.watcher.running .play:after, .pause:after {\
+				left: 6px;\
+			}\
+			.play_select {\
+				width: 6px;\
+				height: 6px;\
+				border: 2px solid #cecece;\
+				border-radius: 2px;\
+				margin-top: 2px;\
+			}\
+			.watcher.selected .play_select { background-color: #55b8ea; border-color: #b4e6ff; }\
+			");
 	},
 
 	addDragAndDrop: function() {
@@ -1215,7 +1281,6 @@ var DispatchUI = {
 
 **/
 function Dispatch() {
-	this.isRunning = false;
 	this.watchers = new Array();
 	this.ignoreList = new IgnoreList();
 	this.isLoading = false;
@@ -1230,21 +1295,20 @@ function Dispatch() {
 	};
 }
 Dispatch.prototype = new Evt();
-Dispatch.prototype.start = function() {
+Dispatch.prototype.start = function(startAll) {
 	if (this.watchers.length > 0) {
 		var count = 0;
 		for (var i = 0, len = this.watchers.length; i < len; i++) {
 			// Don't start them all at the same time. There is a 2 second delay
 			// between each start. It had to be done in a self-executing function
 			// in order for the setTimeout to work properly.
-			if (this.watchers[i].state.isOn) {
+			if (this.watchers[i].state.isSelected || startAll) {
 				(function (watcher, x){
 						watcher.timer = setTimeout(function() { watcher.start(); }, x * 0000); // Let's try 0ms
 				})(this.watchers[i], count++);
 			}
 		}
 	}
-	this.isRunning = true;
 	this.notify(Evt.START, null);
 }
 Dispatch.prototype.stop = function() {
@@ -1253,11 +1317,16 @@ Dispatch.prototype.stop = function() {
 		for (var i = 0, len = this.watchers.length; i < len; i++)
 			this.watchers[i].stop();
 	}
-	this.isRunning = false;
 	this.interruptStart = true;
 	this.notify(Evt.STOP, null)
 }
 Dispatch.prototype.add = function(watcher) {
+	var self = this; 	 	
+		 	
+	watcher.addListener(Evt.CHANGE, function() { 	 	
+		self.save(); 	 	
+	})
+
 	this.watchers.push(watcher);
 
 	if (!this.isLoading) {
@@ -1271,7 +1340,6 @@ Dispatch.prototype.add = function(watcher) {
 }
 Dispatch.prototype.save = function() {
     if (!loadError) {
-        console.log("Saving " + this.watchers.length + " watchers...");
         localStorage.setItem('notifier_watchers', JSON.stringify(dispatch.watchers,Watcher.replacerArray));
 		// localStorage.setItem('notifier_watchers_backup', JSON.stringify(dispatch.watchers,Watcher.replacerArray));
     }
@@ -1441,13 +1509,14 @@ function watcherDialog(watcher, callback) {
 		$("#watcherDuration", dialog).focus().select();
 }
 
+
 function WatcherUI() { /* Nothing */ };
 WatcherUI.create = function(watcher) {
 	// Create jQuery Element...
 	var div = $("<div>").addClass("watcher")
 		.html('<div class="details"> > </div>\
-		<div>\
-			<div class="on_off"><a>ON</a><a>OFF</a></div>\
+		<div class="play_container"><div class="play"></div><div class="play_select"></div></div>\
+		<div class="content">\
 			<a class="name" href="' + watcher.getURL() + '" target="_blank">' + ((typeof watcher.name !== 'undefined') ? watcher.name : watcher.id) + '</a>\
 			<div class="bottom">\
 	            <span class="time">' + (watcher.time / 1000) + ' seconds </span>\
@@ -1460,7 +1529,8 @@ WatcherUI.create = function(watcher) {
 			<div class="color_code"><div></div></div>\
 		</div>');
 
-	if (watcher.state.isOn) $(".on_off", div).addClass("on");
+	if (watcher.state.isSelected)
+		div.addClass("selected");
 
 	// Add listeners
 	watcher.addListener(Evt.START, function() {
@@ -1481,10 +1551,10 @@ WatcherUI.create = function(watcher) {
 		$(".name", div).text(watcher.name).attr('href', watcher.url);
 		$(".time", div).text(watcher.time / 1000 + " seconds");
 
-		if (watcher.state.isOn)
-			$(".on_off", div).addClass("on");
+		if (watcher.state.isSelected)
+			$(div).addClass("selected");
 		else
-			$(".on_off", div).removeClass("on");
+			$(div).removeClass("selected");
 	});
 
 	watcher.addListener(Evt.HITS_CHANGE, function() {
@@ -1522,8 +1592,15 @@ WatcherUI.create = function(watcher) {
 		$(this).removeClass("updated");
 	});
 
-	$(".on_off", div).mousedown(function() {
-		watcher.toggleOnOff();
+	$("div.play_select", div).mousedown(function() {
+		watcher.toggleSelected();
+	});
+
+	$("div.play", div).mousedown(function() {
+		if (watcher.state.isRunning)
+			watcher.stop();
+		else
+			watcher.start();
 	});
 
 
@@ -1572,9 +1649,9 @@ function Watcher(attrs) {
 	// Default states
 	this.state = {};
 	state = attrs.state || {};
-	this.state.isRunning = (typeof state.isRunning !== 'undefined') ? state.isRunning : false;
-	this.state.isOn      = (typeof state.isOn !== 'undefined') ? state.isOn : true;
-	this.state.isUpdated = (typeof state.isUpdated !== 'undefined') ? state.isUpdated : false;
+	this.state.isRunning  = (typeof state.isRunning !== 'undefined') ? state.isRunning : false;
+	this.state.isSelected = (typeof state.isSelected !== 'undefined') ? state.isSelected : false;
+	this.state.isUpdated  = (typeof state.isUpdated !== 'undefined') ? state.isUpdated : false;
 
 	// TODO Erase these state overwrites once we implement resuming state after a page load
 	// Currently if a watcher is on when dispatch saves the watcher list, it'll still be marked as running even
@@ -1594,7 +1671,7 @@ function Watcher(attrs) {
 	this.option.auto        = (typeof option.auto !== 'undefined') ? option.auto : false;
 	this.option.alert       = (typeof option.alert !== 'undefined') ? option.alert : false;
 	this.option.stopOnCatch = (typeof option.stopOnCatch !== 'undefined') ? option.stopOnCatch : true;
-	// console.log(JSON.stringify(option,null,4));
+
 	// Figure out the URL
 	this.url = attrs.url;
 
@@ -1634,7 +1711,8 @@ Watcher.prototype.setUrl = function() {
 			this.url = "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&requesterId=" + this.id;
 			break;
 		case 'url':
-			this.url = this.id;
+			if (typeof this.url === 'undefined')
+				this.url = this.id;
 			
 			// URL watchers get a random id because of id requirements for CSS
 			this.id = "A" + Math.floor(Math.random() * 100000000);
@@ -1657,15 +1735,18 @@ Watcher.prototype.onChanged = function() {
 		this.alert();
 }
 Watcher.prototype.start = function() {
-	var _this = this;
-	
-	// Set the interval and start right away
-	this.interval = setInterval(function(){ _this.getData() }, this.time);
-	this.getData();
-	
-	this.state.isRunning = true;
+	if (!this.state.isRunning) {
+		var _this = this;
 
-	this.notify(Evt.START, null);
+		// Set the interval and start right away
+		this.interval = setInterval(function(){ _this.getData() }, this.time);
+		this.getData();
+		
+		this.state.isRunning = true;
+
+		this.notify(Evt.START, null);
+	}
+
 	return this;
 }
 Watcher.prototype.stop = function() {
@@ -1723,7 +1804,6 @@ Watcher.prototype.filterMessages = function(newHits) {
 	}
 	
 	// If "last hits" doesn't exist, then all of the new hits should be considered new
-	// console.log("Returning same hits");
 	for (var i = 0, len = newHits.length; i < len; i++)
 		if (!dispatch.isMuted(newHits[i].id))
 			filteredHits.push(newHits[i]);
@@ -1732,15 +1812,11 @@ Watcher.prototype.filterMessages = function(newHits) {
 	this.lastHits = newHits;
 	return filteredHits;
 }
-Watcher.prototype.toggleOnOff = function() {
-	if (this.state.isOn) {
-		this.stop();
-		this.state.isOn = false;
-	} else {
-		if (!this.state.isRunning)
-			this.start();
-		this.state.isOn = true;
-	}
+Watcher.prototype.toggleSelected = function() {
+	if (this.state.isSelected)
+		this.state.isSelected = false;
+	else
+		this.state.isSelected = true;
 
 	this.notify(Evt.CHANGE, null);
 }
@@ -1766,7 +1842,7 @@ Watcher.prototype.setValues = function(values) {
 
 	if (typeof val.time !== 'undefined' && this.time !== val.time) {
 		this.time = val.time;
-		// console.log("this.state.isRunning", this.state.isRunning);
+
 		if (this.state.isRunning) {
 			this.stop();
 			this.start();
@@ -1814,7 +1890,6 @@ Watcher.prototype.sendHits = function(hits) {
 	if (typeof hits !== 'undefined' && hits.length > 0) {
 		hits = this.filterMessages(hits);
 
-		// console.log(JSON.stringify(hits,null,4));
 		if (hits.length > 0) {
 			Messenger.sendHits(this, hits);
 		}
@@ -1894,7 +1969,6 @@ Watcher.prototype.parseHitPage = function(data) {
 	if ($(msgbox).length > 0 && ($(msgbox).text()).contains("There are no more available HITs in this group.")) {
 		// If there aren't any more available, keep checking. If they were just previously available
 		// then we should alert the user that it's gone.
-		// console.log("No more available.");
 	} else {
 		// If it's newly available, alert the user and start auto-stacking if that's desired.
 		//TODO We need to test for "You are not qualified to accept this HIT."
@@ -1916,12 +1990,12 @@ Watcher.prototype.parseHitPage = function(data) {
 			// We should probably toggle off all auto-accept hits when we encounter a captcha. Maybe send a special message to all mturk windows while we're at it.
 			// The special message could be some kind of banner that says that no more hits can be accepted in the background until the captcha is entered. (It would
 			// be pretty cool if we could pull up the captcha image in the background and just show it and the form to enter it from another page).
-			this.toggleOnOff();
+			this.stop();
 		
 		return new Array(hit);
 	}
 }
-Watcher.replacerArray = ["id", "time", "type", "name", "option", "auto", "alert", "stopOnCatch", "state", "isRunning", "isOn", "isUpdated", "url"];
+Watcher.replacerArray = ["id", "time", "type", "name", "option", "auto", "alert", "stopOnCatch", "state", "isRunning", "isSelected", "isUpdated", "url"];
 
 var Messenger = function() {
 	var SEND_HITS = "new_hits";
@@ -2352,12 +2426,7 @@ NotificationGroup.prototype.addTO = function(data) {
 		var notifications = group.find(".notification");
 
 		for (id in ratings) {
-			// console.log(id);
-			
 			currentNotification = notifications.filter(function() { return $(this).data("requesterID") === id });
-			// console.log(currentNotification);
-
-			// console.log({ id: id, ratings: ratings[id] });
 			this.appendRatings({ notification: currentNotification, id: id, ratings: ratings[id] });
 		}
 	}
