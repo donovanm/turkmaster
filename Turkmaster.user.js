@@ -4,7 +4,7 @@
 // @author		DonovanM
 // @description A page-monitoring web app to make turking a little easier
 // @include     https://www.mturk.com/mturk/*
-// @version     0.96
+// @version     0.97
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js
 // @require 	https://ajax.googleapis.com/ajax/libs/webfont/1/webfont.js
 // @grant       none
