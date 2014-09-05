@@ -624,7 +624,7 @@ function onMessageReceived(header, message) {
 				// Show the hits and let the dashboard know it was seen
 				if (document.hasFocus())
 					sendMessage({ header: "notification_viewed" });
-				notificationPanel.add(new NotificationGroup(message.title, hits));
+				notificationPanel.add(new NotificationGroup({ title: message.title, hits: hits, url: message.url }));
 				break;
 
 			case 'captcha' :
@@ -804,7 +804,7 @@ function showDetailsPanel(watcher) {
 	if (watcher !== lastWatcher || (watcher === lastWatcher && watcher.isUpdated)) {
 		$("*", panel).remove();
 		if (watcher.lastHits.length > 0) {
-			group = new NotificationGroup(null, watcher.lastHits, false, watcher);
+			group = new NotificationGroup({ hits: watcher.lastHits, isSticky: false, watcher: watcher });
 			$(panel).append((group).getDOMElement());
 
 			// This shouldn't need to use callback once caching is enabled. Anything TO info in the
@@ -2010,7 +2010,7 @@ var Messenger = function() {
 		wasViewed = false;
 
 		// Send Hits
-		sendMessage({ header: SEND_HITS, content: {'title':watcher.name, 'hits':hits} });
+		sendMessage({ header: SEND_HITS, content: { 'title': watcher.name, 'hits': hits, 'url': watcher.url } });
 
 		// Get TO and send it
 		var toData = TO.get(Hit.getUniqueReqeusters(hits), _handleTOReceived);
@@ -2018,7 +2018,7 @@ var Messenger = function() {
 			sendMessage({ header: SEND_TO, content: toData });
 
 		// Show notification on dashboard, too
-		notificationGroup = notificationPanel.add(new NotificationGroup(watcher.name, hits));
+		notificationGroup = notificationPanel.add(new NotificationGroup({ title: watcher.name, hits: hits, url: watcher.url }));
 
 		// Attempt to send a browser notification after a brief period of time. If another mturk
 		// page was visible when it received the hits, this will cancel out.
@@ -2215,10 +2215,7 @@ NotificationPanel.prototype.hide = function() {
 }
 NotificationPanel.prototype.createPanel = function() {
 	var _this = this;
-	var panel =	$("<div>")
-			.addClass("notification_panel")
-			.addClass("hidden")
-			.attr('id', "receiver")
+	var panel =	$('<div class="notification_panel hidden" id="receiver"></div>')
 			.hover(
 				function() {
 					clearTimeout(this.timeout);
@@ -2272,6 +2269,7 @@ NotificationPanel.prototype.createPanel = function() {
 			margin     : 0;\
 		}\
 		#receiver .notification_group h3 { margin: 3px; font-weight: normal }\
+		#receiver .notification_group h3 a:link, #receiver .notification_group h3 a:visited { color: #333 }\
 		#receiver .notification_group h4 a:link,\
 		#receiver .notification_group h4 a:visited { margin: 2px 0 0 4px; color: #222; }\
 		.notification_panel h2, #details_panel h2 { font-size: 100%; font-weight: normal; margin: 0px }\
@@ -2396,22 +2394,23 @@ NotificationPanel.prototype.onTimeoutListener = function(notification) {
 /** The NotificationGroup object. This holds groups of Notifications and interacts 
 	directly with the NotificationPanel
 **/
-function NotificationGroup(title, hits, isSticky, watcher) {
-	this.title       = title;
-	this.hits        = hits;
-	this.isSticky    = (typeof isSticky !== 'undefined') ? isSticky : this.hasAutoAccept();
+function NotificationGroup(obj) { // title, hits, isSticky, watcher, url
+	this.title       = obj.title || null;
+	this.hits        = obj.hits;
+	this.isSticky    = (typeof obj.isSticky !== 'undefined') ? obj.isSticky : this.hasAutoAccept();
+	this.url         = obj.url;
 	this.timeout     = (this.isSticky) ? 15000 : 6000;
 	this.hasTimedOut = false;
 	this.isHovered   = false;
 
-	if (typeof watcher !== 'undefined') this.watcher = watcher;
+	if (typeof obj.watcher !== 'undefined') this.watcher = obj.watcher;
 	
 	var _this = this;
 	setTimeout(function() {
 		if (typeof _this.onTimeout !== 'undefined' && _this.onTimeout !== null) {
 			_this.hasTimedOut = true;
 
-			 if (!_this.isHovered)
+			if (!_this.isHovered)
 				_this.onTimeout(_this);
 		}
 	}, this.timeout);
@@ -2462,7 +2461,7 @@ NotificationGroup.prototype.createDOMElement = function() {
 		hit = this.hits[0];
 
 	var div = $('<div>').addClass("notification_group")
-		.append((this.title !== null) ? $('<h3>').html(this.title) : "")
+		.append((this.title !== null) ? $('<h3><a href="' + this.url + '" target="_blank">' + this.title + '</a></h3>') : "")
 		.append((Hit.isSameRequester(this.hits)) ? $('<h4><a href="' + REQUESTER_PREFIX + hit.requesterID + '" target="_blank" class="requester">' + hit.requester + '</a></h4>') : "")
 		.hover(
 			function() { _this.isHovered = true },
@@ -2514,49 +2513,29 @@ NotificationHit.prototype.createDOMElement = function() {
 
 	// Create notification
 	var hit = this.hit;
-	var notification = $('<div>').addClass("notification")
-		.append($('<a class="title" target="_blank"></a>')
-			.attr('href', hit.getURL('preview'))
-			.attr('title', hit.title)
-			.text(hit.title))
-		.append(
-			(!this.isSameReq) ? $('<a class="requester">').attr('href', URL_PREFIX + hit.requesterID).attr('target', "_blank").html(hit.requester) : "")
-		.append($('<p>' + hit.reward + " - " + hit.available + " rem. - " + hit.time.replace("minutes", "mins") + '</p>'))
-		.append($('<div class="links"></div>'))
-		.append($('<div><a class="mute"></a></div>'))
-		.data("requesterID", hit.requesterID);
+	var notification = $('<div>').addClass("notification").append(
+		'<a class="title" target="_blank" href="' + hit.getURL('preview') + '" title="' + hit.title + '">' + hit.title + '</a>',
+		(!this.isSameReq) ? $('<a class="requester">').attr('href', URL_PREFIX + hit.requesterID).attr('target', "_blank").html(hit.requester) : "",
+		'<p>' + hit.reward + " - " + hit.available + " rem. - " + hit.time.replace("minutes", "mins") + '</p>\
+		 <div class="links"></div>\
+		 <div><a class="mute"></a></div>'
+	).data("requesterID", hit.requesterID);
 
 	// Add links
 	if (typeof hit.id !== 'undefined' && hit.id !== "undefined" && hit.isQualified) {
 		if (this.hit.isAutoAccept) {
-			$(".links", notification)
-				.append($('<a>').addClass("hit_link").attr('href', hit.getURL('view')).attr('target', "_blank").html("VIEW"))
-				.append(
-					$('<a>').addClass("hit_link").attr('href', "javascript:void(0)").html("STACK")
-						.click(function(e) {
-							e.preventDefault();
-							sendMessage({ header: "stack", content: hit.id, timestamp: true });
-						})
-					)
-				.append(
-					$('<a>').addClass("hit_link").attr('href', "javascript:void(0)").html("QUEUE")
-						.click(function(e) {
-							e.preventDefault();
-							sendMessage({ header: "queue", content: hit.id, timestamp: true });
-						})
-					);
+			$(".links", notification).append('<a class="hit_link" href="' + hit.getURL('view') + '" target="_blank">VIEW</a>');
 		} else {
-			$(".links", notification)
-				.append($('<a>').addClass("hit_link").attr('href', hit.getURL('preview')).attr('target', "_blank").html("PREVIEW"))
-				.append($('<a>').addClass("hit_link").attr('href', hit.getURL('accept')).attr('target', "_blank").html("ACCEPT"))
-				.append($('<a>').addClass("hit_link").attr('href', hit.getURL('auto')).attr('target', "_blank").html("+AUTO"));
+			$(".links", notification).append('\
+				<a class="hit_link" target="_blank" href="' + hit.getURL('preview') + '">PREVIEW</a>\
+				<a class="hit_link" target="_blank" href="' + hit.getURL('accept') + '">ACCEPT</a>\
+				<a class="hit_link" target="_blank" href="' + hit.getURL('auto') + '">+AUTO</a>');
 		}
 	} else {
 		$(notification).addClass("not_qualified");
-		$(".links", notification)
-			.append((hit.canPreview) ?
-				$('<a>').addClass("hit_link").attr('href', hit.getURL('preview')).attr('target', "_blank").html("PREVIEW") : "")
-			.append($('<span class="extra_info">').html("Not Qualified&nbsp;&nbsp;"));
+		$(".links", notification).append(
+			(hit.canPreview) ? '<a class="hit_link" href="' + hit.getURL('preview') + '" target="_blank">PREVIEW</a>' : "",
+			'<span class="extra_info">Not Qualified&nbsp;&nbsp;</span>');
 	}
 	
 	
@@ -2616,7 +2595,7 @@ var Sound = function() {
 		if (settings.sound) {
 			if (context instanceof Watcher) {	// It's written this way in case we want sounds for other things in the future
 				var option = context.option;
-				if (!option.stopOnCatch) {
+				if (!option.stopOnCatch && option.auto) {
 					altSound.currentTime = 0;
 					altSound.play();
 				} else if (option.auto || option.alert) {
