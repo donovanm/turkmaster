@@ -1321,10 +1321,17 @@ Dispatch.prototype.stop = function() {
 	this.notify(Evt.STOP, null)
 }
 Dispatch.prototype.add = function(watcher) {
+<<<<<<< HEAD
 	var self = this; 	 	
 		 	
 	watcher.addListener(Evt.CHANGE, function() { 	 	
 		self.save(); 	 	
+=======
+	var self = this;
+
+	watcher.addListener(Evt.CHANGE, function() {
+		self.save();
+>>>>>>> master
 	})
 
 	this.watchers.push(watcher);
