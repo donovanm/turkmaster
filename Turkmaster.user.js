@@ -1191,7 +1191,7 @@ var DispatchUI = {
 			startPos = endPos = $("#watcher_container .watcher").index(e.currentTarget);
 
 			// Get reference to the selected watcher
-			dragDiv = watchers[startPos].addClass("dragging");
+			dragDiv = watchers[startPos];
 			nextDiv = dragDiv.next();
 			prevDiv = dragDiv.prev();
 
@@ -1212,6 +1212,8 @@ var DispatchUI = {
 			if (!isDragging && (Math.abs(offsetY) > slop)) {
 				// Start dragging
 				isDragging = true;
+
+				dragDiv.addClass("dragging");
 
 				dragDiv.css('cursor', "row-resize");
 				dragDiv.css('z-index', "100");
@@ -1321,17 +1323,10 @@ Dispatch.prototype.stop = function() {
 	this.notify(Evt.STOP, null)
 }
 Dispatch.prototype.add = function(watcher) {
-<<<<<<< HEAD
 	var self = this; 	 	
 		 	
 	watcher.addListener(Evt.CHANGE, function() { 	 	
 		self.save(); 	 	
-=======
-	var self = this;
-
-	watcher.addListener(Evt.CHANGE, function() {
-		self.save();
->>>>>>> master
 	})
 
 	this.watchers.push(watcher);
