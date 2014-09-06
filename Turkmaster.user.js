@@ -1077,7 +1077,6 @@ var DispatchUI = {
 				-webkit-user-select: none;\
 				-khtml-user-select: none;\
 			}\
-			#dispatcher .watcher:first-child { margin-top: 0px }\
 			#dispatcher .watcher div { font: " + settings.fontSize + "pt 'Oxygen', verdana, sans-serif }\
 			#dispatcher .watcher.running .details { background-color: #C3ECFC; background-color: rgba(218, 240, 251, 1); }\
 			#dispatcher .watcher.updated { background-color: #e8f5fc; background-color: rgba(218, 240, 251, 1) }\
@@ -1180,7 +1179,7 @@ var DispatchUI = {
 
 	addDragAndDrop: function() {
 		// Drag watchers
-		var startY, currentBaseY, limit, height,
+		var startY, currentBaseY, max, min, height,
 			dragDiv, nextDiv, prevDiv, startPos, endPos, isDragging,
 			slop = 7, watchers = DispatchUI.watchers;
 
@@ -1198,16 +1197,19 @@ var DispatchUI = {
 			// TODO Check target to prevent dragging from a component inside the watcher (i.e. buttons, links, etc.)
 			height = dragDiv.outerHeight(true);
 
-			currentBaseY = startY = e.clientY;
-			limit = Math.min($("#watcher_container").outerHeight(true), height * (DispatchUI.dispatch.watchers.length + .75)) - height;
-			
+			startY = e.clientY;
+			currentBaseY = dragDiv.offset().top;
+
+			// max = Math.min($("#watcher_container").outerHeight(true), height * (DispatchUI.dispatch.watchers.length + .75)) - height;
+			min = watchers[0].offset().top;
+			max = Math.min($("#watcher_container").outerHeight(true), height * (DispatchUI.dispatch.watchers.length - 1) + watchers[0].offset().top);
+
 			$(window).on("mousemove", move);
 			$(window).on("mouseup", up);
 		});
 
 		function move(e) {
 			var offsetY = e.clientY - startY;
-			var diffY = e.clientY - currentBaseY;
 
 			if (!isDragging && (Math.abs(offsetY) > slop)) {
 				// Start dragging
@@ -1222,25 +1224,35 @@ var DispatchUI = {
 			}
 
 			if (isDragging) {
+				dragDiv.css('top', offsetY);
+
+				var diffY = dragDiv.offset().top - currentBaseY;
+
+				if (dragDiv.offset().top > max) {
+					dragDiv.offset({ top: max });
+					diffY = 0;
+				} else if (dragDiv.offset().top < min) {
+					dragDiv.offset({ top: min });
+					diffY = 0;
+				}
+
 				if (diffY > height / 2) {
 					// Move down one spot
-					nextDiv.css('top', parseInt(nextDiv.css('top')) - height);
+					nextDiv.offset({ 'top': nextDiv.offset().top - height });
 					nextDiv = nextDiv.nextAll(":not(.dragging)").first();
-					prevDiv = prevDiv.nextAll(":not(.dragging)").first();
+					prevDiv = (prevDiv.length) ? prevDiv.nextAll(":not(.dragging)").first() : (dragDiv !== watchers[0]) ? watchers[0] : watchers[1];
 
 					currentBaseY += height;
 					endPos++;
 				} else if (-diffY > height / 2) {
 					// Move up one spot
-					prevDiv.css('top', parseInt(prevDiv.css('top')) + height);
+					prevDiv.offset({ 'top': prevDiv.offset().top + height });
 					prevDiv = prevDiv.prevAll(":not(.dragging)").first();
-					nextDiv = nextDiv.prevAll(":not(.dragging)").first();
+					nextDiv = (nextDiv.length) ? nextDiv.prevAll(":not(.dragging)").first() : (dragDiv !== watchers[watchers.length - 1]) ? watchers[watchers.length - 1] : watchers[watchers.length - 2];
 
 					currentBaseY -= height;
 					endPos--;
 				}
-
-				dragDiv.css('top', offsetY);
 			}
 		}
 
