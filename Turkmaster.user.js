@@ -1071,12 +1071,14 @@ var DispatchUI = {
 				border-bottom: 1px solid #ddd;\
 				border-right: 1px solid #ddd;\
 				cursor: default;\
-				transition: background-color 0.5s;\
+				top: 0;\
+				transition: background-color 0.5s, top 0.1s;\
 				-moz-user-select: none;\
 				-webkit-touch-callout: none;\
 				-webkit-user-select: none;\
 				-khtml-user-select: none;\
 			}\
+			#dispatcher .watcher.dragging { cursor: row-resize; z-index: 100; opacity: 0.8; transition: background-color 0.5s, top 0s }\
 			#dispatcher .watcher div { font: " + settings.fontSize + "pt 'Oxygen', verdana, sans-serif }\
 			#dispatcher .watcher.running .details { background-color: #C3ECFC; background-color: rgba(218, 240, 251, 1); }\
 			#dispatcher .watcher.updated { background-color: #e8f5fc; background-color: rgba(218, 240, 251, 1) }\
@@ -1084,7 +1086,7 @@ var DispatchUI = {
 			#dispatcher .watcher .details.updated { background-color: rgba(218, 240, 251, 1); background-color: #e8f5fc; background-color: rgba(220, 255, 228, 1) }\
 			#dispatcher .watcher .name { font-size 130%; color: black; text-decoration: none; display: inline-block; margin-top: -3px}\
 			#dispatcher .watcher .name:hover { text-decoration: underline }\
-			#dispatcher .watcher .name.no_hover:hover { text-decoration: none }\
+			#dispatcher .watcher.dragging .name:hover { text-decoration: none }\
 			#dispatcher .watcher .time { display: block; float: left; font-size: 80% }\
 			.on_off { float: right; cursor: pointer }\
 			.on_off a { color: #333; margin: 1px; font-size: 56%; font-weight: bold }\
@@ -1216,11 +1218,6 @@ var DispatchUI = {
 				isDragging = true;
 
 				dragDiv.addClass("dragging");
-
-				dragDiv.css('cursor', "row-resize");
-				dragDiv.css('z-index', "100");
-				dragDiv.css('opacity', "0.9");
-				$(".name", dragDiv).addClass("no_hover");
 			}
 
 			if (isDragging) {
@@ -1262,6 +1259,7 @@ var DispatchUI = {
 
 			if (isDragging) {
 				e.preventDefault();
+				dragDiv.removeClass("dragging");
 				isDragging = false;
 
 				// $("div", colorCode).css('width', '');
@@ -1269,10 +1267,12 @@ var DispatchUI = {
 				dragDiv.css('z-index', '');
 				dragDiv.css('opacity', '');
 				$(".name", dragDiv).removeClass("no_hover");
-				dragDiv.removeClass("dragging");
 
 				// Reset all watcher offsets
+				$("#watcher_container .watcher").css('transition', "background-color 0.5s, top 0s");
 				$("#watcher_container .watcher").css('top', '');
+
+				setTimeout(function() { $("#watcher_container .watcher").css('transition', ''); }, 600);
 
 				if (startPos !== endPos) {
 					if (endPos > startPos)
