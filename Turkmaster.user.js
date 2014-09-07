@@ -2,9 +2,9 @@
 // @name        Turkmaster
 // @namespace   https://greasyfork.org/users/3408
 // @author		DonovanM
-// @description A page-monitoring web app to make turking a little easier
+// @description A page-monitoring web app for Mturk (Mechanical Turk) to make turking a little easier
 // @include     https://www.mturk.com/mturk/*
-// @version     0.97
+// @version     0.99
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js
 // @require 	https://ajax.googleapis.com/ajax/libs/webfont/1/webfont.js
 // @grant       none
@@ -106,6 +106,7 @@ $(document).ready(function(){
 		dispatch = new Dispatch();
 		DispatchUI.create(dispatch);
 		createDetailsPanel();
+		IgnoreList.init();
 
 		if (settings.preloadHits)
 			loadHits();
@@ -128,7 +129,6 @@ $(document).ready(function(){
 
 $(window).unload(function() {
 	if (pageType.DASHBOARD && pageType.MAIN) {
-		dispatch.ignoreList.save();
 		dispatch.save();
 	}
 });
@@ -557,11 +557,6 @@ function loadHits() {
 		type: 'requester',
 		name: 'Crowdsurf Support'}));
 	dispatch.add(new Watcher({
-		id: "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=qualif&minReward=0.00&x=0&y=0",
-		time: 300000,
-		type: 'url',
-		name: "Qualification HITs"})); // Qualification HITs
-	dispatch.add(new Watcher({
 		id: "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&searchWords=transcri&minReward=0.00&qualifiedFor=on&x=0&y=0",
 		time: 60000,
 		type: 'url',
@@ -590,17 +585,18 @@ function onMessageReceived(header, message) {
 					}
 				})).start();
 				break;
+			case 'ignore_requester' :
+				console.log("Ignore requester", message);
+				IgnoreList.add(IgnoreList.REQUESTER, message.id);
+				break;
 			case 'mute_hit' :
-				var id = message.split(',')[0];
-				if (!dispatch.isMuted(id)) {
-					dispatch.mute(id);
-				} 
+				console.log("Message", message);
+				var id = message.id;
+				IgnoreList.add(IgnoreList.HIT, id);
 				break;
 			case 'unmute_hit' :
-				var id = message.split(',')[0];
-				if (dispatch.isMuted(id)) {
-					dispatch.unmute(id);
-				}
+				var id = message.id;
+				IgnoreList.remove(IgnoreList.HIT, id);
 				break;
 			case 'request_main' :
 				sendMessage({ header: "request_denied" });
@@ -824,55 +820,130 @@ function showDetailsPanel(watcher) {
 }
 
 
-function IgnoreList() {
-	this.time = 60000;
-	this.items = new Array();
-	this.load();
+var IgnoreList = (function() {
+	var _time = 60000,
+		_hits = [];
+		_requesters = [],
+		_HIT = 0,
+		_REQUESTER = 1;
 
-	var _this = this;
-	this.interval = setInterval(function() { _this.save() }, this.time);
-}
-IgnoreList.prototype.save = function() {
-	localStorage.setItem('notifier_ignore', JSON.stringify(this.items));
-}
-IgnoreList.prototype.load = function() {
-	var storedItems = localStorage.getItem('notifier_ignore');
-
-	if (storedItems !== null) {
-		try {
-			this.items = JSON.parse(storedItems);
-		}
-		catch (e) {
-			this.clear();
-			this.save();
-			console.log("Ignore list couldn't be loaded correctly. A new one has been created.");
-		}
-	} else {
-		console.log("No ignored items found");
+	function _init() {
+		// _clear();
+		_load();
+		_addListeners();
 	}
-	var _this = this;
-	setInterval(function(){ _this.save() }, this.time);
-}
-IgnoreList.prototype.clear = function() {
-	this.items = new Array();
-	localStorage.removeItem('notifier_ignore');
-}
-IgnoreList.prototype.stop = function() {
-	clearInterval(this.interval);
-}
-IgnoreList.prototype.contains = function(item) {
-	return (this.items.indexOf(item) !== -1);
-}
-IgnoreList.prototype.add = function(item) {
-	if (!this.contains(item))
-		this.items.push(item);
-}
-IgnoreList.prototype.remove = function(item) {
-	var index = this.items.indexOf(item);
 
-	if (index !== -1)
-		this.items.splice(index, 1);
-}
+	function _addListeners() {
+		$(window).on('unload', function() { _save(); })
+	}
+
+	function _save() {
+		localStorage.setItem('notifier_ignore', JSON.stringify(_hits));
+		localStorage.setItem('notifier_ignore_requesters', JSON.stringify(_requesters));
+		console.log("Saving ignore list", _hits, _requesters);
+	}
+
+	function _load() {
+		var storedHits       = localStorage.getItem('notifier_ignore');
+		var storedRequesters = localStorage.getItem('notifier_ignore_requesters');
+
+		if (storedHits !== null) {
+			try {
+				_hits = JSON.parse(storedHits);
+			} catch (e) {
+				_clear();
+				_save();
+				console.log("Ignored hits couldn't be loaded correctly.");
+			}
+		} else {
+			console.log("No ignored hits found");
+		}
+
+		if (storedRequesters !== null) {
+			try {
+				_requesters = JSON.parse(storedRequesters);
+			} catch (e) {
+				_clear();
+				_save();
+				console.log("Ignored requesters couldn't be loaded correctly.");
+			}
+		} else {
+			console.log("No ignored requesters found");
+		}
+
+		console.log("Ignored requesters", _requesters);
+	}
+
+	function _clear() {
+		_hits = [];
+		_requesters = [];
+		localStorage.removeItem('notifier_ignore');
+		localStorage.removeItem('notifier_ignore_requesters');
+	}
+
+	function _contains(type, item) {
+		if (type === _HIT)
+			return (_hits.indexOf(item) !== -1);
+		else
+			return (_requesters.indexOf(item) !== -1);
+	}
+
+	function _isMuted(item) {
+		return (_hits.indexOf(item) !== -1);
+	}
+
+	function _filter(hits) {
+		var filteredHits = [];
+
+		for (var i = 0, len = hits.length; i < len; i++) {
+			var hit = hits[i];
+
+			if ((_hits.indexOf(hit.id) === -1) && (_requesters.indexOf(hit.requesterID) === -1))
+				filteredHits.push(hit);
+		}
+
+		return filteredHits;
+	}
+
+	function _add(type, id) {
+		if (type === _HIT) {
+			if (_hits.indexOf(id) === -1)
+				_hits.push(id);
+		} else if (type === _REQUESTER) {
+			if (_requesters.indexOf(id) === -1)
+				_requesters.push(id);
+		}
+
+		_save();
+	}
+
+	function _remove(type, id) {
+		if (type === _HIT) {
+			var index = _hits.indexOf(id);
+
+			if (index !== -1)
+				_hits.splice(index, 1);
+
+		} else if (type === _REQUESTER) {
+			var index = _requesters.indexOf(id);
+
+			if (index !== -1)
+				_requesters.splice(index, 1);
+		}
+
+		_save();
+	}
+
+	return {
+		init: _init,
+		add: _add,
+		remove: _remove,
+		filter: _filter,
+		isMuted: _isMuted,
+		HIT: _HIT,
+		REQUESTER: _REQUESTER
+	}
+})();
 
 
 
@@ -1296,7 +1367,6 @@ var DispatchUI = {
 **/
 function Dispatch() {
 	this.watchers = new Array();
-	this.ignoreList = new IgnoreList();
 	this.isLoading = false;
 
 	// Listeners
@@ -1412,15 +1482,6 @@ Dispatch.prototype.getWatcher = function(index) {
 Dispatch.prototype.getWatcherCount = function() {
 	return this.watchers.length;
 }
-Dispatch.prototype.isMuted = function(hitID) {
-	return this.ignoreList.contains(hitID);
-}
-Dispatch.prototype.mute = function(hitID) {
-	this.ignoreList.add(hitID);
-}
-Dispatch.prototype.unmute = function(hitID) {
-	this.ignoreList.remove(hitID);
-}
 Dispatch.prototype.hideWatchers = function() {
 	$("#controller a").css('display', "none");
 	$("#watcher_container").html("");
@@ -1448,7 +1509,6 @@ Dispatch.prototype.hideWatchers = function() {
 Dispatch.prototype.onRequestMainDenied = function() {
 	pageType.MAIN = false;
 	this.hideWatchers();
-	this.ignoreList.stop();
 }
 
 function watcherDialog(watcher, callback) {
@@ -1740,13 +1800,10 @@ Watcher.prototype.setAuto = function(isAuto) {
 Watcher.prototype.isNewHit = function (hit) {
 	return (this.newHits.indexOf(hit) !== -1);
 }
-Watcher.prototype.onChanged = function() {
+Watcher.prototype.onChanged = function(newHits) {
+	Messenger.sendHits(this, newHits);
 	this.isUpdated = true;
-	this.notify(Evt.HITS_CHANGE, null);
-	
-	// Sound alert for auto-accept HIT watchers and watchers that have the alert set on
-	if (this.option.auto || this.option.alert)
-		this.alert();
+	this.notify(Evt.HITS_CHANGE, newHits);
 }
 Watcher.prototype.start = function() {
 	if (!this.state.isRunning) {
@@ -1782,47 +1839,26 @@ Watcher.prototype.delete = function() {
 Watcher.prototype.filterMessages = function(newHits) {
 	// Determine which hits, if any, the user should be notified of
 	// For now just showing new hits
-	var filteredHits = new Array();
+	var filteredHits;
 
 	if (typeof this.lastHits !== 'undefined' && this.lastHits.length > 0) {
-		this.isChanged = false;
-		
+		filteredHits = [];
+
 		for (var i = 0, len = newHits.length; i < len; i++) {
-			// Check if the hit is on the ignore list first before wasting time going through the comparisons
-			if (!dispatch.isMuted(newHits[i].id)) {
-				// Compare URLs for now. Should just use IDs in the future
-				for (var j = 0, len2 = this.lastHits.length; j < len2; j++) {
-					if (newHits[i].url === this.lastHits[j].url) {
-						break;
-					}
-					
-					// If we reach the end with no matches, add it to the changed hits array
-					if (j === len2 - 1 ) {
-						filteredHits.push(newHits[i]);
-						this.isChanged = true;
-					}
-				}
+			for (var j = 0, len2 = this.lastHits.length; j < len2; j++) {
+				if (newHits[i].id === this.lastHits[j].id)
+					break;
+				
+				// If we reach the end with no matches, add it to the changed hits array
+				if (j === len2 - 1 )
+					filteredHits.push(newHits[i]);
 			}
 		}
-
-		if (this.isChanged)
-			this.onChanged();
-
-		if (this.option.auto && !this.option.stopOnCatch)
-			this.onChanged(); // Might add a different method for this case, but using onChanged for now
-
-		this.lastHits = newHits;
-		this.newHits  = filteredHits;
-
-		return filteredHits;
+	} else {
+		// If "last hits" doesn't exist, then all of the new hits should be considered new
+		filteredHits = newHits;
 	}
 	
-	// If "last hits" doesn't exist, then all of the new hits should be considered new
-	for (var i = 0, len = newHits.length; i < len; i++)
-		if (!dispatch.isMuted(newHits[i].id))
-			filteredHits.push(newHits[i]);
-	
-	this.onChanged();
 	this.lastHits = newHits;
 	return filteredHits;
 }
@@ -1902,10 +1938,12 @@ Watcher.prototype.sendHits = function(hits) {
 	// Only send the hits if there is actually something to send
 	// In the near future this will have to be changed to show when HITs go away completely
 	if (typeof hits !== 'undefined' && hits.length > 0) {
-		hits = this.filterMessages(hits);
+		var newHits = this.newHits = this.filterMessages(hits);
 
-		if (hits.length > 0) {
-			Messenger.sendHits(this, hits);
+		if (newHits.length) {
+			this.onChanged(newHits);
+		} else if (this.option.auto && !this.option.stopOnCatch) {
+			this.onChanged(newHits); // Might add a different method for this case, but using onChanged for now
 		}
 	}
 }
@@ -2018,27 +2056,35 @@ var Messenger = function() {
 
 	function _sendHits(watcher, hits) {
 		// Pass through ignore filters
+		hits = IgnoreList.filter(hits);
 
-		// Set wasViewed to false to check if any receiving windows were focused when this
-		// was sent.
-		wasViewed = false;
+		if (hits.length) {
+			// Set wasViewed to false to check if any receiving windows were focused when this was sent.
+			wasViewed = false;
 
-		// Send Hits
-		sendMessage({ header: SEND_HITS, content: { 'title': watcher.name, 'hits': hits, 'url': watcher.url } });
+			// Send Hits
+			sendMessage({ header: SEND_HITS, content: { 'title': watcher.name, 'hits': hits, 'url': watcher.url } });
 
-		// Get TO and send it
-		var toData = TO.get(Hit.getUniqueReqeusters(hits), _handleTOReceived);
-		if (toData)
-			sendMessage({ header: SEND_TO, content: toData });
+			// Get TO and send it
+			var toData = TO.get(Hit.getUniqueReqeusters(hits), _handleTOReceived);
+			if (toData)
+				sendMessage({ header: SEND_TO, content: toData });
 
-		// Show notification on dashboard, too
-		notificationGroup = notificationPanel.add(new NotificationGroup({ title: watcher.name, hits: hits, url: watcher.url }));
+			// Show notification on dashboard, too
+			notificationGroup = notificationPanel.add(new NotificationGroup({ title: watcher.name, hits: hits, url: watcher.url }));
 
-		// Attempt to send a browser notification after a brief period of time. If another mturk
-		// page was visible when it received the hits, this will cancel out.
-		if (!document.hasFocus()) {
-			// var _this = this;
-			setTimeout(function() { sendDesktopNotification(hits, watcher); }, 200);
+			// Attempt to send a browser notification after a brief period of time. If another mturk
+			// page was visible when it received the hits, this will cancel out.
+			if (!document.hasFocus())
+				setTimeout(function() { sendDesktopNotification(hits, watcher); }, 200);
+
+			// Sound alert for auto-accept HIT watchers and watchers that have the alert set on
+			if (watcher.option.auto || watcher.option.alert)
+				watcher.alert();
+
+		} else {
+			if (watcher.option.auto && watcher.option.stopOnCatch)
+				watcher.alert();
 		}
 	}
 
@@ -2304,11 +2350,18 @@ NotificationPanel.prototype.createPanel = function() {
 			font-size : 76%;\
 		}\
 		.notification a.requester:link, .notification a.requester:visited {\
-			display     : block;\
 			margin-top  : 2px;\
 			color       : black;\
 			font-size   : 80%;\
 			font-weight : bold;\
+		}\
+		.notification .ignore {\
+			font-size: 60%;\
+			color: #999;\
+			visibility: hidden;\
+		}\
+		.notification:hover .ignore {\
+			visibility: visible;\
 		}\
 		.notification .extra_info {\
 			font-style : italic;\
@@ -2429,6 +2482,9 @@ function NotificationGroup(obj) { // title, hits, isSticky, watcher, url
 		}
 	}, this.timeout);
 
+	if (typeof this.hits[0] === 'undefined')
+		console.error("Error, no hits for notification", document.URL, obj);
+
 	this.createDOMElement();
 }
 NotificationGroup.prototype.addTO = function(data) {
@@ -2529,7 +2585,7 @@ NotificationHit.prototype.createDOMElement = function() {
 	var hit = this.hit;
 	var notification = $('<div>').addClass("notification").append(
 		'<a class="title" target="_blank" href="' + hit.getURL('preview') + '" title="' + hit.title + '">' + hit.title + '</a>',
-		(!this.isSameReq) ? $('<a class="requester">').attr('href', URL_PREFIX + hit.requesterID).attr('target', "_blank").html(hit.requester) : "",
+		(!this.isSameReq) ? $('<a class="requester" href="' + URL_PREFIX + hit.requesterID + '" target="_blank">' + hit.requester + '</a> <a class="ignore">ignore</a>') : "",
 		'<p>' + hit.reward + " - " + hit.available + " rem. - " + hit.time.replace("minutes", "mins") + '</p>\
 		 <div class="links"></div>\
 		 <div><a class="mute"></a></div>'
@@ -2556,18 +2612,18 @@ NotificationHit.prototype.createDOMElement = function() {
 	var id = hit.id;
 	var muteButton = $('a.mute', notification);
 	
-	$(muteButton).text((typeof dispatch !== 'undefined' && dispatch.isMuted(id)) ? "muted" : "mute");
+	$(muteButton).text((typeof IgnoreList !== 'undefined' && IgnoreList.isMuted(id)) ? "muted" : "mute");
 	$(muteButton).click(function () {
 		if (!pageType.DASHBOARD || (pageType.DASHBOARD && !pageType.MAIN)) {
 			if ($(this).text() === "mute")
-				sendMessage({ header: "mute_hit", content: id, timestamp: true });
+				sendMessage({ header: "mute_hit", content: { id: id }, timestamp: true });
 			else
-				sendMessage({ header: "unmute_hit", content: id, timestamp: true });
+				sendMessage({ header: "unmute_hit", content: { id: id }, timestamp: true });
 		} else {
-			if (!dispatch.isMuted(id))
-				dispatch.mute(id);
+			if (!IgnoreList.isMuted(id))
+				IgnoreList.add(IgnoreList.HIT, id);
 			else
-				dispatch.unmute(id);
+				IgnoreList.remove(IgnoreList.HIT, id);
 		}
 
 		if ($(this).text() === "mute")
@@ -2575,6 +2631,18 @@ NotificationHit.prototype.createDOMElement = function() {
 		else
 			$(this).text("mute");
 	});
+
+	var ignoreButton = $("a.ignore", notification);
+
+	ignoreButton.click(function() {
+		if (!pageType.DASHBOARD || (pageType.DASHBOARD && !pageType.MAIN)) {
+			console.log('hit', hit);
+			sendMessage({ header: "ignore_requester", content: { id: hit.requesterID } });
+		} else {
+			IgnoreList.add(IgnoreList.REQUESTER, hit.requesterID);
+		}
+	});
+
 	
 	if (hit.isAutoAccept)
 		notification.addClass("autoaccept");
