@@ -590,7 +590,6 @@ function onMessageReceived(header, message) {
 				IgnoreList.add(IgnoreList.REQUESTER, message.id);
 				break;
 			case 'mute_hit' :
-				console.log("Message", message);
 				var id = message.id;
 				IgnoreList.add(IgnoreList.HIT, id);
 				break;
@@ -840,7 +839,7 @@ var IgnoreList = (function() {
 	function _save() {
 		localStorage.setItem('notifier_ignore', JSON.stringify(_hits));
 		localStorage.setItem('notifier_ignore_requesters', JSON.stringify(_requesters));
-		console.log("Saving ignore list", _hits, _requesters);
+		// console.log("Saving ignore list", _hits, _requesters);
 	}
 
 	function _load() {
@@ -871,7 +870,7 @@ var IgnoreList = (function() {
 			console.log("No ignored requesters found");
 		}
 
-		console.log("Ignored requesters", _requesters);
+		// console.log("Ignored requesters", _requesters);
 	}
 
 	function _clear() {
@@ -888,6 +887,10 @@ var IgnoreList = (function() {
 			return (_requesters.indexOf(item) !== -1);
 	}
 
+	function _isIgnored(requester) {
+		return (_requesters.indexOf(requester) !== -1);
+	}
+
 	function _isMuted(item) {
 		return (_hits.indexOf(item) !== -1);
 	}
@@ -898,7 +901,7 @@ var IgnoreList = (function() {
 		for (var i = 0, len = hits.length; i < len; i++) {
 			var hit = hits[i];
 
-			if ((_hits.indexOf(hit.id) === -1) && (_requesters.indexOf(hit.requesterID) === -1))
+			if ((_hits.indexOf(hit.id) === -1) && (_requesters.indexOf(hit.requester) === -1))
 				filteredHits.push(hit);
 		}
 
@@ -940,6 +943,7 @@ var IgnoreList = (function() {
 		remove: _remove,
 		filter: _filter,
 		isMuted: _isMuted,
+		isIgnored: _isIgnored,
 		HIT: _HIT,
 		REQUESTER: _REQUESTER
 	}
@@ -1876,9 +1880,6 @@ Watcher.prototype.markViewed = function () {
 		this.notify(Evt.VIEW_DETAILS, null);
 	}
 }
-Watcher.prototype.alert = function () {
-	Sound.alert(this);
-}
 Watcher.prototype.updateWatcherPanel = function() {
 	this.date = new Date();
 	this.notify(Evt.UPDATE, null);
@@ -2080,11 +2081,11 @@ var Messenger = function() {
 
 			// Sound alert for auto-accept HIT watchers and watchers that have the alert set on
 			if (watcher.option.auto || watcher.option.alert)
-				watcher.alert();
+				Sound.alert(watcher);
 
 		} else {
-			if (watcher.option.auto && watcher.option.stopOnCatch)
-				watcher.alert();
+			if (watcher.option.auto && !watcher.option.stopOnCatch)
+				Sound.alert(watcher);
 		}
 	}
 
@@ -2355,10 +2356,17 @@ NotificationPanel.prototype.createPanel = function() {
 			font-size   : 80%;\
 			font-weight : bold;\
 		}\
+		#details_panel .notification.ignored {\
+			opacity: 0.4;\
+		}\
+		#receiver .notification.ignored {\
+			display: none;\
+		}\
 		.notification .ignore {\
 			font-size: 60%;\
 			color: #999;\
 			visibility: hidden;\
+			cursor: pointer;\
 		}\
 		.notification:hover .ignore {\
 			visibility: visible;\
@@ -2416,7 +2424,7 @@ NotificationPanel.prototype.createPanel = function() {
 			border-radius: 3px;\
 			font-size: 80%;\
 			position: relative;\
-			top: 0.5em;\
+			top: 0.6em;\
 		}\
 		.notification_panel .ratings-button > .ratings-chart {\
 			position: absolute;\
@@ -2542,18 +2550,40 @@ NotificationGroup.prototype.createDOMElement = function() {
 					_this.onTimeout(_this);
 			}
 		);
+
+	// Sort the notifications (ignored go to the bottom)
+	if (pageType.DASHBOARD && pageType.MAIN)
+		this.hits.sort(function(a, b) { return (IgnoreList.isIgnored(a.requester)) ? 1 : 0 });
 	
-	var isSameReq = Hit.isSameRequester(this.hits);
-	for (var i = 0, len = this.hits.length; i < len; i++)
-		$(div).append((new NotificationHit(this.hits[i], isSameReq, (typeof this.watcher !== 'undefined') ? this.watcher : null)).getDOMElement());
+	// Add the notifications
+	var isSameReq = Hit.isSameRequester(this.hits),
+		self = this;
+
+	for (var i = 0, len = this.hits.length; i < len; i++) {
+		var notification = new NotificationHit(this.hits[i], isSameReq, (typeof this.watcher !== 'undefined') ? this.watcher : null);
+
+		notification.onIgnore = function(requesterID) {
+			// Remove all notifications within the group that match the requester ID
+			var notifications = self.DOMElement.find(".notification");
+			notifications.filter(function() { return $(this).data("requesterID") === requesterID }).addClass("ignored");
+		};
+
+		notification.onUnIgnore = function(requesterID) {
+			// Remove all notifications within the group that match the requester ID
+			var notifications = self.DOMElement.find(".notification");
+			notifications.filter(function() { return $(this).data("requesterID") === requesterID }).removeClass("ignored");
+		};
+
+		$(div).append(notification.getDOMElement());
+	}
 	
 	if (this.hits[0].isAutoAccept)
 		div.addClass("autoaccept");
 
 	this.DOMElement = div;
 
+	// This is required to get the shrinking effect when notifications are removed
 	setTimeout(function() { div.css('max-height', div.height()); }, 1000);
-
 }
 NotificationGroup.prototype.getDOMElement = function() {
 	return this.DOMElement;
@@ -2607,6 +2637,9 @@ NotificationHit.prototype.createDOMElement = function() {
 			(hit.canPreview) ? '<a class="hit_link" href="' + hit.getURL('preview') + '" target="_blank">PREVIEW</a>' : "",
 			'<span class="extra_info">Not Qualified&nbsp;&nbsp;</span>');
 	}
+
+	if (IgnoreList.isIgnored(hit.requester))
+		notification.addClass("ignored");
 	
 	
 	var id = hit.id;
@@ -2634,12 +2667,23 @@ NotificationHit.prototype.createDOMElement = function() {
 
 	var ignoreButton = $("a.ignore", notification);
 
+	var self = this;
 	ignoreButton.click(function() {
 		if (!pageType.DASHBOARD || (pageType.DASHBOARD && !pageType.MAIN)) {
-			console.log('hit', hit);
-			sendMessage({ header: "ignore_requester", content: { id: hit.requesterID } });
+			sendMessage({ header: "ignore_requester", content: { id: hit.requester } });
 		} else {
-			IgnoreList.add(IgnoreList.REQUESTER, hit.requesterID);
+			if (!notification.hasClass("ignored"))
+				IgnoreList.add(IgnoreList.REQUESTER, hit.requester);
+			else
+				IgnoreList.remove(IgnoreList.REQUESTER, hit.requester);
+		}
+
+		if (!notification.hasClass("ignored")) {
+			if (self.onIgnore && typeof self.onIgnore === 'function')
+				self.onIgnore(hit.requesterID);
+		} else {
+			if (self.onUnIgnore && typeof self.onUnIgnore === 'function')
+				self.onUnIgnore(hit.requesterID);
 		}
 	});
 
