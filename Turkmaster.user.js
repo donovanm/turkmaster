@@ -139,7 +139,7 @@ $(window).unload(function() {
 
 function loadFonts() {
 	WebFont.load({
-		google: { families: [ 'Oxygen:400,700:latin' ] }
+		google: { families: [ 'Oxygen:400,700:latin', 'Droid Sans Mono' ] }
 	});
 }
 
@@ -2437,6 +2437,7 @@ NotificationPanel.prototype.createPanel = function() {
 			bottom: -3em;\
 			left: 0.4em;\
 			background-color: rgb(255, 255, 255);\
+			color: #444;\
 			visibility: hidden;\
 			padding: 0.3em;\
 			border: 1px solid #f0f0f0;\
@@ -2445,11 +2446,13 @@ NotificationPanel.prototype.createPanel = function() {
 		.notification_panel .ratings-button:hover > .ratings-chart { visibility: visible; }\
 		.notification_panel .ratings.no-TO .ratings-button > .ratings-chart { bottom: -1em; }\
 		.notification_panel .ratings-chart table { border-collapse: collapse; }\
-		.notification_panel .ratings-chart td { font-size: 70%;	padding: 0 2em 0 0; }\
+		.notification_panel .ratings-chart td { font-family: 'Oxygen',verdana,sans-serif; font-size: 70%; color: #444; padding: 0 2em 0 0; cursor: default; vertical-align: center }\
+		.notification_panel .ratings-chart td:nth-child(3) { font-family: 'Droid Sans Mono',fixed-width; font-size: 60%; white-space: nowrap }\
 		.notification_panel .ratings-chart p { font-size: 80%; padding: 0 2em 0 0; margin: 0.5em 0 0; white-space: nowrap }\
 		.notification_panel .ratings-chart .light { opacity: 0.6 }\
-		.notification_panel .ratings-chart .rating { padding: 0.2em }\
-		.notification_panel .ratings-chart .rating > div { background-color: #eee; height: 0.5em; width: 13em; border-radius: 4px }\
+		.notification_panel .ratings.no-TO .ratings-chart { padding: 0.5em }\
+		.notification_panel .ratings-chart .rating { padding: 0.3em 0 0 }\
+		.notification_panel .ratings-chart .rating > div { background-color: #eee; height: 0.5em; width: 13em; margin: 0 0.5em 0 0; border-radius: 4px }\
 		.notification_panel .ratings-chart .rating > div > div { background-color: #55B8EA; height: 100%; border-radius: 4px }\
 		");
 }
@@ -2523,6 +2526,7 @@ NotificationGroup.prototype.appendRatings = function(obj) {
 	var notification = obj.notification,
 		requesterID  = obj.id,
 		ratings      = obj.ratings,
+		attrs        = ratings.attrs,
 		requesterEl  = notification.find(".requester");
 
 	// Would be nice to have a chart-looking icon
@@ -2531,18 +2535,19 @@ NotificationGroup.prototype.appendRatings = function(obj) {
 	if (ratings) {
 		var html = '\
 				<table><tbody>\
-					<tr><td>Communicativity</td><td class="rating">' + bar(ratings.attrs.comm) + '</td><td>' + ratings.attrs.comm + '</td></tr>\
-					<tr><td>Pay</td>            <td class="rating">' + bar(ratings.attrs.pay ) + '</td><td>' + ratings.attrs.pay  + '</td></tr>\
-					<tr><td>Fairness</td>       <td class="rating">' + bar(ratings.attrs.fair) + '</td><td>' + ratings.attrs.fair + '</td></tr>\
-					<tr><td>Quickness</td>      <td class="rating">' + bar(ratings.attrs.fast) + '</td><td>' + ratings.attrs.fast + '</td></tr>\
+					<tr><td>Communicativity</td><td class="rating">' + bar(attrs.comm) + '</td><td class="light">' + attrs.comm + ' / 5</td></tr>\
+					<tr><td>Pay</td>            <td class="rating">' + bar(attrs.pay ) + '</td><td class="light">' + attrs.pay  + ' / 5</td></tr>\
+					<tr><td>Fairness</td>       <td class="rating">' + bar(attrs.fair) + '</td><td class="light">' + attrs.fair + ' / 5</td></tr>\
+					<tr><td>Quickness</td>      <td class="rating">' + bar(attrs.fast) + '</td><td class="light">' + attrs.fast + ' / 5</td></tr>\
 				</tbody></table>';
 
 		var count = ratings.reviews;
 
 		html +=	'<p>Scores based on <a href="http://turkopticon.ucsd.edu/' + requesterID + '" target="_blank">' + count + ' review' + ((count !== 1) ? "s" : "") + '</a>';
-		html += ' <span class="light">(' + ratings.tos_flags + ' TOS violation' + ((ratings.tos_flags !== 1) ? "s" : "") + ')</light></p>';
+		html += ' <span class="light">(' + ratings.tos_flags + ' TOS violation' + ((ratings.tos_flags !== 1) ? "s" : "") + ')</light> - <a href="http://turkopticon.ucsd.edu/report?requester[amzn_id]=' + requesterID + '&requester[amzn_name]=' + ratings.name +'" target="_blank">Add review</a></p>';
 
 		element.find(".ratings-chart").append(html);
+		element.find(".ratings-button").css('background-color', getHsl(avg(attrs) / 5 * 100));
 	} else {
 		var html = '<p>No ratings available.</p>';
 		html += '<p>Be the first to <a href="http://turkopticon.ucsd.edu/report?requester[amzn_id]=' + requesterID + '&requester[amzn_name]=' + ratings.name +'" target="_blank">review this requester</a>.';
@@ -2552,9 +2557,31 @@ NotificationGroup.prototype.appendRatings = function(obj) {
 	}
 
 	function bar(rating) {
-		var percent = rating / 5 * 100;
-		var html = '<div><div style="width: ' + percent + '%">&nbsp;</div></div>';
-		return html;
+		var percent = rating / 5 * 100,
+			color = getHsl(percent);
+
+		return '<div><div style="width: ' + percent + '%; background-color: ' + color + '">&nbsp;</div></div>';
+	}
+
+	function getHsl(percent) {
+		var hue = ((percent / 100 * 5) - 1) / 4  * 100; // Max hue = 100 (green)
+		return 'hsl(' + hue + ', 78%, 50%)';
+	}
+
+	function avg(attrs) {
+		var count = 0,
+			sum   = 0,
+			comm  = parseFloat(attrs.comm, 10),
+			pay   = parseFloat(attrs.pay, 10),
+			fast  = parseFloat(attrs.fast, 10),
+			fair  = parseFloat(attrs.fair, 10);
+
+		if (comm !== 0) { sum += comm; count ++; }
+		if (pay  !== 0) { sum += pay;  count ++; }
+		if (fast !== 0) { sum += fast; count ++; }
+		if (fair !== 0) { sum += fair; count ++; }
+
+		return sum / count;
 	}
 	
 	requesterEl.before(element);
