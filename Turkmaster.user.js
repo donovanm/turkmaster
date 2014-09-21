@@ -2448,6 +2448,9 @@ NotificationPanel.prototype.createPanel = function() {
 		.notification_panel .ratings-chart td { font-size: 70%;	padding: 0 2em 0 0; }\
 		.notification_panel .ratings-chart p { font-size: 80%; padding: 0 2em 0 0; margin: 0.5em 0 0; white-space: nowrap }\
 		.notification_panel .ratings-chart .light { opacity: 0.6 }\
+		.notification_panel .ratings-chart .rating { padding: 0.2em }\
+		.notification_panel .ratings-chart .rating > div { background-color: #eee; height: 0.5em; width: 13em; border-radius: 4px }\
+		.notification_panel .ratings-chart .rating > div > div { background-color: #55B8EA; height: 100%; border-radius: 4px }\
 		");
 }
 NotificationPanel.prototype.getDOMElement = function() {
@@ -2528,10 +2531,10 @@ NotificationGroup.prototype.appendRatings = function(obj) {
 	if (ratings) {
 		var html = '\
 				<table><tbody>\
-					<tr><td>Communicativity</td><td>' + ratings.attrs.comm + '</td></tr>\
-					<tr><td>Pay</td>            <td>' + ratings.attrs.pay  + '</td></tr>\
-					<tr><td>Fairness</td>       <td>' + ratings.attrs.fair + '</td></tr>\
-					<tr><td>Quickness</td>      <td>' + ratings.attrs.fast + '</td></tr>\
+					<tr><td>Communicativity</td><td class="rating">' + bar(ratings.attrs.comm) + '</td><td>' + ratings.attrs.comm + '</td></tr>\
+					<tr><td>Pay</td>            <td class="rating">' + bar(ratings.attrs.pay ) + '</td><td>' + ratings.attrs.pay  + '</td></tr>\
+					<tr><td>Fairness</td>       <td class="rating">' + bar(ratings.attrs.fair) + '</td><td>' + ratings.attrs.fair + '</td></tr>\
+					<tr><td>Quickness</td>      <td class="rating">' + bar(ratings.attrs.fast) + '</td><td>' + ratings.attrs.fast + '</td></tr>\
 				</tbody></table>';
 
 		var count = ratings.reviews;
@@ -2546,6 +2549,12 @@ NotificationGroup.prototype.appendRatings = function(obj) {
 
 		element.find(".ratings-chart").append(html);
 		element.addClass("no-TO");
+	}
+
+	function bar(rating) {
+		var percent = rating / 5 * 100;
+		var html = '<div><div style="width: ' + percent + '%">&nbsp;</div></div>';
+		return html;
 	}
 	
 	requesterEl.before(element);
