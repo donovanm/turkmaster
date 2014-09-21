@@ -2,7 +2,7 @@
 // @name        Turkmaster
 // @namespace   https://greasyfork.org/users/3408
 // @author		DonovanM
-// @description A page-monitoring web app for Mturk (Mechanical Turk) to make turking a little easier
+// @description A page-monitoring web app for Mturk (Mechanical Turk) designed to make turking more efficient. Easily monitor search pages and requesters and Auto-Accept the HITs you missed.
 // @include     https://www.mturk.com/mturk/*
 // @version     1.0
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js
@@ -44,9 +44,13 @@ var settings = (function() {
 				pub.desktopNotifications = isPermitted;
 				_save();
 			});
+
+			pub.desktopNotifications = false;
 		} else {
 			pub.desktopNotifications = false;
 		}
+
+		_save();
 	}
 
 	function _setVolume(val) {
@@ -682,7 +686,7 @@ function requestDesktopNotifications(callback) {
 
 			// If the user is okay, let's create a notification
 			if (permission === "granted") {
-				var notification = new window.Notification("Notifications enabled.");
+				var notification = new window.Notification("Desktop notifications enabled.");
 				notification.onshow = function() { setTimeout(function() { notification.close() }, 5000) };
 				callback(true);
 			} else {
@@ -2378,7 +2382,6 @@ NotificationPanel.prototype.createPanel = function() {
 			cursor     : default;\
 		}\
 		.notification_panel a:link, .notification_panel a:visited {\
-			font-size       : 130%;\
 			text-decoration : none;\
 			color           : #6bf;\
 		}\
@@ -2426,20 +2429,25 @@ NotificationPanel.prototype.createPanel = function() {
 			position: relative;\
 			top: 0.6em;\
 		}\
+		.notification_panel .ratings.no-TO .ratings-button {\
+			background-color: #ccc;\
+		}\
 		.notification_panel .ratings-button > .ratings-chart {\
 			position: absolute;\
-			bottom: -2em;\
+			bottom: -3em;\
 			left: 0.4em;\
 			background-color: rgb(255, 255, 255);\
 			visibility: hidden;\
 			padding: 0.3em;\
 			border: 1px solid #f0f0f0;\
+			z-index: 100;\
 		}\
-		.notification_panel .ratings-button:hover > .ratings-chart {\
-			visibility: visible;\
-		}\
+		.notification_panel .ratings-button:hover > .ratings-chart { visibility: visible; }\
+		.notification_panel .ratings.no-TO .ratings-button > .ratings-chart { bottom: -1em; }\
 		.notification_panel .ratings-chart table { border-collapse: collapse; }\
-		.notification_panel .ratings-chart td {	font-size: 70%;	padding: 0 2em 0 0; }\
+		.notification_panel .ratings-chart td { font-size: 70%;	padding: 0 2em 0 0; }\
+		.notification_panel .ratings-chart p { font-size: 80%; padding: 0 2em 0 0; margin: 0.5em 0 0; white-space: nowrap }\
+		.notification_panel .ratings-chart .light { opacity: 0.6 }\
 		");
 }
 NotificationPanel.prototype.getDOMElement = function() {
@@ -2511,27 +2519,36 @@ NotificationGroup.prototype.addTO = function(data) {
 NotificationGroup.prototype.appendRatings = function(obj) {
 	var notification = obj.notification,
 		requesterID  = obj.id,
-		ratings      = obj.ratings;
+		ratings      = obj.ratings,
+		requesterEl  = notification.find(".requester");
 
 	// Would be nice to have a chart-looking icon
 	var element = $('<div class="ratings"><div class="ratings-button" style="float: left"><div class="ratings-chart"></div></div></div>');
 
 	if (ratings) {
-		element.find(".ratings-chart").append('\
+		var html = '\
 				<table><tbody>\
 					<tr><td>Communicativity</td><td>' + ratings.attrs.comm + '</td></tr>\
 					<tr><td>Pay</td>            <td>' + ratings.attrs.pay  + '</td></tr>\
 					<tr><td>Fairness</td>       <td>' + ratings.attrs.fair + '</td></tr>\
 					<tr><td>Quickness</td>      <td>' + ratings.attrs.fast + '</td></tr>\
-				</tbody></table>\
-			');
+				</tbody></table>';
+
+		var count = ratings.reviews;
+
+		html +=	'<p>Scores based on <a href="http://turkopticon.ucsd.edu/' + requesterID + '" target="_blank">' + count + ' review' + ((count !== 1) ? "s" : "") + '</a>';
+		html += ' <span class="light">(' + ratings.tos_flags + ' TOS violation' + ((ratings.tos_flags !== 1) ? "s" : "") + ')</light></p>';
+
+		element.find(".ratings-chart").append(html);
 	} else {
-		element.find(".ratings-chart").append('No ratings available for this requester.');
+		var html = '<p>No ratings available.</p>';
+		html += '<p>Be the first to <a href="http://turkopticon.ucsd.edu/report?requester[amzn_id]=' + requesterID + '&requester[amzn_name]=' + ratings.name +'" target="_blank">review this requester</a>.';
+
+		element.find(".ratings-chart").append(html);
+		element.addClass("no-TO");
 	}
 	
-	notification.find(".requester").before(element);
-
-
+	requesterEl.before(element);
 }
 NotificationGroup.prototype.createDOMElement = function() {
 	var _this = this,
