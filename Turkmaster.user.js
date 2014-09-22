@@ -1723,8 +1723,7 @@ function Watcher(attrs) {
 	var DEFAULT_TIME = 60000;
 	this.interval    = null;		// For continuous interval
 	this.timer       = null; 			// For initial setTimeout
-	this.lastHits    = new Array();
-	this.newHits     = new Array();
+	this.newHits     = [];
 
 	attrs = attrs || {};
 	
@@ -1746,6 +1745,7 @@ function Watcher(attrs) {
 	this.time = attrs.time || DEFAULT_TIME;
 	this.type = attrs.type;
 	this.name = attrs.name || this.id;
+	this.lastHits = attrs.lastHits || [];
 	
 	// Options
 	this.option = {};
@@ -2052,7 +2052,7 @@ Watcher.prototype.parseHitPage = function(data) {
 		return new Array(hit);
 	}
 }
-Watcher.replacerArray = ["id", "time", "type", "name", "option", "auto", "alert", "stopOnCatch", "state", "isRunning", "isSelected", "isUpdated", "url"];
+Watcher.replacerArray = ["id", "time", "type", "name", "option", "auto", "alert", "stopOnCatch", "state", "isRunning", "isSelected", "isUpdated", "url", "lastHits"];
 
 var Messenger = function() {
 	var SEND_HITS = "new_hits";
