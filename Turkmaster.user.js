@@ -21,7 +21,8 @@ var settings = (function() {
 		alertOnly     : false,
 		fontSize      : 10,
 		typeface      : "Oxygen",
-		desktopNotifications : false
+		desktopNotifications : false,
+		canHide       : false
 	}
 
 	_load();
@@ -79,6 +80,7 @@ var settings = (function() {
 	pub.setfontSize = _setfontSize;
 	pub.setVolume   = _setVolume;
 	pub.setDesktopNotifications = _setDesktopNotifications;
+	pub.save = _save;
 
 	return pub;
 }());
@@ -203,6 +205,7 @@ var SettingsDialog = function() {
 		if (settings.notifications) DOMElement.find("#notificationSettings > .on_off").addClass("on");
 		if (settings.desktopNotifications) DOMElement.find("#desktopNotifications .on_off").addClass("on");
 		if (settings.alertOnly) DOMElement.find("#alertOnly .on_off").addClass("on");
+		if (settings.canHide) DOMElement.find("#hideable .on_off").addClass("on");
 		DOMElement.find("#fontSize input").val(settings.fontSize);
 		DOMElement.find("#typeface input").val(settings.typeface);
 	}
@@ -231,6 +234,11 @@ var SettingsDialog = function() {
 					<ul>\
 						<li id="fontSize"><input type="text" />Size (pt)</li>\
 						<!--li id="typeface"><input type="text" />Typeface</li-->\
+					</ul>\
+			   </div>'),
+			$('<div id="uiSettings"><h3>User Interface</h3>\
+					<ul>\
+						<li id="hideable">' + TOGGLE + 'Hideable</li>\
 					</ul>\
 			   </div>')
 		)
@@ -309,6 +317,10 @@ var SettingsDialog = function() {
 			});
 		} else if (id === "alertOnly") {
 			settings.alertOnly = value;
+		} else if (id === "hideable") {
+			settings.canHide = value;
+			setTimeout(function () { DispatchUI.setHide() }, 50);
+			settings.save();
 		}
 	}
 
@@ -786,8 +798,10 @@ function createDetailsPanel() {
 		border: 1px solid #e3e3e3;\
 		border-radius: 0 0 3px 0;\
 		border-width: 0 1px 1px 0;\
+		transition: left 0.5s ease;\
 		display: none }\
-	#details_panel h4 { display: none }");
+	#details_panel h4 { display: none }\
+	#details_panel.left { left: 30px }");
 	
 	$(div).mouseleave(function() { $(this).hide() });
 		
@@ -1115,6 +1129,8 @@ var DispatchUI = {
 
 	addListeners: function() {
 		var dispatch = DispatchUI.dispatch;
+		var div = DispatchUI.div;
+
 		dispatch.addListener(Evt.ADD, function(watcher) {
 			// This could be done on one line, but then we would lose access to the WatcherUI's internal Watcher object and functionality
 			var watcherEl = WatcherUI.create(watcher);
@@ -1126,11 +1142,51 @@ var DispatchUI = {
 		dispatch.addListener(Evt.REMOVE, function(watcher) {
 			// Nothing to do
 		});
+
+		DispatchUI.setHide = function() {
+			if (settings.canHide) {
+				$(window).on('click', handleWindowClick);
+			} else {
+				$(window).off('click', handleWindowClick);
+			}
+		}
+
+		DispatchUI.setHide();
+
+		function handleWindowClick(e) {
+			if (!div.is(e.target) && div.has(e.target).length === 0 && $(".notification_panel").has(e.target).length === 0 && !$("#settingsDialog").is(e.target) && $("#settingsDialog").has(e.target).length === 0) {
+				hide();
+				$(window).off('click', handleWindowClick);
+				$(div).on('click', handleDivClick);
+			}
+		}
+
+		function handleDivClick(e) {
+			show();
+			$(div).off('click', handleDivClick);
+
+			if (settings.canHide)
+				$(window).on('click', handleWindowClick);
+		}
+
+		function hide() {
+			div.addClass("hidden");
+			$("#content_container").addClass("full");
+			$("#details_panel").addClass("left");
+		}
+
+		function show() {
+			div.removeClass("hidden");
+			$("#content_container").removeClass("full");
+			$("#details_panel").removeClass("left");
+		}
 	},
 
 	addStyle: function() {
-		addStyle("#dispatcher { background-color: #f5f5f5; position: fixed; top: 0px; float: left; height: 100%;  width: 270px; font-size: 8pt;  margin-left: 0px; margin }\
-			#content_container { position: absolute; left: 270px; top: 0; right: 0; border-left: 2px solid #dadada; }\
+		addStyle("#dispatcher { background-color: #f5f5f5; position: fixed; top: 0px; float: left; left: 0; height: 100%;  width: 270px; font-size: 8pt;  margin-left: 0px; transition: left 0.5s ease; }\
+			#dispatcher.hidden { left: -240px }\
+			#content_container { position: absolute; left: 270px; top: 0; right: 0; border-left: 2px solid #dadada; transition: left 0.5s ease; }\
+			#content_container.full { left: 30px }\
 			#dispatcher #controller { text-align: center; font: 160% Candara, sans-serif; color: #585858; position: relative; padding: 3px 5px; }\
 			#dispatcher #controller .on_off { margin: 6px 5px 0 0 }\
 			#dispatcher #controller .on_off a { font-size: 80% }\
