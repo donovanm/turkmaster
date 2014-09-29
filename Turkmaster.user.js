@@ -1,10 +1,10 @@
 // ==UserScript==
-// @name        Turkmaster
+// @name        Turkmaster (Mturk)
 // @namespace   https://greasyfork.org/users/3408
 // @author		DonovanM
-// @description A page-monitoring web app for Mturk (Mechanical Turk) designed to make turking more efficient. Easily monitor search pages and requesters and Auto-Accept the HITs you missed.
+// @description A page-monitoring web app for Mturk (Mechanical Turk) designed to make turking more efficient. Easily monitor mturk search pages and requesters and Auto-Accept the HITs you missed.
 // @include     https://www.mturk.com/mturk/*
-// @version     1.1.1
+// @version     1.2
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js
 // @require 	https://ajax.googleapis.com/ajax/libs/webfont/1/webfont.js
 // @grant       none
@@ -240,6 +240,12 @@ var SettingsDialog = function() {
 					<ul>\
 						<li id="hideable">' + TOGGLE + 'Hideable</li>\
 					</ul>\
+			   </div>'),
+			$('<div id="export"><h3>Backup</h3>\
+					<ul>\
+						<li id="export"><button class="more">...</button>Export</li>\
+						<li id="import"><button class="more">...</button>Import</li>\
+					</ul>\
 			   </div>')
 		)
 
@@ -322,6 +328,35 @@ var SettingsDialog = function() {
 			setTimeout(function () { DispatchUI.setHide() }, 50);
 			settings.save();
 		}
+
+		if (id === "export") {
+			_showExport();
+		} else if (id === "import") {
+			_showImport();
+		}
+	}
+
+	function _showExport() {
+		var div = $('<div id="export-box" class="dialog-big"><h2>Export Watchers</h2><h3>Copy the text below. (Triple-click to highlight all)</h3><p>' + dispatch.exportWatchers() + '</p></h2></div>');
+		$('<button>Close</button>')
+			.click(function() { div.remove() })
+			.appendTo(div);
+
+		div.appendTo($("body"));
+	}
+
+	function _showImport() {
+		var div = $('<div id="import-box" class="dialog-big"><h2>Import Watchers</h2><h3>Paste the backup text to load watchers</h3><textarea></textarea></h2></div>');
+		$('<button>Save</button>')
+			.click(function() { dispatch.importWatchers($("#import-box textarea").val()); div.remove() })
+			.appendTo(div);
+		$('<button>Close</button>')
+			.click(function() { div.remove() })
+			.appendTo(div);
+
+		div.appendTo($("body"));
+
+		div.find("textarea").focus();
 	}
 
 	function _addStyle() {
@@ -371,8 +406,17 @@ var SettingsDialog = function() {
 			#settingsDialog .on_off { margin-top: 6px; }\
 			#settingsDialog ul { margin: 0 0 0.2em; padding: 0 0 0 1.9em }\
 			#settingsDialog ul li { list-style: none; margin-bottom: 0.5em; }\
-			#settingsDialog li input { float: right; width: 3em; font-size: 80%; margin-right: 0.8em; text-align: right; padding-right: 0.5em }\
+			#settingsDialog li input, #settingsDialog li button { float: right; }\
+			#settingsDialog li input[type='text'] { width: 3em; font-size: 80%; margin-right: 0.8em; text-align: right; padding-right: 0.5em }\
+			#settingsDialog li .more { width: 24px; border: none; color: #808080; font: bold 160% inital; line-height: 0%; transform: rotate(90deg); background-color: transparent; position: relative; top: 8px; cursor: pointer; height: 0.7em; padding: 0 0 0.65em; }\
 			#settingsDialog li#typeface input { width: 8em }\
+			.dialog-big { position: fixed; top: 2em; left: 50%; width: 860px; margin-left: -430px; background-color: white; padding: 2%; border: 1px solid #ddd; font-family: 'Oxygen'; box-shadow: 3px 3px 3px rgba(0, 0, 0, 0.4); border-radius: 10px; }\
+			.dialog-big p { background-color: #f7f7f7; padding: 1.5em; height: 500px; overflow: scroll; }\
+			.dialog-big h2, #export-box h3 { font-weight: 400 }\
+			.dialog-big h2 { font-size: 170%; margin-top: 0 }\
+			.dialog-big button { background-color: #cecece; color: white; padding: 3px 10px; font-family: 'Oxygen'; border: none; border-radius: 3px; font-weight: bold; transition: background-color 0.3s; margin-right: 0.5em }\
+			.dialog-big button:hover { background-color: #55B8EA }\
+			.dialog-big textarea { display: block; width: 100%; height: 500px; margin: 1em 1em 1em 0; }\
 		");
 	}
 
@@ -1528,10 +1572,10 @@ Dispatch.prototype.moveWatcher = function(from, to) {
 		this.save();
 	}
 }
-Dispatch.prototype.getWatcherById = function(id) {
+Dispatch.prototype.getWatcherByProperty = function(name, value) {
 	if (this.watchers.length > 0) {
 		for (var i = 0, len = this.watchers.length; i < len; i++) {
-			if (this.watchers[i].id === id)
+			if (this.watchers[i][name] === value)
 				return this.watchers[i];
 		}
 	}
@@ -1574,6 +1618,39 @@ Dispatch.prototype.onRequestMainDenied = function() {
 	pageType.MAIN = false;
 	this.hideWatchers();
 }
+Dispatch.prototype.exportWatchers = function() {
+	var watcherAttrs = ["id", "time", "type", "name", "option", "auto", "alert", "stopOnCatch", "state", "isSelected", "url"];
+
+	return JSON.stringify(this.watchers, watcherAttrs);
+}
+Dispatch.prototype.importWatchers = function(data) {
+	try {
+		data = JSON.parse(data);
+		var storage = localStorage.getItem('notifier_watchers');
+
+		if (!storage) {
+			localStorage.setItem('notifier_watchers', data);
+			dispatch.load();
+		} else {
+			dispatch.isLoading = true;
+
+			for (var i = 0, len = data.length; i < len; i++) {
+				var watcher = new Watcher(data[i]);
+
+				if (!this.getWatcherByProperty('id', watcher.id) && !this.getWatcherByProperty('name', watcher.name))
+					this.add(watcher);
+			}
+
+			dispatch.isLoading = false;
+		}
+
+		console.log("Watchers imported", dispatch.watchers);
+	} catch(e) {
+		console.error("Error importing watchers", e, data);
+		alert("Invalid input. Try disabling word wrap on your text editor and re-copy.")
+	}
+}
+
 
 function watcherDialog(watcher, callback) {
 	var dialog = $("<div>").attr('id', 'add_watcher_form').append(
@@ -2089,6 +2166,61 @@ Watcher.prototype.parseHitPage = function(data) {
 		if (hasCaptcha) {
 			console.log("Has captcha");
 			sendMessage({header: 'captcha'});
+
+			// Get the captcha form
+			var captcha = $("img[src*='capi-na.ssl-images-amazon.com']", data).parents("form");
+
+			// Show the captcha
+			$("#javascriptDependentFunctionality[style='display:none']", captcha).css('display','block');
+
+			// Remove the buttons
+			$("div[name='cookieFreeFunctionality'] img", captcha).parents("table").css('display','none');
+
+			// Remove the timer and money stuff
+			$("td[width='50%']", captcha).css('display','none');
+
+			// Fake submit button
+			$(captcha).append("<img id='captchaSubmit' src='/images/accept_hit.gif'>");
+			$("#captchaSubmit", captcha).css('cursor','pointer');
+
+			// Add the captcha to the page
+			$("#subtabs_and_searchbar").after('<div id="captchaWrapper" class="message warning"><span class="icon"></span></div>');
+			$("#captchaWrapper").append(captcha);
+			$("#captchaWrapper").css('width', '760px');
+			$("#captchaWrapper").css('margin-left', 'auto');
+			$("#captchaWrapper").css('margin-right', 'auto');
+			$("#captchaWrapper").css('text-align', 'center');
+
+			// Send the captcha to mTurk
+			$("#captchaSubmit").click(function (e) {
+				$("form[name='hitForm']").css('opacity','0.5'); // Grey out the box to show something has happened
+				var posX = e.pageX - $(this).offset().left;
+            	var posY = e.pageY - $(this).offset().top;
+            	var url = "https://www.mturk.com/mturk/accept";
+            	var acceptPos = "&%2Faccept.x=" + posX + "&%2Faccept.y=" + posY; // This tells mTurk we pressed accept 
+				$.ajax( {
+					type: "GET",
+					url: url,
+					data: $("form[name='hitForm']").serialize() + acceptPos, // serializes the form's elements.
+					success: function(data)
+					{
+						$("#captchaWrapper").remove();
+						
+						if ( $("#alertboxMessage", data).text().contains("Repeated failure may affect your ability to complete HITs in the future.") ){
+							// Failed
+							$("#subtabs_and_searchbar").after("<div id='captchaWrapper' class='message error'><span class='icon'></span><h6><span id='alertboxHeader'>Captcha failed. I don't know how to make this function run twice, but it just needs to 'restart'</span></h6></div>");
+						}else{
+							// Success
+							$("#subtabs_and_searchbar").after("<div id='captchaWrapper' class='message success'><span class='icon'></span><h6><span id='alertboxHeader'>Captcha success! From here it would be cool to restart the paused HITs!</span></h6></div>");
+						}
+
+						$("#captchaWrapper").css('width', '760px');
+						$("#captchaWrapper").css('margin-left', 'auto');
+						$("#captchaWrapper").css('margin-right', 'auto');
+						$("#captchaWrapper").css('text-align', 'center');
+					}
+				});
+			});
 		}
 
 		var uid = $("input[name='hitId']", data).attr("value");
