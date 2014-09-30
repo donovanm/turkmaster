@@ -2166,6 +2166,61 @@ Watcher.prototype.parseHitPage = function(data) {
 		if (hasCaptcha) {
 			console.log("Has captcha");
 			sendMessage({header: 'captcha'});
+
+			// Get the captcha form
+			var captcha = $("img[src*='capi-na.ssl-images-amazon.com']", data).parents("form");
+
+			// Show the captcha
+			$("#javascriptDependentFunctionality[style='display:none']", captcha).css('display','block');
+
+			// Remove the buttons
+			$("div[name='cookieFreeFunctionality'] img", captcha).parents("table").css('display','none');
+
+			// Remove the timer and money stuff
+			$("td[width='50%']", captcha).css('display','none');
+
+			// Fake submit button
+			$(captcha).append("<img id='captchaSubmit' src='/images/accept_hit.gif'>");
+			$("#captchaSubmit", captcha).css('cursor','pointer');
+
+			// Add the captcha to the page
+			$("#subtabs_and_searchbar").after('<div id="captchaWrapper" class="message warning"><span class="icon"></span></div>');
+			$("#captchaWrapper").append(captcha);
+			$("#captchaWrapper").css('width', '760px');
+			$("#captchaWrapper").css('margin-left', 'auto');
+			$("#captchaWrapper").css('margin-right', 'auto');
+			$("#captchaWrapper").css('text-align', 'center');
+
+			// Send the captcha to mTurk
+			$("#captchaSubmit").click(function (e) {
+				$("form[name='hitForm']").css('opacity','0.5'); // Grey out the box to show something has happened
+				var posX = e.pageX - $(this).offset().left;
+            	var posY = e.pageY - $(this).offset().top;
+            	var url = "https://www.mturk.com/mturk/accept";
+            	var acceptPos = "&%2Faccept.x=" + posX + "&%2Faccept.y=" + posY; // This tells mTurk we pressed accept 
+				$.ajax( {
+					type: "GET",
+					url: url,
+					data: $("form[name='hitForm']").serialize() + acceptPos, // serializes the form's elements.
+					success: function(data)
+					{
+						$("#captchaWrapper").remove();
+						
+						if ( $("#alertboxMessage", data).text().contains("Repeated failure may affect your ability to complete HITs in the future.") ){
+							// Failed
+							$("#subtabs_and_searchbar").after("<div id='captchaWrapper' class='message error'><span class='icon'></span><h6><span id='alertboxHeader'>Captcha failed. I don't know how to make this function run twice, but it just needs to 'restart'</span></h6></div>");
+						}else{
+							// Success
+							$("#subtabs_and_searchbar").after("<div id='captchaWrapper' class='message success'><span class='icon'></span><h6><span id='alertboxHeader'>Captcha success! From here it would be cool to restart the paused HITs!</span></h6></div>");
+						}
+
+						$("#captchaWrapper").css('width', '760px');
+						$("#captchaWrapper").css('margin-left', 'auto');
+						$("#captchaWrapper").css('margin-right', 'auto');
+						$("#captchaWrapper").css('text-align', 'center');
+					}
+				});
+			});
 		}
 
 		var uid = $("input[name='hitId']", data).attr("value");
