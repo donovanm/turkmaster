@@ -1177,14 +1177,26 @@ var DispatchUI = {
 
 		dispatch.addListener(Evt.ADD, function(watcher) {
 			// This could be done on one line, but then we would lose access to the WatcherUI's internal Watcher object and functionality
-			var watcherEl = WatcherUI.create(watcher);
-			$("#watcher_container", DispatchUI.div).append(watcherEl);
-			DispatchUI.watchers.push(watcherEl);
+			var watcher = WatcherUI.create(watcher);
+			$("#watcher_container", DispatchUI.div).append(watcher.element);
+			DispatchUI.watchers.push(watcher);
 			// watchers.push(WatcherUI.create(watcher).appendTo($("#watcher_container", div)));
 		});
 
 		dispatch.addListener(Evt.REMOVE, function(watcher) {
-			// Nothing to do
+			// Remove watcher from array
+			var index = -1,
+				watchers = DispatchUI.watchers;
+
+			for (var i = 0, len = watchers.length; i < len; i++) {
+				if (watchers[i].watcher === watcher) {
+					index = i;
+					break;
+				}
+			}
+
+			if (index !== -1)
+				DispatchUI.watchers.splice(index, 1);
 		});
 
 		DispatchUI.setHide = function() {
@@ -1362,7 +1374,7 @@ var DispatchUI = {
 		// Drag watchers
 		var startY, currentBaseY, max, min, height,
 			dragDiv, nextDiv, prevDiv, startPos, endPos, isDragging,
-			slop = 7, watchers = DispatchUI.watchers;
+			slop = 7, currentWatcher, watchers = DispatchUI.watchers;
 
 		DispatchUI.div.on("mousedown", ".watcher", function(e) {
 			isDragging = false;
@@ -1371,7 +1383,8 @@ var DispatchUI = {
 			startPos = endPos = $("#watcher_container .watcher").index(e.currentTarget);
 
 			// Get reference to the selected watcher
-			dragDiv = watchers[startPos];
+			currentWatcher = watchers[startPos];
+			dragDiv = currentWatcher.element;
 			nextDiv = dragDiv.next();
 			prevDiv = dragDiv.prev();
 
@@ -1382,8 +1395,8 @@ var DispatchUI = {
 			currentBaseY = dragDiv.offset().top;
 
 			// max = Math.min($("#watcher_container").outerHeight(true), height * (DispatchUI.dispatch.watchers.length + .75)) - height;
-			min = watchers[0].offset().top;
-			max = Math.min($("#watcher_container").outerHeight(true), height * (DispatchUI.dispatch.watchers.length - 1) + watchers[0].offset().top);
+			min = watchers[0].element.offset().top;
+			max = Math.min($("#watcher_container").outerHeight(true), height * (watchers.length - 1) + watchers[0].element.offset().top);
 
 			$(window).on("mousemove", move);
 			$(window).on("mouseup", up);
@@ -1416,7 +1429,7 @@ var DispatchUI = {
 					// Move down one spot
 					nextDiv.offset({ 'top': nextDiv.offset().top - height });
 					nextDiv = nextDiv.nextAll(":not(.dragging)").first();
-					prevDiv = (prevDiv.length) ? prevDiv.nextAll(":not(.dragging)").first() : (dragDiv !== watchers[0]) ? watchers[0] : watchers[1];
+					prevDiv = (prevDiv.length) ? prevDiv.nextAll(":not(.dragging)").first() : (dragDiv !== watchers[0].element) ? watchers[0].element : watchers[1].element;
 
 					currentBaseY += height;
 					endPos++;
@@ -1424,7 +1437,7 @@ var DispatchUI = {
 					// Move up one spot
 					prevDiv.offset({ 'top': prevDiv.offset().top + height });
 					prevDiv = prevDiv.prevAll(":not(.dragging)").first();
-					nextDiv = (nextDiv.length) ? nextDiv.prevAll(":not(.dragging)").first() : (dragDiv !== watchers[watchers.length - 1]) ? watchers[watchers.length - 1] : watchers[watchers.length - 2];
+					nextDiv = (nextDiv.length) ? nextDiv.prevAll(":not(.dragging)").first() : (dragDiv !== watchers[watchers.length - 1].element) ? watchers[watchers.length - 1].element : watchers[watchers.length - 2].element;
 
 					currentBaseY -= height;
 					endPos--;
@@ -1463,7 +1476,7 @@ var DispatchUI = {
 
 					// Re-arrange our watchers array
 					watchers.splice(startPos, 1);
-					watchers.splice(endPos, 0, dragDiv);
+					watchers.splice(endPos, 0, currentWatcher);
 				}
 			}
 		}
@@ -1874,7 +1887,7 @@ WatcherUI.create = function(watcher) {
 	$(".delete img", div).hover(function() { $(this).attr('src', "https://i.imgur.com/guRzYEL.png")}, function() {$(this).attr('src', "https://i.imgur.com/5snaSxU.png")});
 	$(".edit img", div).hover(function() { $(this).attr('src', "https://i.imgur.com/VTHXHI4.png")}, function() {$(this).attr('src', "https://i.imgur.com/peEhuHZ.png")});
 
-	return div;
+	return { element: div, watcher: watcher };
 }
 
 /**	The Watcher object. This is what controls the pages that are monitored and how often
