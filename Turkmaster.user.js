@@ -115,7 +115,7 @@ $(document).ready(function(){
 		IgnoreList.init();
 
 		if (settings.preloadHits)
-			loadHits();
+			loadDefaultWatchers();
 		else
 			dispatch.load();
 
@@ -581,7 +581,7 @@ function addStyle(styleText) {
 	$("head").append(style);
 }
 
-function loadHits() {
+function loadDefaultWatchers() {
 	// Add a few watchers. Won't be done like this in the future
 	dispatch.isLoading = true;
 	dispatch.add(new Watcher({
@@ -1532,25 +1532,62 @@ Dispatch.prototype.add = function(watcher) {
 }
 Dispatch.prototype.save = function() {
     if (!loadError) {
-        localStorage.setItem('notifier_watchers', JSON.stringify(dispatch.watchers,Watcher.replacerArray));
-		// localStorage.setItem('notifier_watchers_backup', JSON.stringify(dispatch.watchers,Watcher.replacerArray));
+        localStorage.setItem('notifier_watchers', JSON.stringify(dispatch.watchers, Watcher.replacerArray));
+
+        var lastChecked = getLastChecked(dispatch.watchers);
+
+        if (lastChecked > 0)
+	        localStorage.setItem('notifier_watchers_lastChecked', JSON.stringify(lastChecked));
+    }
+
+    function getLastChecked(watchers) {
+    	var lastChecked = (watchers[0].date) ? watchers[0].date.getTime() : 0;
+
+    	for (var i = 1, len = watchers.length; i < len; i++) {
+    		if (watchers[i].isRunning)
+    			return new Date.getTime();
+
+    		if ((watchers[i].date) && (watchers[i].date.getTime() > lastChecked))
+    			lastChecked = watchers[i].date.getTime();
+    	}
+
+    	return lastChecked;
     }
 }
 Dispatch.prototype.load = function() {
 	this.isLoading = true;
 	var data = localStorage.getItem('notifier_watchers');
-	var watchers;
+	var watchers,
+		lastChecked = localStorage.getItem('notifier_watchers_lastChecked');
 
 	if (data !== null) {
-		watchers = JSON.parse(data);
 		try {
-			for(var i = 0; i < watchers.length; i++) this.add(new Watcher(watchers[i]));
+			watchers = JSON.parse(data);
+
+			try {
+				lastChecked = JSON.parse(lastChecked);
+			} catch(e) {
+				lastChecked = null;
+			}
+
+			var now = new Date().getTime(),
+				expTime = 180000,	// 3 minutes
+				expired = (lastChecked !== null) ? now - lastChecked > expTime : false; // Expired if most recent watcher update happened more than x minutes before page was loaded
+
+			// Add the watchers. Clear last hits if past the expiration time
+			for(var i = 0; i < watchers.length; i++) {
+				if (expired)
+					watchers[i].lastHits = [];
+
+				this.add(new Watcher(watchers[i]));
+			}
+
 		} catch(e) {
 			loadError = true;
 			console.log("Error loading saved list", e);
         }
 	} else {
-		loadHits();
+		loadDefaultHits();
 	}
 
 	this.isLoading = false;
