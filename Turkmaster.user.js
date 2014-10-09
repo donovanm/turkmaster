@@ -362,7 +362,7 @@ var SettingsDialog = function() {
 	function _addStyle() {
 		addStyle("\
 			#settingsDialog {\
-				position: absolute;\
+				position: fixed;\
 				top: 16px;\
 				left: 249px;\
 				background-color: #fafafa;\
