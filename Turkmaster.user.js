@@ -871,7 +871,7 @@ function showDetailsPanel(watcher) {
 			$(panel).append((group).getDOMElement());
 
 			// This doesn't need a callback since the data will already be cached at this point
-			group.addTO(TO.get(Hit.getUniqueReqeusters(watcher.lastHits)));
+			group.addTO(TO.get(Hit.getUniqueReqeusters(watcher.lastHits), _handleTOReceived));
 		} else {
 			$(panel).append($('<div>').append('<h2>').css('text-align', 'center').html("<br />There are no HITs avaialable.<br /><br />"));
 		}
