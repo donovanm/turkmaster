@@ -806,9 +806,8 @@ function showDetailsPanel(watcher) {
 			group = new NotificationGroup({ hits: watcher.lastHits, isSticky: false, watcher: watcher });
 			$(panel).append((group).getDOMElement());
 
-			// This shouldn't need to use callback once caching is enabled. Anything TO info in the
-			// details panel will have been already retrieved from the server.
-			TO.get(Hit.getUniqueReqeusters(watcher.lastHits), _handleTOReceived);
+			// This doesn't need a callback since the data will already be cached at this point
+			group.addTO(TO.get(Hit.getUniqueReqeusters(watcher.lastHits)));
 		} else {
 			$(panel).append($('<div>').append('<h2>').css('text-align', 'center').html("<br />There are no HITs avaialable.<br /><br />"));
 		}
@@ -2077,6 +2076,7 @@ var Messenger = function() {
 
 			// Show notification on dashboard, too
 			notificationGroup = notificationPanel.add(new NotificationGroup({ title: watcher.name, hits: hits, url: watcher.url }));
+			notificationGroup.addTO(toData);
 
 			// Attempt to send a browser notification after a brief period of time. If another mturk
 			// page was visible when it received the hits, this will cancel out.
@@ -2188,28 +2188,56 @@ var Loader = function() {
 }();
 
 var TO = function() {
-	var URL_PREFIX = "https://api.turkopticon.istrack.in/multi-attrs.php?ids=";
+	var URL_PREFIX = "https://api.turkopticon.istrack.in/multi-attrs.php?ids=",
+		cache = {};
+
+	setInterval(function() { cache = {}; }, 3600000); // Clear cache once per hour
 
 	function _get(ids, callback) {
-		var data = _getFromStorage(ids);
+		var results = _getFromCache(ids);
 
 		// If not all requesters found in storage, fetch from server
-		// if (data.length < ids.length)
-			_fetchFromServer(URL_PREFIX + ids.join(','), callback);
+		if (results.missing.length > 0)
+			_fetchFromServer(URL_PREFIX + results.missing.join(','), callback);
 
-		return data;
+		return JSON.stringify(results.found);
 	}
 
-	function _getFromStorage(ids) {
-		// Fake it for now
-		// return '{"A2S0QCZG8DTNJC":{"name":"Procore Development","attrs":{"comm":"5.00","pay":"4.87","fair":"5.00","fast":"5.00"},"reviews":15,"tos_flags":0},"A6YG5FKV2TAVC":{"name":"Agent Agent","attrs":{"comm":"4.33","pay":"4.78","fair":"4.80","fast":"4.57"},"reviews":84,"tos_flags":0}}';
-		return null;
+	function _getFromCache(ids) {
+		var sorted = { found: {}, missing: [] };
+
+		for (var i = 0, len = ids.length; i < len; i++) {
+			if (cache[ids[i]])
+				sorted.found[ids[i]] = cache[ids[i]];
+			else
+				sorted.missing.push(ids[i]);
+		}
+
+		return sorted;
 	}
 
 	function _fetchFromServer(url, callback) {
 		$.get(url, function(data) {
-			callback(data);
+			_cache(data);
+
+			if (typeof callback === 'function')
+				callback(data);
 		})
+	}
+
+	function _getCount(obj) {
+		var count = 0;
+
+		for (key in obj)
+			count++;
+	}
+
+	function _cache(data) {
+		var ratings = JSON.parse(data);
+
+		for (id in ratings) {
+			cache[id] = ratings[id];
+		}
 	}
 
 	return {
