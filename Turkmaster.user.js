@@ -1837,7 +1837,10 @@ WatcherUI.create = function(watcher) {
 
 
 	// Set actions
-	$(".edit", div).click(function() {
+	$(".edit", div).click(showWatcherDialog);
+	div.dblclick(showWatcherDialog);
+
+	function showWatcherDialog() {
 		watcherDialog(watcher, function(values) {
 			watcher.setValues({
 				name        : values.name,
@@ -1847,7 +1850,7 @@ WatcherUI.create = function(watcher) {
 				stopOnCatch : values.stopOnCatch
 			})
 		});
-	});
+	}
 
 	$(".delete", div).click(function() {
 		dispatch.remove(watcher);
