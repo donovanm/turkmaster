@@ -1261,7 +1261,6 @@ var DispatchUI = {
 				position: relative;\
 				border-bottom: 1px solid #ddd;\
 				border-right: 1px solid #ddd;\
-				cursor: default;\
 				top: 0;\
 				transition: background-color 0.5s, top 0.1s;\
 				-moz-user-select: none;\
@@ -1269,7 +1268,7 @@ var DispatchUI = {
 				-webkit-user-select: none;\
 				-khtml-user-select: none;\
 			}\
-			#dispatcher .watcher.dragging { cursor: row-resize; z-index: 100; opacity: 0.8; transition: background-color 0.5s, top 0s }\
+			#dispatcher .watcher.dragging { cursor: grabbing; z-index: 100; opacity: 0.8; transition: background-color 0.5s, top 0s }\
 			#dispatcher .watcher div { font: " + settings.fontSize + "pt 'Oxygen', verdana, sans-serif }\
 			#dispatcher .watcher.running .details { background-color: #C3ECFC; background-color: rgba(218, 240, 251, 1); }\
 			#dispatcher .watcher.updated { background-color: #e8f5fc; background-color: rgba(218, 240, 251, 1) }\
@@ -1295,8 +1294,9 @@ var DispatchUI = {
 			#dispatcher .watcher:hover .icons { visibility: visible }\
 			#dispatcher .watcher .icons img { opacity: 0.2; height: 0.9em }\
 			#dispatcher .watcher .icons img:hover { opacity: 1 }\
-			#dispatcher .watcher .color_code { position: absolute; left: 0; top: 0; bottom: 0; width: 9px; cursor: row-resize }\
-			#dispatcher .watcher .color_code div { position: absolute; left: 0; top: 0; bottom: 0; width: 5px; transition: width 0.15s }\
+			#dispatcher .watcher .color_code { position: absolute; left: 0; top: 0; bottom: 0; width: 9px; cursor: grab;}\
+			#dispatcher .watcher .color_code div { position: absolute; left: 0; top: 0; bottom: 0; width: 5px; transition: width 0.15s; }\
+			#dispatcher .watcher.dragging .color_code { cursor: grabbing; }\
 			#dispatcher .watcher .color_code:hover div { width: 9px }\
 			#dispatcher .watcher .color_code.hit div       { background-color: rgba(234, 111, 111, .7); }\
 			#dispatcher .watcher .color_code.requester div { background-color: rgba(51, 147, 255, .7); }\
@@ -1304,6 +1304,7 @@ var DispatchUI = {
 			.watcher .play_container {\
 				padding: 0px 0px 0px 12px;\
 				float: left;\
+				cursor: default;\
 			}\
 			.play, .pause, .play_all {\
 				width:20px;\
