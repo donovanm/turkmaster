@@ -2256,25 +2256,27 @@ var Messenger = function() {
 		hits = IgnoreList.filter(hits);
 
 		if (hits.length) {
-			// Set wasViewed to false to check if any receiving windows were focused when this was sent.
-			wasViewed = false;
+			if (settings.notifications) {
+				// Set wasViewed to false to check if any receiving windows were focused when this was sent.
+				wasViewed = false;
 
-			// Send Hits
-			sendMessage({ header: SEND_HITS, content: { 'title': watcher.name, 'hits': hits, 'url': watcher.url } });
+				// Send Hits
+				sendMessage({ header: SEND_HITS, content: { 'title': watcher.name, 'hits': hits, 'url': watcher.url } });
 
-			// Get TO and send it
-			var toData = TO.get(Hit.getUniqueReqeusters(hits), _handleTOReceived);
-			if (toData)
-				sendMessage({ header: SEND_TO, content: toData });
+				// Get TO and send it
+				var toData = TO.get(Hit.getUniqueReqeusters(hits), _handleTOReceived);
+				if (toData)
+					sendMessage({ header: SEND_TO, content: toData });
+
+				// Attempt to send a browser notification after a brief period of time. If another mturk
+				// page was visible when it received the hits, this will cancel out.
+				if (!document.hasFocus())
+					setTimeout(function() { sendDesktopNotification(hits, watcher); }, 200);
+			}
 
 			// Show notification on dashboard, too
 			notificationGroup = notificationPanel.add(new NotificationGroup({ title: watcher.name, hits: hits, url: watcher.url }));
 			notificationGroup.addTO(toData);
-
-			// Attempt to send a browser notification after a brief period of time. If another mturk
-			// page was visible when it received the hits, this will cancel out.
-			if (!document.hasFocus())
-				setTimeout(function() { sendDesktopNotification(hits, watcher); }, 200);
 
 			// Sound alert for auto-accept HIT watchers and watchers that have the alert set on
 			if (watcher.option.auto || watcher.option.alert)
