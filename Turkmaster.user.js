@@ -2256,6 +2256,8 @@ var Messenger = function() {
 		hits = IgnoreList.filter(hits);
 
 		if (hits.length) {
+			var toData = TO.get(Hit.getUniqueReqeusters(hits), _handleTOReceived);
+
 			if (settings.notifications) {
 				// Set wasViewed to false to check if any receiving windows were focused when this was sent.
 				wasViewed = false;
@@ -2264,7 +2266,6 @@ var Messenger = function() {
 				sendMessage({ header: SEND_HITS, content: { 'title': watcher.name, 'hits': hits, 'url': watcher.url } });
 
 				// Get TO and send it
-				var toData = TO.get(Hit.getUniqueReqeusters(hits), _handleTOReceived);
 				if (toData)
 					sendMessage({ header: SEND_TO, content: toData });
 
@@ -2733,13 +2734,22 @@ function NotificationGroup(obj) { // title, hits, isSticky, watcher, url
 	this.createDOMElement();
 }
 NotificationGroup.prototype.addTO = function(data) {
-	if (data) {
+	if (data !== "{}") {
 		var ratings = JSON.parse(data);
 		var group = this.getDOMElement();
 
-		var notifications = group.find(".notification");
+		var notifications = group.find(".notification"),
+			singleRequester = group.find("h4 .requester");
 
-		for (id in ratings) {
+		if (singleRequester.length > 0) {
+			var id
+			for (var i in ratings)
+				id = i;
+
+			this.appendRatings({ notification: singleRequester.parent(), id: id, ratings: ratings[id] });
+		}
+
+		for (var id in ratings) {
 			currentNotification = notifications.filter(function() { return $(this).data("requesterID") === id });
 			this.appendRatings({ notification: currentNotification, id: id, ratings: ratings[id] });
 		}
@@ -2812,11 +2822,13 @@ NotificationGroup.prototype.appendRatings = function(obj) {
 NotificationGroup.prototype.createDOMElement = function() {
 	var _this = this,
 		REQUESTER_PREFIX = "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&requesterId=",
-		hit = this.hits[0];
+		hit = this.hits[0],
+		isSameReq = Hit.isSameRequester(this.hits),
+		self = this;
 
 	var div = $('<div>').addClass("notification_group")
 		.append((this.title !== null) ? $('<h3><a href="' + this.url + '" target="_blank">' + this.title + '</a></h3>') : "")
-		.append((Hit.isSameRequester(this.hits)) ? $('<h4><a href="' + REQUESTER_PREFIX + hit.requesterID + '" target="_blank" class="requester">' + hit.requester + '</a></h4>') : "")
+		.append((isSameReq) ? $('<h4><a href="' + REQUESTER_PREFIX + hit.requesterID + '" target="_blank" class="requester">' + hit.requester + '</a></h4>') : "")
 		.hover(
 			function() { _this.isHovered = true },
 			function() {
@@ -2832,9 +2844,6 @@ NotificationGroup.prototype.createDOMElement = function() {
 		this.hits.sort(function(a, b) { return (IgnoreList.isIgnored(a.requester)) ? 1 : 0 });
 	
 	// Add the notifications
-	var isSameReq = Hit.isSameRequester(this.hits),
-		self = this;
-
 	for (var i = 0, len = this.hits.length; i < len; i++) {
 		var notification = new NotificationHit(this.hits[i], isSameReq, (typeof this.watcher !== 'undefined') ? this.watcher : null);
 
