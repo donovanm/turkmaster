@@ -7,7 +7,8 @@
 // @version     1.2
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js
 // @require 	https://ajax.googleapis.com/ajax/libs/webfont/1/webfont.js
-// @grant       none
+// @grant       GM_getValue
+// @grant       GM_setValue
 // ==/UserScript==
 
 var settings = (function() {
@@ -63,11 +64,15 @@ var settings = (function() {
 	}
 
 	function _save() {
-		localStorage.setItem(LOCAL_STORAGE, JSON.stringify(pub));
+		// localStorage.setItem(LOCAL_STORAGE, JSON.stringify(pub));
+		GM_setValue(LOCAL_STORAGE, JSON.stringify(pub));
 	}
 
 	function _load() {
-		var values = localStorage.getItem(LOCAL_STORAGE);
+		var values = GM_getValue(LOCAL_STORAGE);
+
+		if (typeof values === 'undefined')
+			values = localStorage.getItem(LOCAL_STORAGE);
 
 		if (values) {
 			values = JSON.parse(values);
@@ -318,7 +323,7 @@ var SettingsDialog = function() {
 					target.addClass("on");
 				} else {
 					target.removeClass("on");
-					console.log("Desktop notifications are blocked.");
+					console.error("Desktop notifications are blocked.");
 				}
 			});
 		} else if (id === "alertOnly") {
@@ -326,8 +331,9 @@ var SettingsDialog = function() {
 		} else if (id === "hideable") {
 			settings.canHide = value;
 			setTimeout(function () { DispatchUI.setHide() }, 50);
-			settings.save();
 		}
+
+		settings.save();
 
 		if (id === "export") {
 			_showExport();
@@ -1545,7 +1551,8 @@ Dispatch.prototype.add = function(watcher) {
 }
 Dispatch.prototype.save = function() {
     if (!loadError) {
-        localStorage.setItem('notifier_watchers', JSON.stringify(dispatch.watchers, Watcher.replacerArray));
+        // localStorage.setItem('notifier_watchers', JSON.stringify(dispatch.watchers, Watcher.replacerArray));
+        GM_setValue('notifier_watchers', JSON.stringify(dispatch.watchers, Watcher.replacerArray));
 
         var lastChecked = getLastChecked(dispatch.watchers);
 
@@ -1569,9 +1576,14 @@ Dispatch.prototype.save = function() {
 }
 Dispatch.prototype.load = function() {
 	this.isLoading = true;
-	var data = localStorage.getItem('notifier_watchers');
+	var data;
 	var watchers,
 		lastChecked = localStorage.getItem('notifier_watchers_lastChecked');
+
+	data = GM_getValue('notifier_watchers');
+
+	if (typeof data === 'undefined')
+		data = localStorage.getItem('notifier_watchers');
 
 	if (data !== null) {
 		try {
@@ -1676,23 +1688,17 @@ Dispatch.prototype.exportWatchers = function() {
 Dispatch.prototype.importWatchers = function(data) {
 	try {
 		data = JSON.parse(data);
-		var storage = localStorage.getItem('notifier_watchers');
+		dispatch.isLoading = true;
 
-		if (!storage) {
-			localStorage.setItem('notifier_watchers', data);
-			dispatch.load();
-		} else {
-			dispatch.isLoading = true;
+		for (var i = 0, len = data.length; i < len; i++) {
+			var watcher = new Watcher(data[i]);
 
-			for (var i = 0, len = data.length; i < len; i++) {
-				var watcher = new Watcher(data[i]);
-
-				if (!this.getWatcherByProperty('id', watcher.id) && !this.getWatcherByProperty('name', watcher.name))
-					this.add(watcher);
-			}
-
-			dispatch.isLoading = false;
+			if (!this.getWatcherByProperty('id', watcher.id) && !this.getWatcherByProperty('name', watcher.name))
+				this.add(watcher);
 		}
+
+		dispatch.isLoading = false;
+		dispatch.save();
 
 		console.log("Watchers imported", dispatch.watchers);
 	} catch(e) {
