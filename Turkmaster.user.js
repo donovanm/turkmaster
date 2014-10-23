@@ -4,7 +4,7 @@
 // @author		DonovanM
 // @description A page-monitoring web app for Mturk (Mechanical Turk) designed to make turking more efficient. Easily monitor mturk search pages and requesters and Auto-Accept the HITs you missed.
 // @include     https://www.mturk.com/mturk/*
-// @version     1.3.1
+// @version     1.3.2
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js
 // @require 	https://ajax.googleapis.com/ajax/libs/webfont/1/webfont.js
 // @grant       GM_getValue
@@ -2384,7 +2384,7 @@ var Loader = function() {
 }();
 
 var TO = function() {
-	var URL_PREFIX = "https://api.turkopticon.istrack.in/multi-attrs.php?ids=",
+	var URL_PREFIX = "https://mturk-api.istrack.in/multi-attrs.php?ids=",
 		cache = {};
 
 	setInterval(function() { cache = {}; }, 3600000); // Clear cache once per hour
