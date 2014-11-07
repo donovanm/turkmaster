@@ -873,7 +873,7 @@ function showDetailsPanel(watcher) {
 			// This doesn't need a callback since the data will already be cached at this point
 			group.addTO(TO.get(Hit.getUniqueReqeusters(watcher.lastHits), _handleTOReceived));
 		} else {
-			$(panel).append($('<div>').append('<h2>').css('text-align', 'center').html("<br />There are no HITs avaialable.<br /><br />"));
+			$(panel).append($('<div>').append('<h2>').css('text-align', 'center').html("<br />There are no HITs available.<br /><br />"));
 		}
 	}
 	$(panel).show();
@@ -1231,13 +1231,13 @@ var DispatchUI = {
 		}
 
 		function hide() {
-			div.addClass("hidden");
+			div.addClass("tm-hidden");
 			$("#content_container").addClass("full");
 			$("#details_panel").addClass("left");
 		}
 
 		function show() {
-			div.removeClass("hidden");
+			div.removeClass("tm-hidden");
 			$("#content_container").removeClass("full");
 			$("#details_panel").removeClass("left");
 		}
@@ -1245,7 +1245,7 @@ var DispatchUI = {
 
 	addStyle: function() {
 		addStyle("#dispatcher { background-color: #f5f5f5; position: fixed; top: 0px; float: left; left: 0; height: 100%;  width: 270px; font-size: 8pt;  margin-left: 0px; transition: left 0.5s ease; }\
-			#dispatcher.hidden { left: -240px }\
+			#dispatcher.tm-hidden { left: -240px }\
 			#content_container { position: absolute; left: 270px; top: 0; right: 0; border-left: 2px solid #dadada; transition: left 0.5s ease; }\
 			#content_container.full { left: 30px }\
 			#dispatcher #controller { text-align: center; font: 160% Candara, sans-serif; color: #585858; position: relative; padding: 3px 5px; }\
@@ -2492,19 +2492,19 @@ NotificationPanel.prototype.remove = function(notification) {
 }
 NotificationPanel.prototype.show = function() {
 	if (this.isHidden) {
-		this.getDOMElement().removeClass("hidden");
+		this.getDOMElement().removeClass("tm-hidden");
 		this.isHidden = false;
 	}
 }
 NotificationPanel.prototype.hide = function() {
 	if (!this.isHidden && !this.isHovered) {
-		this.getDOMElement().addClass("hidden");
+		this.getDOMElement().addClass("tm-hidden");
 		this.isHidden = true;
 	}
 }
 NotificationPanel.prototype.createPanel = function() {
 	var _this = this;
-	var panel =	$('<div class="notification_panel hidden" id="receiver"></div>')
+	var panel =	$('<div class="notification_panel tm-hidden" id="receiver"></div>')
 			.hover(
 				function() {
 					clearTimeout(this.timeout);
@@ -2537,7 +2537,7 @@ NotificationPanel.prototype.createPanel = function() {
 			border-right  : 0;\
 			transition    : right 0.2s;\
 		}\
-		#receiver.notification_panel.hidden {\
+		#receiver.notification_panel.tm-hidden {\
 			right: -395px;\
 		}\
 		#receiver .notification_group {\
