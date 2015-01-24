@@ -1278,7 +1278,7 @@ var DispatchUI = {
 			#dispatcher .watcher.running .details { background-color: #C3ECFC; background-color: rgba(218, 240, 251, 1); }\
 			#dispatcher .watcher.updated { background-color: #e8f5fc; background-color: rgba(218, 240, 251, 1) }\
 			#dispatcher .watcher .details { width: 25px; text-align: center; float: right; background-color: rgba(234, 234, 234, 1); position: absolute; top: 0; bottom: 0; right: 0; font-size: 90%; color: #fff; transition: background-color 0.5s }\
-			#dispatcher .watcher .details.updated { background-color: rgba(218, 240, 251, 1); background-color: #e8f5fc; background-color: rgba(220, 255, 228, 1) }\
+			#dispatcher .watcher .details.updated { background-color: rgba(220, 255, 228, 1) }\
 			#dispatcher .watcher .name { font-size 130%; color: black; text-decoration: none; display: inline-block; margin-top: -3px}\
 			#dispatcher .watcher .name:hover { text-decoration: underline }\
 			#dispatcher .watcher.dragging .name:hover { text-decoration: none }\
@@ -1781,69 +1781,98 @@ function watcherDialog(watcher, callback) {
 }
 
 
-function WatcherUI() { /* Nothing */ };
-WatcherUI.create = function(watcher) {
-	// Create jQuery Element...
-	var div = $("<div>").addClass("watcher")
+function WatcherUI(watcher) {
+	this.watcher = watcher;
+	this.createDiv();
+	this.addStyles();
+	this.addListeners();
+	this.addActions();
+
+	return { element: this.div, watcher: this.watcher };
+}
+WatcherUI.prototype.createDiv = function() {
+	this.div = $("<div>").addClass("watcher")
 		.html('<div class="details"> > </div>\
 		<div class="play_container"><div class="play"></div><div class="play_select"></div></div>\
 		<div class="content">\
-			<a class="name" href="' + watcher.getURL() + '" target="_blank">' + ((typeof watcher.name !== 'undefined') ? watcher.name : watcher.id) + '</a>\
+			<a class="name" href="' + this.watcher.getURL() + '" target="_blank">' + ((typeof this.watcher.name !== 'undefined') ? this.watcher.name : this.watcher.id) + '</a>\
 			<div class="bottom">\
-	            <span class="time">' + (watcher.time / 1000) + ' seconds </span>\
+	            <span class="time">' + (this.watcher.time / 1000) + ' seconds </span>\
 	            <span class="icons">\
 	                <a class="edit" href="javascript:void(0)"><img src="https://i.imgur.com/peEhuHZ.png" /></a>\
 	                <a class="delete" href="javascript:void(0)"><img src="https://i.imgur.com/5snaSxU.png" /></a>\
 	            </span>\
-				<div class="last_updated" title="Last checked: ' + ((typeof watcher.date !== 'undefined') ? watcher.date.toString() : "n/a") + '">' + ((typeof watcher.date !== 'undefined') ? watcher.getFormattedTime() : "n/a") + '</div>\
+				<div class="last_updated" title="Last checked: ' + ((typeof this.watcher.date !== 'undefined') ? this.watcher.date.toString() : "n/a") + '">' + ((typeof this.watcher.date !== 'undefined') ? this.watcher.getFormattedTime() : "n/a") + '</div>\
 			</div>\
 			<div class="color_code"><div></div></div>\
 		</div>');
+}
+WatcherUI.prototype.addStyles = function() {
+	if (this.watcher.state.isSelected)
+		this.div.addClass("selected");
 
-	if (watcher.state.isSelected)
-		div.addClass("selected");
+	// Add colors for watcher type
+	var colorCode = $(".color_code", this.div);
+	if (this.watcher.type === 'hit') {
+		colorCode.addClass("hit");
+		colorCode.attr('title', "HIT Watcher");
+	} else if (this.watcher.type === 'requester') {
+		colorCode.addClass("requester");
+		colorCode.attr('title', "Requester Watcher");
+	} else if (this.watcher.type === 'url') {
+		colorCode.addClass("url");
+		colorCode.attr('title', "URL Watcher");
+	}
+	colorCode.attr('title', colorCode.attr('title') + "\nClick and drag to re-order");
 
-	// Add listeners
-	watcher.addListener(Evt.START, function() {
-		div.addClass("running");
+	$(".delete img", this.div).hover(function() { $(this).attr('src', "https://i.imgur.com/guRzYEL.png")}, function() {$(this).attr('src', "https://i.imgur.com/5snaSxU.png")});
+	$(".edit img", this.div).hover(function() { $(this).attr('src', "https://i.imgur.com/VTHXHI4.png")}, function() {$(this).attr('src', "https://i.imgur.com/peEhuHZ.png")});
+}
+WatcherUI.prototype.addListeners = function() {
+	var self = this;
+
+	this.watcher.addListener(Evt.START, function() {
+		self.div.addClass("running");
 	});
 
-	watcher.addListener(Evt.STOP, function() {
-		div.removeClass("running");
+	this.watcher.addListener(Evt.STOP, function() {
+		self.div.removeClass("running");
 	});
 
-	watcher.addListener(Evt.UPDATE, function(e) {
-		$(".last_updated", div).text(watcher.getFormattedTime()).attr('title', "Last checked: " + watcher.date.toString());
-		div.addClass("updated");
-		setTimeout(function() { div.removeClass("updated") }, 1000);
+	this.watcher.addListener(Evt.UPDATE, function(e) {
+		$(".last_updated", self.div).text(self.watcher.getFormattedTime()).attr('title', "Last checked: " + self.watcher.date.toString());
+		self.div.addClass("updated");
+		setTimeout(function() { self.div.removeClass("updated") }, 1000);
 	});
 
-	watcher.addListener(Evt.CHANGE, function() {
-		$(".name", div).text(watcher.name).attr('href', watcher.url);
-		$(".time", div).text(watcher.time / 1000 + " seconds");
+	this.watcher.addListener(Evt.CHANGE, function() {
+		$(".name", self.div).text(this.watcher.name).attr('href', this.watcher.url);
+		$(".time", self.div).text(this.watcher.time / 1000 + " seconds");
 
-		if (watcher.state.isSelected)
-			$(div).addClass("selected");
+		if (this.watcher.state.isSelected)
+			$(self.div).addClass("selected");
 		else
-			$(div).removeClass("selected");
+			$(self.div).removeClass("selected");
 	});
 
-	watcher.addListener(Evt.HITS_CHANGE, function() {
-		$(".details", div).addClass("updated");
+	this.watcher.addListener(Evt.HITS_CHANGE, function() {
+		$(".details", self.div).addClass("updated");
 	});
 
-	watcher.addListener(Evt.DELETE, function() {
-		div.remove();
+	this.watcher.addListener(Evt.DELETE, function() {
+		self.div.remove();
 	});
 
-	watcher.addListener(Evt.VIEW_DETAILS, function() {
-		$(".details", div).removeClass("updated");
+	this.watcher.addListener(Evt.VIEW_DETAILS, function() {
+		$(".details", self.div).removeClass("updated");
 	});
-
+}
+WatcherUI.prototype.addActions = function() {
+	var self = this;
 
 	// Set actions
-	$(".edit", div).click(showWatcherDialog);
-	div.dblclick(showWatcherDialog);
+	$(".edit", this.div).click(showWatcherDialog);
+	this.div.dblclick(showWatcherDialog);
 
 	function showWatcherDialog() {
 		watcherDialog(watcher, function(values) {
@@ -1857,47 +1886,30 @@ WatcherUI.create = function(watcher) {
 		});
 	}
 
-	$(".delete", div).click(function() {
-		dispatch.remove(watcher);
+	$(".delete", this.div).click(function() {
+		dispatch.remove(self.watcher);
 	});
 
-	$(".details", div).mouseover(function () {
-		showDetailsPanel(watcher);
+	$(".details", this.div).mouseover(function () {
+		showDetailsPanel(self.watcher);
 		$(this).removeClass("updated");
 	});
 
-	$("div.play_select", div).mousedown(function() {
-		watcher.toggleSelected();
+	$("div.play_select", this.div).mousedown(function() {
+		self.watcher.toggleSelected();
 	});
 
-	$("div.play", div).mousedown(function() {
-		if (watcher.state.isRunning)
-			watcher.stop();
+	$("div.play", this.div).mousedown(function() {
+		if (self.watcher.state.isRunning)
+			self.watcher.stop();
 		else
-			watcher.start();
+			self.watcher.start();
 	});
-
-
-	// Add colors for watcher type
-	var colorCode = $(".color_code", div);
-	if (watcher.type === 'hit') {
-		colorCode.addClass("hit");
-		colorCode.attr('title', "HIT Watcher");
-	} else if (watcher.type === 'requester') {
-		colorCode.addClass("requester");
-		colorCode.attr('title', "Requester Watcher");
-	} else if (watcher.type === 'url') {
-		colorCode.addClass("url");
-		colorCode.attr('title', "URL Watcher");
-	}
-	colorCode.attr('title', colorCode.attr('title') + "\nClick and drag to re-order");
-
-
-	$(".delete img", div).hover(function() { $(this).attr('src', "https://i.imgur.com/guRzYEL.png")}, function() {$(this).attr('src', "https://i.imgur.com/5snaSxU.png")});
-	$(".edit img", div).hover(function() { $(this).attr('src', "https://i.imgur.com/VTHXHI4.png")}, function() {$(this).attr('src', "https://i.imgur.com/peEhuHZ.png")});
-
-	return { element: div, watcher: watcher };
 }
+WatcherUI.create = function(watcher) {
+	return new WatcherUI(watcher);
+}
+
 
 /**	The Watcher object. This is what controls the pages that are monitored and how often
 
@@ -2666,6 +2678,7 @@ NotificationPanel.prototype.createPanel = function() {
 			padding: 0.3em;\
 			border: 1px solid #f0f0f0;\
 			z-index: 100;\
+			box-shadow: 1px 1px 2px rgb(182, 182, 182);\
 		}\
 		.notification_panel .ratings-button:hover > .ratings-chart { visibility: visible; }\
 		.notification_panel .ratings.no-TO .ratings-button > .ratings-chart { bottom: -1em; }\
