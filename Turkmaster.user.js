@@ -1507,19 +1507,11 @@ function Dispatch() {
 }
 Dispatch.prototype = new Evt();
 Dispatch.prototype.start = function(startAll) {
-	if (this.watchers.length > 0) {
-		var count = 0;
-		for (var i = 0, len = this.watchers.length; i < len; i++) {
-			// Don't start them all at the same time. There is a 2 second delay
-			// between each start. It had to be done in a self-executing function
-			// in order for the setTimeout to work properly.
-			if (this.watchers[i].state.isSelected || startAll) {
-				(function (watcher, x){
-						watcher.timer = setTimeout(function() { watcher.start(); }, x * 0000); // Let's try 0ms
-				})(this.watchers[i], count++);
-			}
-		}
-	}
+	this.watchers.map(function(watcher) {
+		if (startAll || watcher.state.isSelected)
+			watcher.start();
+	})
+
 	this.notify(Evt.START, null);
 }
 Dispatch.prototype.stop = function() {
@@ -1551,7 +1543,6 @@ Dispatch.prototype.add = function(watcher) {
 }
 Dispatch.prototype.save = function() {
     if (!loadError) {
-        // localStorage.setItem('notifier_watchers', JSON.stringify(dispatch.watchers, Watcher.replacerArray));
         GM_setValue('notifier_watchers', JSON.stringify(dispatch.watchers, Watcher.replacerArray));
 
         var lastChecked = getLastChecked(dispatch.watchers);
@@ -1563,13 +1554,13 @@ Dispatch.prototype.save = function() {
     function getLastChecked(watchers) {
     	var lastChecked = (watchers[0].date) ? watchers[0].date.getTime() : 0;
 
-    	for (var i = 1, len = watchers.length; i < len; i++) {
-    		if (watchers[i].isRunning)
+    	watchers.map(function(watcher) {
+    		if (watcher.isRunning)
     			return new Date.getTime();
 
-    		if ((watchers[i].date) && (watchers[i].date.getTime() > lastChecked))
-    			lastChecked = watchers[i].date.getTime();
-    	}
+    		if (watcher.date && (watcher.date.getTime() > lastChecked))
+    			lastChecked = watcher.date.getTime();
+		})
 
     	return lastChecked;
     }
@@ -1950,7 +1941,7 @@ function Watcher(attrs) {
 	this.url = attrs.url;
 
 	if (typeof this.url === 'undefined')
-		this.setUrl();
+		this.updateUrl();
 
 	// Listeners
 	this.listener = {
@@ -1966,17 +1957,10 @@ function Watcher(attrs) {
 	return this;
 }
 Watcher.prototype = new Evt();
-Watcher.prototype.toString = function() {
-	return this.name;
-}
-Watcher.prototype.getHTML = function() {
-	this.DOMElement = $("<div>");
-	return $("<div>");
-}
 Watcher.prototype.getURL = function() {
 	return this.url;
 }
-Watcher.prototype.setUrl = function() {
+Watcher.prototype.updateUrl = function() {
 	switch(this.type) {
 		case 'hit':
 			this.url = "https://www.mturk.com/mturk/preview" + (this.option.auto ? "andaccept" : "") + "?groupId=" + this.id;
@@ -1995,7 +1979,7 @@ Watcher.prototype.setUrl = function() {
 }
 Watcher.prototype.setAuto = function(isAuto) {
 	this.option.auto = isAuto;
-	this.setUrl();
+	this.updateUrl();
 }
 Watcher.prototype.isNewHit = function (hit) {
 	return (this.newHits.indexOf(hit) !== -1);
@@ -2063,11 +2047,7 @@ Watcher.prototype.filterMessages = function(newHits) {
 	return filteredHits;
 }
 Watcher.prototype.toggleSelected = function() {
-	if (this.state.isSelected)
-		this.state.isSelected = false;
-	else
-		this.state.isSelected = true;
-
+	this.state.isSelected = (this.state.isSelected) ? false : true;
 	this.notify(Evt.CHANGE, null);
 }
 Watcher.prototype.markViewed = function () {
@@ -2100,24 +2080,25 @@ Watcher.prototype.setValues = function(values) {
 }
 Watcher.prototype.getFormattedTime = function() {
 	if (typeof this.date !== 'undefined') {
-		var time = this.date;
-		var str = "";
-		var hours = time.getHours();
-		var ampm = "am";
-		
-		if (hours >= 12) {
-			if (hours > 12)
-				hours -= 12;
+		var time = this.date,
+			str = "",
+			hours = time.getHours(),
+			ampm = "am";
+
+		if (hours >= 12)
 			ampm = "pm";
-		} else if (hours === 0) {
+
+		if (hours > 12)
+			hours -= 12;
+
+		if (hours === 0)
 			hours = 12;
-		}
-			
+
 		str += hours + ":" 
 			+ ((time.getMinutes() < 10) ? "0" : "") + time.getMinutes() + ":"
 			+ ((time.getSeconds() < 10) ? "0" : "") + time.getSeconds()
 			+ ampm;
-			
+
 		return str;
 	} else {
 		return "N/A";
@@ -2185,7 +2166,7 @@ Watcher.prototype.parseListing = function(data) {
 		hit.reward      = $(qryReward, content).text().trim();
 		hit.available   = $(qryAvailable, content).text().trim();
 		hit.time        = $(qryTime, content).text().trim();
-		
+
 		var urlData = $(qryUrl, topRow);
 		hit.url = urlData.attr("href");
 
@@ -2194,9 +2175,9 @@ Watcher.prototype.parseListing = function(data) {
 		if (idMatch !== null) {
 			hit.id = idMatch[2];
 		}
-		
+
 		hit.canPreview = false;
-		
+
 		// Check each link to see if user is qualified or can preview the HIT, etc.
 		urlData.each(function() {
 			if (typeof this.href !== 'undefined') {
@@ -2223,7 +2204,6 @@ Watcher.prototype.parseHitPage = function(data) {
 		//TODO We need to test for "You are not qualified to accept this HIT."
 		
 		if (hasCaptcha) {
-			console.log("Has captcha");
 			sendMessage({header: 'captcha'});
 		}
 
@@ -2234,13 +2214,13 @@ Watcher.prototype.parseHitPage = function(data) {
 		hit.reward    = $("td.capsule_field_text:nth-child(5) > span:nth-child(1)", data).text().trim();
 		hit.available = $("td.capsule_field_text:nth-child(8)", data).text().trim();
 		hit.time      = $("td.capsule_field_text:nth-child(11)", data).text().trim();
-		
+
 		if ((hasCaptcha || (this.option.auto && this.option.stopOnCatch)) && this.state.isRunning)
 			// We should probably toggle off all auto-accept hits when we encounter a captcha. Maybe send a special message to all mturk windows while we're at it.
 			// The special message could be some kind of banner that says that no more hits can be accepted in the background until the captcha is entered. (It would
 			// be pretty cool if we could pull up the captcha image in the background and just show it and the form to enter it from another page).
 			this.stop();
-		
+
 		return new Array(hit);
 	}
 }
