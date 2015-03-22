@@ -1890,26 +1890,14 @@ WatcherUI.create = function(watcher) {
 	return { element: div, watcher: watcher };
 }
 
-/**	The Watcher object. This is what controls the pages that are monitored and how often
 
-	Events:
-		onStart      - The watcher has started to check the desired page with a time interval
-		onStop       - The time interval has stopped
-		onUpdate     - The watcher has just checked the page for hits
-		onChange     - Attributes of the watcher changed, like name, interval time, etc.
-		onDelete     - When a watcher has been deleted
-		onHitsChange - The watcher updated and found a different set of hits from last time
-		onCaptcha?   - The watcher encounters a captcha. Not sure if this should be handled by the Watcher or Loader (maybe both)
-
-**/
 function Watcher(attrs) {
 	var DEFAULT_TIME = 60000;
-	this.interval    = null;		// For continuous interval
-	this.timer       = null; 			// For initial setTimeout
+	this.interval    = null;	// Interval object
 	this.newHits     = [];
 
 	attrs = attrs || {};
-	
+
 	// Default states
 	this.state = {};
 	state = attrs.state || {};
@@ -1929,7 +1917,7 @@ function Watcher(attrs) {
 	this.type = attrs.type;
 	this.name = attrs.name || this.id;
 	this.lastHits = attrs.lastHits || [];
-	
+
 	// Options
 	this.option = {};
 	option 	= attrs.option || {};
@@ -2007,7 +1995,6 @@ Watcher.prototype.start = function() {
 Watcher.prototype.stop = function() {
 	// Stop the interval object and the timer object
 	clearInterval(this.interval);
-	clearTimeout(this.timer);
 	this.state.isRunning = false;
 
 	this.notify(Evt.STOP, null);
