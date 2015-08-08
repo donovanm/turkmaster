@@ -23,7 +23,8 @@ var settings = (function() {
 		fontSize      : 10,
 		typeface      : "Oxygen",
 		desktopNotifications : false,
-		canHide       : false
+		canHide       : false,
+		stopOnCaptcha : true
 	}
 
 	_load();
@@ -186,13 +187,94 @@ function preloadImages() {
 
 var SettingsDialog = function() {
 	var DOMElement,
-	    TOGGLE = '<button class="on_off"><span>ON</span><span>OFF</span></button>';
+		widgetGroups = [
+			{
+				id      : 'soundSettings',
+				text    : 'Sound',
+				type    : 'toggle',
+				setting : 'sound',
+				items   : [
+					{
+						id   : 'volume',
+						text : 'Volume (0 - 100)',
+						type : 'text',
+						setting : 'volume'
+					}
+				]
+			},
+			{
+				id      : 'notificationSettings',
+				text    : 'Notifications',
+				type    : 'toggle',
+				setting : 'notifications',
+				items   : [
+					{
+						id   : 'desktopNotifications',
+						text : 'Desktop Notifications',
+						type : 'toggle',
+						setting : 'desktopNotifications'
+					}
+				]
+			},
+			{
+				id    : 'fontSettings',
+				text  : 'Font',
+				items : [
+					{
+						id   : 'fontSize',
+						text : 'Size (pt)',
+						type : 'text',
+						setting : 'fontSize'
+					}
+				]
+			},
+			{
+				id    : 'uiSettings',
+				text  : 'User Interface',
+				items : [
+					{
+						id   : 'hideable',
+						text : 'Hideable',
+						type : 'toggle',
+						setting : 'canHide'
+					}
+				]
+			},
+			{
+				id    : 'export',
+				text  : 'Backup',
+				items : [
+					{
+						type : 'more',
+						id   : 'export',
+						text : 'Export'
+					},
+					{
+						type : 'more',
+						id   : 'import',
+						text : 'Import'
+					}
+				]
+			},
+			{
+				id    : 'more',
+				text  : 'Other',
+				items : [
+					{
+						id   : 'stopOnCaptcha',
+						text : 'Stop on Captcha',
+						type : 'toggle',
+						setting : 'stopOnCaptcha'
+					}
+				]
+			}
+		];
 
 	function _show() {
 		if (!DOMElement)
 			_createDOMElement()
 
-		_getSettings();
+		_setCurrentSettings(widgetGroups);
 		DOMElement.show();
 		$(window).on('click', _handleWindowClick);
 	}
@@ -204,15 +286,26 @@ var SettingsDialog = function() {
 			return false;
 	}
 
-	function _getSettings() {
-		if (settings.sound) DOMElement.find("#soundSettings > .on_off").addClass("on");
-		DOMElement.find("#volume input").val(settings.volume);
-		if (settings.notifications) DOMElement.find("#notificationSettings > .on_off").addClass("on");
-		if (settings.desktopNotifications) DOMElement.find("#desktopNotifications .on_off").addClass("on");
-		if (settings.alertOnly) DOMElement.find("#alertOnly .on_off").addClass("on");
-		if (settings.canHide) DOMElement.find("#hideable .on_off").addClass("on");
-		DOMElement.find("#fontSize input").val(settings.fontSize);
-		DOMElement.find("#typeface input").val(settings.typeface);
+	// Sets the widgets to reflect the current settings
+	function _setCurrentSettings(list) {
+		list.forEach(function (item) {
+			if (item.type)
+				_setSetting(item.id, item.type, item.setting);
+
+			if (item.items)
+				_setCurrentSettings(item.items);
+		})
+	}
+
+	function _setSetting(id, type, setting) {
+		var widget = DOMElement.find("#" + id),
+			value = settings[setting];
+
+		if (type === "toggle" && value) {
+			widget.children(".on_off").addClass("on");
+		} else if (type === "text") {
+			widget.children("input").val(value);
+		}
 	}
 
 	function _save() {
@@ -225,44 +318,66 @@ var SettingsDialog = function() {
 
 	function _createDOMElement() {
 		_addStyle();
-		DOMElement = $('<div id="settingsDialog"><h2>Settings</h2></div>').append(
-			$('<div id="soundSettings">' + TOGGLE + '<h3>Sound</h3>\
-					<ul><li id="volume">Volume (0 - 100)<input type="text" /></li></ul>\
-			   </div>'),
-			$('<div id="notificationSettings">' + TOGGLE + '<h3>Notifications</h3>\
-					<ul>\
-						<li id="desktopNotifications">' + TOGGLE + 'Desktop Notifications</li>\
-						<!--li id="alertOnly">' + TOGGLE + 'Alert/Auto only</li-->\
-					</ul>\
-			   </div>'),
-			$('<div id="fontSettings"><h3>Font</h3>\
-					<ul>\
-						<li id="fontSize"><input type="text" />Size (pt)</li>\
-						<!--li id="typeface"><input type="text" />Typeface</li-->\
-					</ul>\
-			   </div>'),
-			$('<div id="uiSettings"><h3>User Interface</h3>\
-					<ul>\
-						<li id="hideable">' + TOGGLE + 'Hideable</li>\
-					</ul>\
-			   </div>'),
-			$('<div id="export"><h3>Backup</h3>\
-					<ul>\
-						<li id="export"><button class="more">...</button>Export</li>\
-						<li id="import"><button class="more">...</button>Import</li>\
-					</ul>\
-			   </div>')
-		)
+
+		DOMElement = $('<div id="settingsDialog"><h2>Settings</h2></div>').append(_createGroups(widgetGroups));
 
 		_addHandlers();
 
 		$("body").append(DOMElement);
 	}
 
+	// Creates settings groups for each group item in groups
+	function _createGroups(groups) {
+		return groups.map(function (group) {
+			return _createGroup(group);
+		});
+	}
+
+	function _createGroup(params) {
+		var widgetHTML = widgetHTML || "",
+			group,
+			list;
+
+		if (params.type === 'toggle')
+			widgetHTML = getToggleHTML();
+
+		group = $('<div id="' + params.id + '">' + widgetHTML + '<h3>' + params.text + '</h3><ul></ul></div>');
+		list = group.find('ul');
+
+		params.items.forEach(function (item) {
+			list.append(_createItem(item));
+		});
+
+		return group;
+	}
+
+	function _createItem(params) {
+		return (params.type === 'toggle') ? _createToggleItem(params.id, params.text) :
+		       (params.type === 'text')   ? _createTextItem(params.id, params.text) :
+		       (params.type === 'more')   ? _createMoreItem(params.id, params.text) :
+		       undefined;
+	}
+
+	function _createTextItem(id, text) {
+		return $('<li id="' + id + '">' + text + '<input type="text" class="text" /></li>');
+	}
+
+	function _createToggleItem(id, text) {
+		return $('<li id="' + id + '">' + getToggleHTML() + text + '</li>');
+	}
+
+	function _createMoreItem(id, text) {
+		return $('<li id="' + id + '"><button class="more">...</button>' + text + '</li>');
+	}
+
+	function getToggleHTML() {
+		return '<button class="on_off"><span>ON</span><span>OFF</span></button>';
+	}
+
 	function _addHandlers() {
 		DOMElement.on('click', function(e) {
 			if (e.target.tagName === "BUTTON" || e.target.parentNode.tagName === "BUTTON")
-				_handleButtonToggle(e);
+				_handleWidgetClick(e);
 		});
 
 		DOMElement.on('change', _handleInputChange);
@@ -271,6 +386,7 @@ var SettingsDialog = function() {
 	function _handleWindowClick(e) {
 		var target = e.target;
 
+		// Hides the settings dialog if user clicks outside of the dialog
 		if (!DOMElement.is(target) && DOMElement.has(target).length === 0 && $("#settings img").get(0) !== target) {
 			_cancel();
 			$(window).off('click', _handleWindowClick);
@@ -286,11 +402,9 @@ var SettingsDialog = function() {
 			settings.setVolume(value);
 		else if (id === "fontSize")
 			settings.setfontSize(value);
-		else if (id === "typeface")
-			settings.typeface = value;
 	}
 
-	function _handleButtonToggle(e) {
+	function _handleWidgetClick(e) {
 		e.preventDefault();
 
 		// Chrome returns the span as the target while FF returns the button
@@ -298,15 +412,9 @@ var SettingsDialog = function() {
 			value = target.hasClass("on"),
 			id = target.parent().attr('id');
 
-		if (id !== "desktopNotifications") {
-			if (target.hasClass("on")) {
-				target.removeClass("on");
-				value = false;
-			} else {
-				target.addClass("on");
-				value = true;
-			}
-		}
+		// Toggle widget unless it's for desktop notifications (because it's asynchronous)
+		if (id !== "desktopNotifications")
+			value = _toggle(target);
 
 		if (id === "soundSettings") {
 			settings.sound = value;
@@ -331,6 +439,8 @@ var SettingsDialog = function() {
 		} else if (id === "hideable") {
 			settings.canHide = value;
 			setTimeout(function () { DispatchUI.setHide() }, 50);
+		} else if (id === "stopOnCaptcha") {
+			settings.stopOnCaptcha = value;
 		}
 
 		settings.save();
@@ -339,6 +449,16 @@ var SettingsDialog = function() {
 			_showExport();
 		} else if (id === "import") {
 			_showImport();
+		}
+	}
+
+	function _toggle(element) {
+		if (element.hasClass("on")) {
+			element.removeClass("on");
+			return false;
+		} else {
+			element.addClass("on");
+			return true;
 		}
 	}
 
@@ -1117,9 +1237,7 @@ var DispatchUI = {
 	},
 
 	init: function() {
-		var div = DispatchUI.div = $("<div>").attr('id', "dispatcher")
-			.append($("<div>").attr('id', "controller"))
-			.append($("<div>").attr('id', "watcher_container"));
+		var div = DispatchUI.div = $('<div id="dispatcher"><div id="controller"></div><div id="watcher_container"></div></div>');
 
 		DispatchUI.watchers = [];
 
@@ -1135,11 +1253,7 @@ var DispatchUI = {
 		$("body").css('margin', "0").prepend(div);
 
 		var ctrl = DispatchUI.ctrl = $("#controller", div);
-		var settingsBtn = $("<a>")
-				.attr('id', "settings")
-				.attr('href', "javascript:void(0)")
-				.attr('title', "Settings")
-				.html('<img />')
+		var settingsBtn = $('<a id="settings" href="javascript:void(0)" title="Setting"><img /></a')
 				.click(function() {
 					if (!SettingsDialog.isVisible())
 						SettingsDialog.show();
@@ -2236,7 +2350,7 @@ Watcher.prototype.parseHitPage = function(data) {
 		hit.available = $("td.capsule_field_text:nth-child(8)", data).text().trim();
 		hit.time      = $("td.capsule_field_text:nth-child(11)", data).text().trim();
 		
-		if ((hasCaptcha || (this.option.auto && this.option.stopOnCatch)) && this.state.isRunning)
+		if (((hasCaptcha && settings.stopOnCaptcha) || (this.option.auto && this.option.stopOnCatch)) && this.state.isRunning)
 			// We should probably toggle off all auto-accept hits when we encounter a captcha. Maybe send a special message to all mturk windows while we're at it.
 			// The special message could be some kind of banner that says that no more hits can be accepted in the background until the captcha is entered. (It would
 			// be pretty cool if we could pull up the captcha image in the background and just show it and the form to enter it from another page).
