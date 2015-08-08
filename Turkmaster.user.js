@@ -4,7 +4,7 @@
 // @author		DonovanM
 // @description A page-monitoring web app for Mturk (Mechanical Turk) designed to make turking more efficient. Easily monitor mturk search pages and requesters and Auto-Accept the HITs you missed.
 // @include     https://www.mturk.com/mturk/*
-// @version     1.3.4
+// @version     1.4
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js
 // @require 	https://ajax.googleapis.com/ajax/libs/webfont/1/webfont.js
 // @grant       GM_getValue
@@ -516,6 +516,7 @@ var SettingsDialog = function() {
 				border-bottom: 1px solid #DDD;\
 				border-right: 1px solid #DDD;\
 				border-radius: 0.3em;\
+				color: #333;\
 			}\
 			#settingsDialog div, #settingsDialog li, #settingsDialog input, #settingsDialog button {\
 				font: " + settings.fontSize + "pt 'Oxygen', verdana, sans-serif;\
@@ -752,11 +753,6 @@ function loadDefaultWatchers() {
 		type: 'requester',
 		name: "Agent Agent",
 		option: {alert:true}}));	// Agent Agent
-	dispatch.add(new Watcher({
-		id: "A2SUM2D7EOAK1T",
-		time: 120000,
-		type: 'requester',
-		name: 'Crowdsource'}));
 	dispatch.add(new Watcher({
 		id: "AKEBQYX32KM19",
 		time: 120000,
@@ -1409,10 +1405,10 @@ var DispatchUI = {
 			}\
 			#dispatcher .watcher.dragging { cursor: grabbing; z-index: 100; opacity: 0.8; transition: background-color 0.5s, top 0s }\
 			#dispatcher .watcher div { font: " + settings.fontSize + "pt 'Oxygen', verdana, sans-serif }\
-			#dispatcher .watcher.running .details { background-color: #C3ECFC; background-color: rgba(218, 240, 251, 1); }\
-			#dispatcher .watcher.updated { background-color: #e8f5fc; background-color: rgba(218, 240, 251, 1) }\
+			#dispatcher .watcher.running .details { background-color: #BADFF2 }\
+			#dispatcher .watcher.updated { background-color: rgba(218, 240, 251, 1); }\
 			#dispatcher .watcher .details { width: 25px; text-align: center; float: right; background-color: rgba(234, 234, 234, 1); position: absolute; top: 0; bottom: 0; right: 0; font-size: 90%; color: #fff; transition: background-color 0.5s }\
-			#dispatcher .watcher .details.updated { background-color: rgba(218, 240, 251, 1); background-color: #e8f5fc; background-color: rgba(220, 255, 228, 1) }\
+			#dispatcher .watcher .details.updated { background-color: rgba(218, 240, 251, 1); background-color: #F0FF60; }\
 			#dispatcher .watcher .name { font-size 130%; color: black; text-decoration: none; display: inline-block; margin-top: -3px}\
 			#dispatcher .watcher .name:hover { text-decoration: underline }\
 			#dispatcher .watcher.dragging .name:hover { text-decoration: none }\
