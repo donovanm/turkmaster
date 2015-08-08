@@ -29,7 +29,7 @@ var settings = (function() {
 
 	_load();
 
-	function _setfontSize(val) {
+	function _setFontSize(val) {
 		if (val >= 5 && val <= 20) {
 			pub.fontSize = val;
 			$("#dispatcher div").css("font-size", val + "pt");
@@ -83,7 +83,7 @@ var settings = (function() {
 		}
 	}
 
-	pub.setfontSize = _setfontSize;
+	pub.setFontSize = _setFontSize;
 	pub.setVolume   = _setVolume;
 	pub.setDesktopNotifications = _setDesktopNotifications;
 	pub.save = _save;
@@ -198,7 +198,10 @@ var SettingsDialog = function() {
 						id   : 'volume',
 						text : 'Volume (0 - 100)',
 						type : 'text',
-						setting : 'volume'
+						setting : 'volume',
+						handler : function (target, value) {
+							settings.setVolume(value);
+						}
 					}
 				]
 			},
@@ -212,7 +215,20 @@ var SettingsDialog = function() {
 						id   : 'desktopNotifications',
 						text : 'Desktop Notifications',
 						type : 'toggle',
-						setting : 'desktopNotifications'
+						setting : 'desktopNotifications',
+						handler : _handleDesktopNotificationToggle
+					}
+				]
+			},
+			{
+				id    : 'more',
+				text  : 'Captchas',
+				items : [
+					{
+						id   : 'stopOnCaptcha',
+						text : 'Stop on Captcha',
+						type : 'toggle',
+						setting : 'stopOnCaptcha'
 					}
 				]
 			},
@@ -224,7 +240,10 @@ var SettingsDialog = function() {
 						id   : 'fontSize',
 						text : 'Size (pt)',
 						type : 'text',
-						setting : 'fontSize'
+						setting : 'fontSize',
+						handler : function (target, value) {
+							settings.setFontSize(value);
+						}
 					}
 				]
 			},
@@ -236,35 +255,29 @@ var SettingsDialog = function() {
 						id   : 'hideable',
 						text : 'Hideable',
 						type : 'toggle',
-						setting : 'canHide'
+						setting : 'canHide',
+						handler : function (target, value) {
+							settings.canHide = value;
+							setTimeout(function () { DispatchUI.setHide() }, 50);
+						}
 					}
 				]
 			},
 			{
-				id    : 'export',
+				id    : 'backup',
 				text  : 'Backup',
 				items : [
 					{
 						type : 'more',
 						id   : 'export',
-						text : 'Export'
+						text : 'Export',
+						handler: _showExport
 					},
 					{
 						type : 'more',
 						id   : 'import',
-						text : 'Import'
-					}
-				]
-			},
-			{
-				id    : 'more',
-				text  : 'Other',
-				items : [
-					{
-						id   : 'stopOnCaptcha',
-						text : 'Stop on Captcha',
-						type : 'toggle',
-						setting : 'stopOnCaptcha'
+						text : 'Import',
+						handler: _showImport
 					}
 				]
 			}
@@ -308,10 +321,6 @@ var SettingsDialog = function() {
 		}
 	}
 
-	function _save() {
-
-	}
-
 	function _cancel() {
 		DOMElement.hide();
 	}
@@ -331,6 +340,19 @@ var SettingsDialog = function() {
 		return groups.map(function (group) {
 			return _createGroup(group);
 		});
+	}
+
+	function _addDefaultHandlers(items) {
+		items.forEach(function (item) {
+			if (item.type && !item.handler)
+				item.handler = _setValue;
+			if (item.items)
+				_addDefaultHandlers(item.items);
+		})
+	}
+
+	function _setValue(target, value) {
+		settings[this.setting] = value;
 	}
 
 	function _createGroup(params) {
@@ -381,6 +403,7 @@ var SettingsDialog = function() {
 		});
 
 		DOMElement.on('change', _handleInputChange);
+		_addDefaultHandlers(widgetGroups);
 	}
 
 	function _handleWindowClick(e) {
@@ -398,10 +421,7 @@ var SettingsDialog = function() {
 			value = target.val(),
 			id = target.parent().attr('id');
 
-		if (id === "volume")
-			settings.setVolume(value);
-		else if (id === "fontSize")
-			settings.setfontSize(value);
+		_setWidget(id, target, value);
 	}
 
 	function _handleWidgetClick(e) {
@@ -415,41 +435,13 @@ var SettingsDialog = function() {
 		// Toggle widget unless it's for desktop notifications (because it's asynchronous)
 		if (id !== "desktopNotifications")
 			value = _toggle(target);
+		
+		_setWidget(id, target, value);
+	}
 
-		if (id === "soundSettings") {
-			settings.sound = value;
-		} else if (id === "notificationSettings") {
-			settings.notifications = value;
-		} else if (id === "desktopNotifications") {
-			if (value)
-				target.removeClass("on");
-
-			// Desktop notification requests require user action so we need a callback
-			// for when the user responds.
-			settings.setDesktopNotifications(!value, function(isPermitted) {
-				if (isPermitted) {
-					target.addClass("on");
-				} else {
-					target.removeClass("on");
-					console.error("Desktop notifications are blocked.");
-				}
-			});
-		} else if (id === "alertOnly") {
-			settings.alertOnly = value;
-		} else if (id === "hideable") {
-			settings.canHide = value;
-			setTimeout(function () { DispatchUI.setHide() }, 50);
-		} else if (id === "stopOnCaptcha") {
-			settings.stopOnCaptcha = value;
-		}
-
+	function _setWidget(id, target, value) {
+		_findWidget(widgetGroups, id).handler(target, value);
 		settings.save();
-
-		if (id === "export") {
-			_showExport();
-		} else if (id === "import") {
-			_showImport();
-		}
 	}
 
 	function _toggle(element) {
@@ -460,6 +452,32 @@ var SettingsDialog = function() {
 			element.addClass("on");
 			return true;
 		}
+	}
+
+	// Recursively looks for a widget with specified id
+	function _findWidget(widgets, id, i) {
+		return widgets.reduce(function (prev, curr) {
+			return (prev !== null) ? prev :
+			       (curr.id === id) ? curr :
+			       (curr.items) ? _findWidget(curr.items, id) :
+			       null;
+		}, null);
+	}
+
+	function _handleDesktopNotificationToggle(target, value) {
+		if (value)
+			target.removeClass("on");
+
+		// Desktop notification requests require user action so we need a callback
+		// for when the user responds.
+		settings.setDesktopNotifications(!value, function(isPermitted) {
+			if (isPermitted) {
+				target.addClass("on");
+			} else {
+				target.removeClass("on");
+				console.error("Desktop notifications are blocked.");
+			}
+		});
 	}
 
 	function _showExport() {
@@ -505,16 +523,18 @@ var SettingsDialog = function() {
 			#settingsDialog > div {\
 				margin: 0px 0px 0.5em;\
 				border: 1px solid #eee;\
-				padding: 0.75em;\
+				padding: 0.35em 0.60em 0.05em;\
 				background-color: #fff;\
 			}\
 			#settingsDialog h2, #settingsDialog h3 {\
-				font-weight: 400;\
 				margin: 0 0 0.5em;\
+				font-size: 95%;\
+				letter-spacing: 0.5px;\
 			}\
 			#settingsDialog h2 {\
+				font-weight: 400;\
 				text-align: center;\
-				font-size: 140%;\
+				font-size: 110%;\
 				color: #333;\
 			}\
 			#settingsDialog button.on_off {\
@@ -534,7 +554,7 @@ var SettingsDialog = function() {
 			#settingsDialog ul li { list-style: none; margin-bottom: 0.5em; }\
 			#settingsDialog li input, #settingsDialog li button { float: right; }\
 			#settingsDialog li input[type='text'] { width: 3em; font-size: 80%; margin-right: 0.8em; text-align: right; padding-right: 0.5em }\
-			#settingsDialog li .more { width: 24px; border: none; color: #808080; font: bold 160% inital; line-height: 0%; transform: rotate(90deg); background-color: transparent; position: relative; top: 8px; cursor: pointer; height: 0.7em; padding: 0 0 0.65em; }\
+			#settingsDialog li .more { width: 24px; border: none; color: #808080; font: bold 160% inital; line-height: 0%; transform: rotate(90deg); background-color: transparent; position: relative; top: 2px; cursor: pointer; height: 0.7em; padding: 0 0 0.65em; }\
 			#settingsDialog li#typeface input { width: 8em }\
 			.dialog-big { position: fixed; top: 2em; left: 50%; width: 860px; margin-left: -430px; background-color: white; padding: 2%; border: 1px solid #ddd; font-family: 'Oxygen'; box-shadow: 3px 3px 3px rgba(0, 0, 0, 0.4); border-radius: 10px; }\
 			.dialog-big p { background-color: #f7f7f7; padding: 1.5em; height: 500px; overflow: scroll; }\
