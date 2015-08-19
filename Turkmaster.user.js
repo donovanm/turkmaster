@@ -139,7 +139,7 @@ $(document).ready(function(){
 	window.addEventListener('storage', onStorageEvent, false);
 }); 
 
-$(window).unload(function() {
+$(window).on('beforeunload', function() {
 	if (pageType.DASHBOARD && pageType.MAIN) {
 		dispatch.save();
 	}
@@ -634,7 +634,8 @@ function addWatchButton() {
 						name        : values.name,
 						auto        : values.auto,
 						alert       : values.alert,
-						stopOnCatch : values.stopOnCatch
+						stopOnCatch : values.stopOnCatch,
+						muteBatch   : values.muteBatch
 					};
 
 				sendMessage({
@@ -788,7 +789,6 @@ function onMessageReceived(header, message) {
 				})).start();
 				break;
 			case 'ignore_requester' :
-				console.log("Ignore requester", message);
 				IgnoreList.add(IgnoreList.REQUESTER, message.id);
 				break;
 			case 'mute_hit' :
@@ -1042,7 +1042,6 @@ var IgnoreList = (function() {
 	function _save() {
 		localStorage.setItem('notifier_ignore', JSON.stringify(_hits));
 		localStorage.setItem('notifier_ignore_requesters', JSON.stringify(_requesters));
-		// console.log("Saving ignore list", _hits, _requesters);
 	}
 
 	function _load() {
@@ -1055,7 +1054,7 @@ var IgnoreList = (function() {
 			} catch (e) {
 				_clear();
 				_save();
-				console.log("Ignored hits couldn't be loaded correctly.");
+				console.error("Ignored hits couldn't be loaded correctly.");
 			}
 		} else {
 			console.log("No ignored hits found");
@@ -1067,13 +1066,11 @@ var IgnoreList = (function() {
 			} catch (e) {
 				_clear();
 				_save();
-				console.log("Ignored requesters couldn't be loaded correctly.");
+				console.error("Ignored requesters couldn't be loaded correctly.");
 			}
 		} else {
 			console.log("No ignored requesters found");
 		}
-
-		// console.log("Ignored requesters", _requesters);
 	}
 
 	function _clear() {
@@ -1740,7 +1737,7 @@ Dispatch.prototype.load = function() {
 
 		} catch(e) {
 			loadError = true;
-			console.log("Error loading saved list", e);
+			console.error("Error loading saved list", e);
         }
 	} else {
 		loadDefaultWatchers();
@@ -1864,6 +1861,12 @@ function watcherDialog(watcher, callback) {
 			$("<input>").attr('type', "checkbox").attr('id', "alert").prop('checked', watcher.option.alert),
 			$("<label>").attr('for', "alert").text("Alert")
 			),
+		(watcher.type === "hit") ?
+			$("<p>").append(
+				$("<input>").attr('type', "checkbox").attr('id', "mutebatch").prop('checked', watcher.option.muteBatch),
+				$("<label>").attr('for', "mutebatch").text("Silence batches after first seen")
+				)
+			: "",
 		$("<p>").addClass("form_buttons").append(
 			$("<input>").attr('type', "button").attr('value', "Save"),
 			$("<input>").attr('type', "button").attr('value', "Cancel")
@@ -1876,7 +1879,8 @@ function watcherDialog(watcher, callback) {
 			time		: parseInt($("#watcherDuration", dialog).val(), 10) * 1000,
 			alert		: $("#alert", dialog).prop('checked'),
 			auto		: $("#autoaccept", dialog).prop('checked'),
-			stopOnCatch	: $("#stopaccept", dialog).prop('checked')
+			stopOnCatch	: $("#stopaccept", dialog).prop('checked'),
+			muteBatch	: $("#mutebatch", dialog).prop('checked')
 		})
 
 		hide();
@@ -1894,10 +1898,10 @@ function watcherDialog(watcher, callback) {
 
 	$(dialog).keydown(function(e) {
 		switch(e.keyCode) {
-			case 13:
+			case 13: // Enter
 				save();
 				break;
-			case 27:
+			case 27: // Esc
 				hide();
 				break;
 		}
@@ -1983,7 +1987,8 @@ WatcherUI.create = function(watcher) {
 				time        : values.time,
 				alert       : values.alert,
 				auto        : values.auto,
-				stopOnCatch : values.stopOnCatch
+				stopOnCatch : values.stopOnCatch,
+				muteBatch   : values.muteBatch
 			})
 		});
 	}
@@ -2076,6 +2081,7 @@ function Watcher(attrs) {
 	this.option.auto        = (typeof option.auto !== 'undefined') ? option.auto : false;
 	this.option.alert       = (typeof option.alert !== 'undefined') ? option.alert : false;
 	this.option.stopOnCatch = (typeof option.stopOnCatch !== 'undefined') ? option.stopOnCatch : true;
+	this.option.muteBatch   = (typeof option.muteBatch !== 'undefined') ? option.muteBatch : false;
 
 	// Figure out the URL
 	this.url = attrs.url;
@@ -2217,6 +2223,7 @@ Watcher.prototype.setValues = function(values) {
 	this.setAuto(val.auto);
 	this.option.stopOnCatch = val.stopOnCatch;
 	this.option.alert = val.alert;
+	this.option.muteBatch = val.muteBatch;
 
 	if (typeof val.time !== 'undefined' && this.time !== val.time) {
 		this.time = val.time;
@@ -2415,13 +2422,12 @@ var Messenger = function() {
 				Sound.alert(watcher);
 
 		} else {
-			if (watcher.option.auto && !watcher.option.stopOnCatch)
+			if (!watcher.option.muteBatch && watcher.option.auto && !watcher.option.stopOnCatch)
 				Sound.alert(watcher);
 		}
 	}
 
 	function _handleTOReceived(data) {
-		// console.log("TurkOpticon data", JSON.stringify(JSON.parse(data), null, 4));
 		sendMessage({ header: SEND_TO, content: data });
 
 		if (data) 
