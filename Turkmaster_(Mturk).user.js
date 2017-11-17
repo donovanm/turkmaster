@@ -133,6 +133,8 @@ $(document).ready(function(){
 		addFormStyle();
 	}
 
+	console.log(pageType);
+
 	if (pageType.HIT || pageType.REQUESTER || pageType.SEARCH)
 		addWatchButton();
 
@@ -160,8 +162,9 @@ function onStorageEvent(event) {
 }
 
 function checkPageType() {
-	if (document.URL.match("worker.mturk.com") !== null)
+	if (document.URL.match("worker.mturk.com") !== null) {
 		pageType.NEW_SITE = true;
+	}
 
 	// Dashboard, hit, requester, search
 	if (document.URL === "https://www.mturk.com/mturk/dashboard" || document.URL.startsWith("https://worker.mturk.com/dashboard")) {
@@ -169,9 +172,7 @@ function checkPageType() {
 		return;
 	}
 
-	if (document.URL.match(/https:\/\/www.mturk.com\/mturk\/(preview|accept).+groupId=.*/) !== null
-		|| document.URL.startsWith("https://worker.mturk.com/projects/")
-	) {
+	if (document.URL.match(/https:\/\/www.mturk.com\/mturk\/(preview|accept).+groupId=.*/) !== null || document.URL.startsWith("https://worker.mturk.com/projects/")) {
 		pageType.HIT = true;
 		return;
 	}
@@ -648,8 +649,15 @@ function addWatchButton() {
 				}
 			},
 			function(values) {
-				var id = (document.URL.match(/groupId=([A-Z0-9]+)/) || document.URL.match(/requesterId=([A-Z0-9]+)/) || [,document.URL])[1],
-					watcher = {
+				var id;
+
+				if (!pageType.NEW_SITE) {
+					id = (document.URL.match(/groupId=([A-Z0-9]+)/) || document.URL.match(/requesterId=([A-Z0-9]+)/) || [,document.URL])[1];
+				} else {
+					id = document.URL.match(/requesters\/([A-Z0-9]+)/)[1];
+					console.log('in else statement', document.URL);
+				}
+				var watcher = {
 						id          : id,
 						duration    : values.time,
 						type        : (type === "page") ? "url" : type,
@@ -659,6 +667,8 @@ function addWatchButton() {
 						stopOnCatch : values.stopOnCatch,
 						muteBatch   : values.muteBatch
 					};
+
+				console.log('watcher', watcher);
 
 				sendMessage({
 					header    : 'add_watcher',
@@ -670,24 +680,28 @@ function addWatchButton() {
 	}
 
 	var location;	// Location to add the watch button
-	if (pageType.HIT) {
-		if ($(".message.success h6").length)
-			location = $(".message.success h6");
-		else if ($("#javascriptDependentFunctionality").length)
-			location = $("#javascriptDependentFunctionality");
-		else if ($("body > form:nth-child(7) > table:nth-child(9) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(2) > td:nth-child(1)").length)
-			location = $("body > form:nth-child(7) > table:nth-child(9) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(2) > td:nth-child(1)");
-		else if (!$("span#alertboxHeader:visible").length) {
-			button.addClass("block");
-			location = $("img[src='/media/submit_hit_disabled.gif']").eq(0).parent().parent();
+	if (!pageType.NEW_SITE) {
+		if (pageType.HIT) {
+			if ($(".message.success h6").length)
+				location = $(".message.success h6");
+			else if ($("#javascriptDependentFunctionality").length)
+				location = $("#javascriptDependentFunctionality");
+			else if ($("body > form:nth-child(7) > table:nth-child(9) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(2) > td:nth-child(1)").length)
+				location = $("body > form:nth-child(7) > table:nth-child(9) > tbody:nth-child(1) > tr:nth-child(1) > td:nth-child(2) > table:nth-child(1) > tbody:nth-child(1) > tr:nth-child(2) > td:nth-child(1)");
+			else if (!$("span#alertboxHeader:visible").length) {
+				button.addClass("block");
+				location = $("img[src='/media/submit_hit_disabled.gif']").eq(0).parent().parent();
+			}
+			else
+				location = $('span#alertboxHeader');
+		} else if (pageType.REQUESTER || pageType.SEARCH) {
+			if ($(".title_orange_text_bold").length)
+				location = $(".title_orange_text_bold");
+			else
+				location = $(".error_title");
 		}
-		else
-			location = $('span#alertboxHeader');
-	} else if (pageType.REQUESTER || pageType.SEARCH) {
-		if ($(".title_orange_text_bold").length)
-			location = $(".title_orange_text_bold");
-		else
-			location = $(".error_title");
+	} else {
+		location = $(".back-to-search-link");
 	}
 	location.append(button);
 	addFormStyle();
