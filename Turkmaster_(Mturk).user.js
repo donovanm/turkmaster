@@ -4,6 +4,7 @@
 // @author		DonovanM
 // @description A page-monitoring web app for Mturk (Mechanical Turk) designed to make turking more efficient. Easily monitor mturk search pages and requesters and Auto-Accept the HITs you missed.
 // @include     https://www.mturk.com/mturk/*
+// @include     https://worker.mturk.com/*
 // @version     1.5.1
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js
 // @require 	https://ajax.googleapis.com/ajax/libs/webfont/1/webfont.js
@@ -96,7 +97,8 @@ var pageType = {
 	DASHBOARD : false,
 	HIT       : false,
 	REQUESTER : false,
-	SEARCH    : false
+	SEARCH    : false,
+	NEW_SITE  : false
 };
 
 var loadError = false;
@@ -158,15 +160,28 @@ function onStorageEvent(event) {
 }
 
 function checkPageType() {
+	if (document.URL.match("worker.mturk.com") !== null)
+		pageType.NEW_SITE = true;
+
 	// Dashboard, hit, requester, search
-	if (document.URL === "https://www.mturk.com/mturk/dashboard")
+	if (document.URL === "https://www.mturk.com/mturk/dashboard" || document.URL.startsWith("https://worker.mturk.com/dashboard")) {
 		pageType.DASHBOARD = true;
-	else if (document.URL.match(/https:\/\/www.mturk.com\/mturk\/(preview|accept).+groupId=.*/) !== null)
+		return;
+	}
+
+	if (document.URL.match(/https:\/\/www.mturk.com\/mturk\/(preview|accept).+groupId=.*/) !== null
+		|| document.URL.startsWith("https://worker.mturk.com/projects/")
+	) {
 		pageType.HIT = true;
-	else if (document.URL.match(/requesterId=([A-Z0-9]+)/) !== null)
+		return;
+	}
+
+	if (document.URL.match(/requesterId=([A-Z0-9]+)/) !== null || document.URL.startsWith("https://worker.mturk.com/requesters/")) {
 		pageType.REQUESTER = true;
-	else if (document.URL.match(/(searchbar|findhits)/) !== null)
-		pageType.SEARCH = true;
+		return;
+	}
+
+	pageType.SEARCH = true;
 }
 
 function requestMain() {
@@ -594,25 +609,31 @@ function addWatchButton() {
 			stopOnCatch = true;
 
 		// Find the name if available
-		if (pageType.REQUESTER) {
-			if ($(".title_orange_text_bold").length > 0) {
-				name = $(".title_orange_text_bold").text().match(/Created by '(.+)'/);
-				name = (typeof name !== 'undefined') ? name[1] : "";
-			} else if (document.URL.match(/prevRequester=/)) {
-				name = document.URL.match(/prevRequester=([^&]*)/)[1];
-			}
-		} else if (pageType.SEARCH) {
-			name = document.URL.match(/searchWords=([^&]*)/);
+		if (!pageType.NEW_SITE) {
+			if (pageType.REQUESTER) {
+				if ($(".title_orange_text_bold").length > 0) {
+					name = $(".title_orange_text_bold").text().match(/Created by '(.+)'/);
+					name = (typeof name !== 'undefined') ? name[1] : "";
+				} else if (document.URL.match(/prevRequester=/)) {
+					name = document.URL.match(/prevRequester=([^&]*)/)[1];
+				}
+			} else if (pageType.SEARCH) {
+				name = document.URL.match(/searchWords=([^&]*)/);
 
-			if (name !== null) {
-				name = name[1].replace('+', ' ');
-				name = name.charAt(0).toUpperCase() + name.slice(1);	// Capitalize first letter
-			} else {
-				name = "";
+				if (name !== null) {
+					name = name[1].replace('+', ' ');
+					name = name.charAt(0).toUpperCase() + name.slice(1);	// Capitalize first letter
+				} else {
+					name = "";
+				}
+			} else if (pageType.HIT) {
+				name = $(".capsulelink_bold > div:nth-child(1)").text().trim();
 			}
-		} else if (pageType.HIT) {
-			name = $(".capsulelink_bold > div:nth-child(1)").text().trim();
+		} else {
+			name = $(".back-to-search-link span").text();
 		}
+
+		console.log(pageType);
 
 		// Pull up a Watcher Dialog with default values set
 		watcherDialog(
@@ -2128,7 +2149,11 @@ Watcher.prototype.getHTML = function() {
 	return $("<div>");
 }
 Watcher.prototype.getURL = function() {
-	return this.url + URL_POSTFIX;
+	if (!pageType.NEW_SITE)
+		return this.url + URL_POSTFIX;
+
+	if (this.type === 'requester')
+		return `https://worker.mturk.com/requesters/${this.id}/projects`;
 }
 Watcher.prototype.setUrl = function() {
 	switch(this.type) {
@@ -2301,7 +2326,36 @@ Watcher.prototype.sendHits = function(hits) {
 }
 Watcher.prototype.getData = function() {
 	var _this = this;
-	Loader.load(this, this.url, function(data) { _this.onDataReceived($(data)); });
+	Loader.load(this, this.getURL(), function(data) {
+		if (!pageType.NEW_SITE)
+			_this.onDataReceived($(data));
+		else
+			_this.onNewDataReceived(data);
+	});
+}
+Watcher.prototype.onNewDataReceived = function(data) {
+	console.log(data);
+
+	const hits = data.results.map(result => {
+		const hit = new Hit();
+
+		return Object.assign(hit, {
+			id: result.hit_set_id,
+			requester: result.requester_name,
+			requesterID: result.requester_id,
+			title: result.title,
+			reward: result.monetary_reward.amount_in_dollars,
+			available: result.assignable_hits_count,
+			time: String(result.assignment_duration_in_seconds),
+			url: result.project_tasks_url,
+			canPreview: result.caller_meets_preview_requirements,
+			isQualified: result.caller_meets_requirements,
+			description: result.description,
+		});
+	});
+
+	console.log(hits);
+	this.setHits(hits);
 }
 Watcher.prototype.onDataReceived = function(data) {
 	var error = $(".error_title", data);
@@ -2516,7 +2570,8 @@ var Loader = function() {
 	}
 
 	function _getData(url, callback) {
-		$.get(url + URL_POSTFIX, function(data) {
+		console.log('getting data', url);
+		$.get(url + (!pageType.NEW_SITE ? URL_POSTFIX : ''), function(data) {
 			callback(data);
 
 			if (++count < maxLoad) {
