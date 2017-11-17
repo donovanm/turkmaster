@@ -4,7 +4,7 @@
 // @author		DonovanM
 // @description A page-monitoring web app for Mturk (Mechanical Turk) designed to make turking more efficient. Easily monitor mturk search pages and requesters and Auto-Accept the HITs you missed.
 // @include     https://www.mturk.com/mturk/*
-// @version     1.4.5
+// @version     1.5.1
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js
 // @require 	https://ajax.googleapis.com/ajax/libs/webfont/1/webfont.js
 // @grant       GM_getValue
@@ -103,6 +103,7 @@ var loadError = false;
 var wasViewed = false;
 var dispatch;
 var notificationPanel;
+var URL_POSTFIX = '&doNotRedirect=true';
 
 if(!('contains' in String.prototype)) {
 	String.prototype.contains = function(str, startIndex) {
@@ -920,21 +921,30 @@ function Hit(attrs) {
 	this.canPreview   = (typeof attrs.canPreview !== 'undefined') ? attrs.canPreview : true;
 }
 Hit.prototype.getURL = function(type) {
+	var url;
+
 	switch(type) {
 		case 'preview':
-			return "https://www.mturk.com/mturk/preview?groupId=" + this.id;
+			url = "https://www.mturk.com/mturk/preview?groupId=" + this.id;
+			break;
 		case 'accept' :
-			return (this.isQualified) ? "https://www.mturk.com/mturk/previewandaccept?groupId=" + this.id : null;
+			url = (this.isQualified) ? "https://www.mturk.com/mturk/previewandaccept?groupId=" + this.id : null;
+			break;
 		case 'auto'   :
-			return "https://www.mturk.com/mturk/previewandaccept?groupId=" + this.id + "&autoAcceptEnabled=true";
+			url = "https://www.mturk.com/mturk/previewandaccept?groupId=" + this.id + "&autoAcceptEnabled=true";
+			break;
 		case 'view'   :
-			return "https://www.mturk.com/mturk/continue?hitId=" + this.uid;
+			url = "https://www.mturk.com/mturk/continue?hitId=" + this.uid;
+			break;
 		case 'return' :
 			// This will need to be changed. It's the same as 'view' until more testing is done on AMT's return functionality
-			return "https://www.mturk.com/mturk/preview?hitId=" + this.uid;
+			url = "https://www.mturk.com/mturk/preview?hitId=" + this.uid;
+			break;
 		default:
-			return "";
+			url = "";
 	}
+
+	return url + URL_POSTFIX;
 };
 // Returns the position of a hit in a hit array by its ID
 Hit.indexOf = function(hitId, hits) {
@@ -1961,7 +1971,7 @@ WatcherUI.create = function(watcher) {
 	});
 
 	watcher.addListener(Evt.CHANGE, function() {
-		$(".name", div).text(watcher.name).attr('href', watcher.url);
+		$(".name", div).text(watcher.name).attr('href', watcher.url + URL_POSTFIX);
 		$(".time", div).text(watcher.time / 1000 + " seconds");
 
 		if (watcher.state.isSelected)
@@ -2118,7 +2128,7 @@ Watcher.prototype.getHTML = function() {
 	return $("<div>");
 }
 Watcher.prototype.getURL = function() {
-	return this.url;
+	return this.url + URL_POSTFIX;
 }
 Watcher.prototype.setUrl = function() {
 	switch(this.type) {
@@ -2506,7 +2516,7 @@ var Loader = function() {
 	}
 
 	function _getData(url, callback) {
-		$.get(url, function(data) {
+		$.get(url + URL_POSTFIX, function(data) {
 			callback(data);
 
 			if (++count < maxLoad) {
@@ -2971,8 +2981,8 @@ NotificationGroup.prototype.createDOMElement = function() {
 		self = this;
 
 	var div = $('<div>').addClass("notification_group")
-		.append((this.title !== null) ? $('<h3><a href="' + this.url + '" target="_blank">' + this.title + '</a></h3>') : "")
-		.append((isSameReq) ? $('<h4><a href="' + REQUESTER_PREFIX + hit.requesterID + '" target="_blank" class="requester">' + hit.requester + '</a></h4>') : "")
+		.append((this.title !== null) ? $('<h3><a href="' + this.url + URL_POSTFIX + '" target="_blank">' + this.title + '</a></h3>') : "")
+		.append((isSameReq) ? $('<h4><a href="' + REQUESTER_PREFIX + hit.requesterID + URL_POSTFIX + '" target="_blank" class="requester">' + hit.requester + '</a></h4>') : "")
 		.hover(
 			function() { _this.isHovered = true },
 			function() {
@@ -3044,7 +3054,7 @@ NotificationHit.prototype.createDOMElement = function() {
 	var hit = this.hit;
 	var notification = $('<div>').addClass("notification").append(
 		'<a class="title" target="_blank" href="' + hit.getURL('preview') + '" title="' + hit.title + '">' + hit.title + '</a>',
-		(!this.isSameReq) ? $('<a class="requester" href="' + URL_PREFIX + hit.requesterID + '" target="_blank">' + hit.requester + '</a> <a class="ignore">ignore</a>') : "",
+		(!this.isSameReq) ? $('<a class="requester" href="' + URL_PREFIX + hit.requesterID + URL_POSTFIX + '" target="_blank">' + hit.requester + '</a> <a class="ignore">ignore</a>') : "",
 		'<p>' + hit.reward + " - " + hit.available + " rem. - " + hit.time.replace("minutes", "mins") + '</p>\
 		 <div class="links"></div>\
 		 <div><a class="mute"></a></div>'
