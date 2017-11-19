@@ -133,8 +133,6 @@ $(document).ready(function(){
 		addFormStyle();
 	}
 
-	console.log(pageType);
-
 	if (pageType.HIT || pageType.REQUESTER || pageType.SEARCH)
 		addWatchButton();
 
@@ -631,10 +629,17 @@ function addWatchButton() {
 				name = $(".capsulelink_bold > div:nth-child(1)").text().trim();
 			}
 		} else {
-			name = $(".back-to-search-link span").text();
-		}
+			if (pageType.REQUESTER) {
+				name = $(".back-to-search-link span").text();
+			}
+			if (pageType.HIT) {
+				const data = $('.project-detail-bar [data-react-class]').data('react-props');
 
-		console.log(pageType);
+				if (data) {
+					name = data.modalOptions.projectTitle;
+				}
+			}
+		}
 
 		// Pull up a Watcher Dialog with default values set
 		watcherDialog(
@@ -654,7 +659,7 @@ function addWatchButton() {
 				if (!pageType.NEW_SITE) {
 					id = (document.URL.match(/groupId=([A-Z0-9]+)/) || document.URL.match(/requesterId=([A-Z0-9]+)/) || [,document.URL])[1];
 				} else {
-					id = document.URL.match(/requesters\/([A-Z0-9]+)/)[1];
+					id = (document.URL.match(/requesters\/([A-Z0-9]+)/) || document.URL.match(/projects\/([A-Z0-9]+)/) || [,document.URL])[1];
 					console.log('in else statement', document.URL);
 				}
 				var watcher = {
@@ -701,7 +706,11 @@ function addWatchButton() {
 				location = $(".error_title");
 		}
 	} else {
-		location = $(".back-to-search-link");
+		if (pageType.REQUESTER || pageType.SEARCH)
+			location = $(".projects-info-header h1");
+		else {
+			location = $("#MainContent h2").first();
+		}
 	}
 	location.append(button);
 	addFormStyle();
@@ -761,6 +770,7 @@ function addFormStyle() {
 			border-radius: 10px;\
 			font-family: 'Oxygen', verdana, sans-serif;\
 			transition: background-color 0.4s;\
+			font-size: 13px;\
 		}\
 		.watcher_button a:hover { background-color: #55B8EA }\
 		.error_title .watcher_button { display: block; margin: 15px }\
@@ -957,6 +967,21 @@ function Hit(attrs) {
 }
 Hit.prototype.getURL = function(type) {
 	var url;
+
+	if (pageType.NEW_SITE) {
+		switch(type) {
+			case 'preview':
+				return `https://worker.mturk.com/projects/${this.id}/tasks`;
+			case 'accept':
+				return `https://worker.mturk.com/projects/${this.id}/tasks/accept_random?ref=w_pl_prvw`;
+				// https://worker.mturk.com/projects/38DNTK7MFN2CTL246TLG4O5C3HN10B/tasks/accept_random?ref=w_pl_prvw
+			// case 'view':
+				// Not sure how to get the assignment id right now. I'd hate to have to parse the queue page to get it
+			  // return `https://worker.mturk.com/projects/318YEPE7DU2B3S8GOXFQOE05R2HZ7Q/tasks/3MNJFORX8B5P675LHMVCDKJDCYS5F4?assignment_id=34PGFRQONOC2BC4VMFE762K5DO6JW5&ref=w_pl_prvw`;
+			default:
+				return "";
+		}
+	}
 
 	switch(type) {
 		case 'preview':
@@ -2166,8 +2191,15 @@ Watcher.prototype.getURL = function() {
 	if (!pageType.NEW_SITE)
 		return this.url + URL_POSTFIX;
 
-	if (this.type === 'requester')
+	if (this.type === 'requester') {
 		return `https://worker.mturk.com/requesters/${this.id}/projects`;
+	}
+
+	if (this.type === 'hit') {
+		return `https://worker.mturk.com/projects/${this.id}/tasks${this.option.auto ? '/accept_random?ref=w_pl_prvw' : ''}`;
+	}
+
+	return this.url;
 }
 Watcher.prototype.setUrl = function() {
 	switch(this.type) {
@@ -2348,28 +2380,28 @@ Watcher.prototype.getData = function() {
 	});
 }
 Watcher.prototype.onNewDataReceived = function(data) {
-	console.log(data);
+	if (this.type === 'hit') {
+		this.setHits(this.parseNewHit(data.project));
+	} else {
+		this.setHits(data.results.map(this.parseNewHit));
+	}
+}
+Watcher.prototype.parseNewHit = function(result) {
+	const hit = new Hit();
 
-	const hits = data.results.map(result => {
-		const hit = new Hit();
-
-		return Object.assign(hit, {
-			id: result.hit_set_id,
-			requester: result.requester_name,
-			requesterID: result.requester_id,
-			title: result.title,
-			reward: result.monetary_reward.amount_in_dollars,
-			available: result.assignable_hits_count,
-			time: String(result.assignment_duration_in_seconds),
-			url: result.project_tasks_url,
-			canPreview: result.caller_meets_preview_requirements,
-			isQualified: result.caller_meets_requirements,
-			description: result.description,
-		});
+	return Object.assign(hit, {
+		id: result.hit_set_id,
+		requester: result.requester_name,
+		requesterID: result.requester_id,
+		title: result.title,
+		reward: result.monetary_reward.amount_in_dollars,
+		available: result.assignable_hits_count,
+		time: String(result.assignment_duration_in_seconds),
+		url: result.project_tasks_url,
+		canPreview: result.caller_meets_preview_requirements,
+		isQualified: result.caller_meets_requirements,
+		description: result.description,
 	});
-
-	console.log(hits);
-	this.setHits(hits);
 }
 Watcher.prototype.onDataReceived = function(data) {
 	var error = $(".error_title", data);
@@ -2584,21 +2616,32 @@ var Loader = function() {
 	}
 
 	function _getData(url, callback) {
-		console.log('getting data', url);
-		$.get(url + (!pageType.NEW_SITE ? URL_POSTFIX : ''), function(data) {
-			callback(data);
+		$.ajax({
+			url: url + (!pageType.NEW_SITE ? URL_POSTFIX : ''),
+			type: 'GET',
+			success: function(data) {
+				console.log('the data from Loader.getData', data);
+				callback(data);
 
-			if (++count < maxLoad) {
-				setTimeout(_next, intervalTime);
-			} else {
-				paused = true;
-				count = 0;
-				setTimeout(function() {
-					if (paused)
-						_next();
-				}, pauseTime);
-			}
-		})
+				if (++count < maxLoad) {
+					setTimeout(_next, intervalTime);
+				} else {
+					paused = true;
+					count = 0;
+					setTimeout(function() {
+						if (paused)
+							_next();
+					}, pauseTime);
+				}
+			},
+			error: function() {
+				// Since auto-accept pages are http, we'll always get an error when trying to load them on the
+				// new worker site. We'll just have to assume it worked in this case.
+				if (pageType.NEW_SITE && url.includes('accept_random')) {
+					callback('success');
+				}
+			},
+		});
 	}
 
 	return {
