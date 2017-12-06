@@ -660,7 +660,6 @@ function addWatchButton() {
 					id = (document.URL.match(/groupId=([A-Z0-9]+)/) || document.URL.match(/requesterId=([A-Z0-9]+)/) || [,document.URL])[1];
 				} else {
 					id = (document.URL.match(/requesters\/([A-Z0-9]+)/) || document.URL.match(/projects\/([A-Z0-9]+)/) || [,document.URL])[1];
-					console.log('in else statement', document.URL);
 				}
 				var watcher = {
 						id          : id,
@@ -672,8 +671,6 @@ function addWatchButton() {
 						stopOnCatch : values.stopOnCatch,
 						muteBatch   : values.muteBatch
 					};
-
-				console.log('watcher', watcher);
 
 				sendMessage({
 					header    : 'add_watcher',
@@ -1062,7 +1059,9 @@ function createDetailsPanel() {
 		border-radius: 0 0 3px 0;\
 		border-width: 0 1px 1px 0;\
 		transition: left 0.5s ease;\
-		display: none }\
+		display: none;\
+		z-index: 1050;\
+	}\
 	#details_panel h4 { display: none }\
 	#details_panel.left { left: 30px }");
 
@@ -1577,6 +1576,7 @@ var DispatchUI = {
 				margin-top: 2px;\
 			}\
 			.watcher.selected .play_select { background-color: #55b8ea; border-color: #b4e6ff; }\
+			.watcher.incompatible { background-color: #e9e9e9 !important }\
 			");
 	},
 
@@ -1997,9 +1997,9 @@ function WatcherUI() { /* Nothing */ };
 WatcherUI.create = function(watcher) {
 	// Create jQuery Element...
 	var div = $("<div>").addClass("watcher")
-		.html('<div class="details"> > </div>\
-		<div class="play_container"><div class="play"></div><div class="play_select"></div></div>\
-		<div class="content">\
+		.html('<div class="details"> > </div>'
+		+ (!watcher.isIncompatible() ? '<div class="play_container"><div class="play"></div><div class="play_select"></div></div>' : '')
+		+ '<div class="content">\
 			<a class="name" href="' + watcher.getURL() + '" target="_blank">' + ((typeof watcher.name !== 'undefined') ? watcher.name : watcher.id) + '</a>\
 			<div class="bottom">\
 	            <span class="time">' + (watcher.time / 1000) + ' seconds </span>\
@@ -2014,6 +2014,11 @@ WatcherUI.create = function(watcher) {
 
 	if (watcher.state.isSelected)
 		div.addClass("selected");
+
+	if (watcher.isIncompatible()) {
+		div.addClass("incompatible");
+		div.prop('title', 'This URL watcher is incomaptible with the new worker site');
+	}
 
 	// Add listeners
 	watcher.addListener(Evt.START, function() {
@@ -2217,6 +2222,9 @@ Watcher.prototype.setUrl = function() {
 			this.id = "A" + Math.floor(Math.random() * 100000000);
 			break;
 	}
+}
+Watcher.prototype.isIncompatible = function () {
+	return pageType.NEW_SITE && this.type === 'url' && this.url.startsWith('https://www.mturk.com/')
 }
 Watcher.prototype.setAuto = function(isAuto) {
 	this.option.auto = isAuto;
@@ -2620,7 +2628,6 @@ var Loader = function() {
 			url: url + (!pageType.NEW_SITE ? URL_POSTFIX : ''),
 			type: 'GET',
 			success: function(data) {
-				console.log('the data from Loader.getData', data);
 				callback(data);
 
 				if (++count < maxLoad) {
@@ -2634,7 +2641,7 @@ var Loader = function() {
 					}, pauseTime);
 				}
 			},
-			error: function() {
+			error: function(error) {
 				// Since auto-accept pages are http, we'll always get an error when trying to load them on the
 				// new worker site. We'll just have to assume it worked in this case.
 				if (pageType.NEW_SITE && url.includes('accept_random')) {
@@ -2802,6 +2809,7 @@ NotificationPanel.prototype.createPanel = function() {
 			border-radius :  5px 0 0 0;\
 			border-right  : 0;\
 			transition    : right 0.2s;\
+			z-index       : 1050;\
 		}\
 		#receiver.notification_panel.tm-hidden {\
 			right: -395px;\
