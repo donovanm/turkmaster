@@ -1,15 +1,16 @@
 // ==UserScript==
 // @name        Turkmaster (Mturk)
 // @namespace   https://greasyfork.org/users/3408
-// @author		DonovanM
+// @author      DonovanM
 // @description A page-monitoring web app for Mturk (Mechanical Turk) designed to make turking more efficient. Easily monitor mturk search pages and requesters and Auto-Accept the HITs you missed.
 // @include     https://www.mturk.com/mturk/*
 // @include     https://worker.mturk.com/*
 // @version     1.5.1
-// @require     https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js
-// @require 	https://ajax.googleapis.com/ajax/libs/webfont/1/webfont.js
+// @require     https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js
+// @require     https://ajax.googleapis.com/ajax/libs/webfont/1/webfont.js
 // @grant       GM_getValue
 // @grant       GM_setValue
+// @grant       GM_xmlhttpRequest
 // ==/UserScript==
 
 var settings = (function() {
@@ -971,10 +972,8 @@ Hit.prototype.getURL = function(type) {
 				return `https://worker.mturk.com/projects/${this.id}/tasks`;
 			case 'accept':
 				return `https://worker.mturk.com/projects/${this.id}/tasks/accept_random?ref=w_pl_prvw`;
-				// https://worker.mturk.com/projects/38DNTK7MFN2CTL246TLG4O5C3HN10B/tasks/accept_random?ref=w_pl_prvw
-			// case 'view':
-				// Not sure how to get the assignment id right now. I'd hate to have to parse the queue page to get it
-			  // return `https://worker.mturk.com/projects/318YEPE7DU2B3S8GOXFQOE05R2HZ7Q/tasks/3MNJFORX8B5P675LHMVCDKJDCYS5F4?assignment_id=34PGFRQONOC2BC4VMFE762K5DO6JW5&ref=w_pl_prvw`;
+			case 'view':
+				return `https://worker.mturk.com/projects/${this.id}/tasks/${this.taskID}?assignment_id=${this.assignmentID}&from_queue=true`
 			default:
 				return "";
 		}
@@ -2388,14 +2387,30 @@ Watcher.prototype.getData = function() {
 	});
 }
 Watcher.prototype.onNewDataReceived = function(data) {
+	data = JSON.parse(data);
+
 	if (this.type === 'hit') {
-		this.setHits(this.parseNewHit(data.project));
+		this.setHits(this.parseNewHit(data));
 	} else {
 		this.setHits(data.results.map(this.parseNewHit));
 	}
 }
 Watcher.prototype.parseNewHit = function(result) {
 	const hit = new Hit();
+
+	if (this.option.isAutoAccept) {
+		Object.assign(hit, {
+			taskID: result.task_id,
+			assignmentID: result.assignment_id,
+		});
+		result = result.project;
+	} else {
+		Object.assign(hit, {
+			url: result.project_tasks_url,
+			canPreview: result.caller_meets_preview_requirements,
+			isQualified: result.caller_meets_requirements,
+		});
+	}
 
 	return Object.assign(hit, {
 		id: result.hit_set_id,
@@ -2405,9 +2420,6 @@ Watcher.prototype.parseNewHit = function(result) {
 		reward: result.monetary_reward.amount_in_dollars,
 		available: result.assignable_hits_count,
 		time: String(result.assignment_duration_in_seconds),
-		url: result.project_tasks_url,
-		canPreview: result.caller_meets_preview_requirements,
-		isQualified: result.caller_meets_requirements,
 		description: result.description,
 	});
 }
@@ -2624,11 +2636,12 @@ var Loader = function() {
 	}
 
 	function _getData(url, callback) {
-		$.ajax({
-			url: url + (!pageType.NEW_SITE ? URL_POSTFIX : ''),
-			type: 'GET',
-			success: function(data) {
-				callback(data);
+		GM_xmlhttpRequest({
+			method: "GET",
+			url: url,
+			onload: function(res) {
+				// Can switch to requesting JSON after the switch over to the new site
+				callback(res.responseText);
 
 				if (++count < maxLoad) {
 					setTimeout(_next, intervalTime);
@@ -2640,14 +2653,7 @@ var Loader = function() {
 							_next();
 					}, pauseTime);
 				}
-			},
-			error: function(error) {
-				// Since auto-accept pages are http, we'll always get an error when trying to load them on the
-				// new worker site. We'll just have to assume it worked in this case.
-				if (pageType.NEW_SITE && url.includes('accept_random')) {
-					callback('success');
-				}
-			},
+			}
 		});
 	}
 
