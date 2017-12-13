@@ -634,7 +634,7 @@ function addWatchButton() {
 				name = $(".back-to-search-link span").text();
 			}
 			if (pageType.HIT) {
-				const data = $('.project-detail-bar [data-react-class]').data('react-props');
+				let data = $('.project-detail-bar [data-react-class]').data('react-props');
 
 				if (data) {
 					name = data.modalOptions.projectTitle;
@@ -708,6 +708,10 @@ function addWatchButton() {
 			location = $(".projects-info-header h1");
 		else {
 			location = $("#MainContent h2").first();
+
+			if (!location.length) {
+				location = $(".project-detail-bar > .row .row [data-react-class]").first();
+			}
 		}
 	}
 	location.append(button);
@@ -2209,6 +2213,7 @@ Watcher.prototype.setUrl = function() {
 	switch(this.type) {
 		case 'hit':
 			this.url = "https://www.mturk.com/mturk/preview" + (this.option.auto ? "andaccept" : "") + "?groupId=" + this.id;
+
 			break;
 		case 'requester':
 			this.url = "https://www.mturk.com/mturk/searchbar?selectedSearchType=hitgroups&requesterId=" + this.id;
@@ -2392,18 +2397,20 @@ Watcher.prototype.onNewDataReceived = function(data) {
 	if (this.type === 'hit') {
 		this.setHits(this.parseNewHit(data));
 	} else {
-		this.setHits(data.results.map(this.parseNewHit));
+		this.setHits(data.results.map(this.parseNewHit.bind(this)));
 	}
 }
 Watcher.prototype.parseNewHit = function(result) {
 	const hit = new Hit();
 
-	if (this.option.isAutoAccept) {
+	if (this.option.auto) {
 		Object.assign(hit, {
 			taskID: result.task_id,
 			assignmentID: result.assignment_id,
+			isAutoAccept: true,
 		});
 		result = result.project;
+
 	} else {
 		Object.assign(hit, {
 			url: result.project_tasks_url,
@@ -2642,6 +2649,7 @@ var Loader = function() {
 			onload: function(res) {
 				// Can switch to requesting JSON after the switch over to the new site
 				callback(res.responseText);
+
 
 				if (++count < maxLoad) {
 					setTimeout(_next, intervalTime);
@@ -3197,6 +3205,10 @@ NotificationHit.prototype.createDOMElement = function() {
 				<a class="hit_link" target="_blank" href="' + hit.getURL('auto') + '">+AUTO</a>');
 		}
 	} else {
+		if (this.hit.isAutoAccept && PageType.NEW_SITE) { // This is copy/pasted. Will clean up when the old site goes away
+			$(".links", notification).append('<a class="hit_link" href="' + hit.getURL('view') + '" target="_blank">VIEW</a>');
+		}
+
 		$(notification).addClass("not_qualified");
 		$(".links", notification).append(
 			(hit.canPreview) ? '<a class="hit_link" href="' + hit.getURL('preview') + '" target="_blank">PREVIEW</a>' : "",
