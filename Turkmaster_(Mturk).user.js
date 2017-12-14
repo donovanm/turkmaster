@@ -5,7 +5,7 @@
 // @description A page-monitoring web app for Mturk (Mechanical Turk) designed to make turking more efficient. Easily monitor mturk search pages and requesters and Auto-Accept the HITs you missed.
 // @include     https://www.mturk.com/mturk/*
 // @include     https://worker.mturk.com/*
-// @version     1.5.1
+// @version     1.5.3
 // @require     https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js
 // @require     https://ajax.googleapis.com/ajax/libs/webfont/1/webfont.js
 // @grant       GM_getValue
